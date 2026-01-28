@@ -1,0 +1,102 @@
+/* =========================================
+   1. GLOBAL VARIABLES (Jantung Desain Kamu)
+   Ubah angka di sini, satu aplikasi berubah semua.
+   ========================================= */
+:root {
+    --sidebar-width: 260px;     /* Lebar Sidebar Tetap */
+    --navbar-height: 60px;      /* Tinggi Navbar (jika ada nanti) */
+    --primary-color: #0d6efd;   /* Warna Biru Bootstrap */
+    --sidebar-bg: #212529;      /* Warna Gelap Sidebar */
+    --bg-light: #f8f9fa;        /* Warna Background Konten */
+    --transition-speed: 0.3s;   /* Kecepatan animasi */
+}
+
+/* =========================================
+   2. RESET & BASE STYLES
+   ========================================= */
+body {
+    background-color: var(--bg-light);
+    overflow-x: hidden; /* Mencegah scroll ke samping */
+}
+
+/* =========================================
+   3. LAYOUT STRUCTURE (Penting!)
+   ========================================= */
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+}
+
+/* --- Sidebar Area --- */
+.sidebar-wrapper {
+    width: var(--sidebar-width);
+    height: 100vh;
+    position: fixed; /* Melayang di kiri */
+    top: 0;
+    left: 0;
+    background-color: var(--sidebar-bg);
+    color: white;
+    z-index: 1000;
+    overflow-y: auto; /* Scroll kalau menu kepanjangan */
+    transition: width var(--transition-speed);
+    box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+}
+
+/* --- Main Content Area --- */
+.content-wrapper {
+    /* Margin kiri otomatis sebesar lebar sidebar */
+    margin-left: var(--sidebar-width); 
+    width: calc(100% - var(--sidebar-width));
+    min-height: 100vh;
+    padding: 2rem; /* Jarak ke dalam (padding) yang konsisten */
+    background-color: var(--bg-light);
+    transition: margin-left var(--transition-speed), width var(--transition-speed);
+}
+
+/* =========================================
+   4. COMPONENT STYLES
+   ========================================= */
+
+/* Nav Link di Sidebar */
+.nav-link {
+    color: rgba(255, 255, 255, 0.8) !important; /* Timpa warna bootstrap */
+    margin-bottom: 5px;
+    border-radius: 8px; /* Sudut tumpul biar modern */
+    transition: all 0.2s;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white !important;
+    transform: translateX(5px); /* Efek geser dikit pas di hover */
+}
+
+.nav-link.active {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(13, 110, 253, 0.3); /* Bayangan biru */
+}
+
+/* Peta Leaflet Container */
+.map-responsive {
+    width: 100%;
+    height: 75vh; /* Tinggi peta menyesuaikan layar (75%) */
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+/* Card Modern */
+.card-modern {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    transition: transform 0.2s;
+}
+
+.card-modern:hover {
+    transform: translateY(-5px); /* Efek naik pas di hover */
+}
