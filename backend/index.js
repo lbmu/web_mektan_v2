@@ -3,6 +3,8 @@ const mysql = require('mysql2');
 const cors = require('cors');
 const mqtt = require('mqtt');
 
+const monitoringRoutes = require('./routes/monitoringRoutes');
+
 const app = express();
 const port = 3000;
 

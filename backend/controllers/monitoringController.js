@@ -32,10 +32,10 @@ exports.getStatusMesin = (req, res) => {
     const id = req.params.id;
 
     const query = `
-        SELECT m.*, a.nama_alat, a.jenis_alat
-        FROM monitoring_status m
-        JOIN alsintan a ON m.alsintan_id = a.alsintan_id
-        WHERE m.alsintan_id = ?
+    SELECT m.*, a.nama_alat, a.kategori_alat, a.merk_alat
+    FROM monitoring_status m
+    JOIN alsintan a ON m.alsintan_id = a.alsintan_id
+    WHERE m.alsintan_id = ?
     `;
 
     db.query(query, [id], (err, results) => {
