@@ -7,3 +7,5 @@
 include/secrets.h
 
 backend/node_modules
+backend/uploads
+backend/.env
