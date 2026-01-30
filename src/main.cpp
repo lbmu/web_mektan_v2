@@ -2,6 +2,8 @@
 #include <Wire.h>
 #include <TinyGPS++.h>
 #include <Adafruit_INA219.h>
+#include <espOTA.h>
+#include <secrets.h>
 
 // --- CONFIGURATION ---
 #define SIM_RX_PIN 16
@@ -14,6 +16,7 @@ HardwareSerial SerialGPS(1);
 
 TinyGPSPlus gps;
 Adafruit_INA219 ina219;
+ESP_OTA remoteUpdate;
 
 // --- SHARED DATA & MUTEX ---
 // This struct holds the latest data so tasks can share it safely
@@ -110,13 +113,37 @@ void TaskMonitor(void *pvParameters) {
     }
 }
 
+void TaskBlink(void *pvParameters) {
+    pinMode(2, OUTPUT); // GPIO 2 adalah Built-in LED ESP32 DevKit
+    for (;;) {
+        digitalWrite(2, HIGH); // Nyala
+        vTaskDelay(pdMS_TO_TICKS(500)); // Cepat (5x per detik)
+        digitalWrite(2, LOW);  // Mati
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
 void setup() {
     Serial.begin(115200);
     
+    // Inisialisasi OTA (Mode AP)
+    remoteUpdate.begin(WIFI_SSID, WIFI_PASS, OTA_PASS);
+
+    Serial.println("\n\n=========================================");
+    Serial.println("STATUS: FIRMWARE V1 (BLINKING)");
+    Serial.print("Built Time: ");
+    Serial.print(__DATE__); 
+    Serial.print(" ");
+    Serial.println(__TIME__);
+    Serial.println("=========================================\n");
+
+    Serial.println("System Started...");
     // Init Hardware
     SerialAT.begin(115200, SERIAL_8N1, SIM_RX_PIN, SIM_TX_PIN);
     SerialGPS.begin(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
     
+    
+
     if (!ina219.begin()) {
         Serial.println("❌ INA219 Not Found!");
     }
@@ -128,11 +155,13 @@ void setup() {
     // xTaskCreate(Function, Name, Stack Size, Param, Priority, Handle)
     xTaskCreate(TaskGPS, "GPS_Task", 4096, NULL, 1, NULL);
     xTaskCreate(TaskMonitor, "Monitor_Task", 4096, NULL, 1, NULL);
+    xTaskCreate(TaskBlink, "Blink_Task", 1024, NULL, 1, NULL);
 
     Serial.println("✅ FreeRTOS Scheduler Started...");
 }
 
 void loop() {
     // Empty! The Tasks handle everything now.
+
     vTaskDelete(NULL);
 }
