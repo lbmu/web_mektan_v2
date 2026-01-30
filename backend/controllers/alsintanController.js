@@ -36,7 +36,11 @@ exports.createAlsintan = (req, res) => {
         kapasitas_lahan,
     } = req.body;
 
-    const status_mesin = req.body.status || 'OFF';
+    const status = req.body.status || 'OFF';
+    // let status = 'OFF';
+    // if (req.body.status && req.body.status.toUpperCase() === 'ON') {
+    //     status = 'ON';
+    // }
     const gambar = req.file ? req.file.filename : 'default.jpg';
 
     if (!kode_perangkat || !nama_alat) {
@@ -45,7 +49,19 @@ exports.createAlsintan = (req, res) => {
 
     const query = `
         INSERT INTO alsintan
-        (kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, status_sensor, status_operasional, deskripsi, kapasitas_lahan, status_mesin, gambar)
+        (
+            kode_perangkat, 
+            nama_alat, 
+            kategori_alat, 
+            merk_alat, 
+            nomor_seri, 
+            status, 
+            status_sensor, 
+            status_operasional, 
+            deskripsi, 
+            kapasitas_lahan, 
+            gambar
+        )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
 
@@ -54,8 +70,8 @@ exports.createAlsintan = (req, res) => {
         nama_alat,
         kategori_alat,
         merk_alat,
-        status_mesin,
         nomor_seri,
+        status,
         status_sensor,
         status_operasional,
         deskripsi,
