@@ -3,11 +3,13 @@
    Ubah angka di sini, satu aplikasi berubah semua.
    ========================================= */
 :root {
-    --sidebar-width: 260px;     /* Lebar Sidebar Tetap */
+    --sidebar-width: 260px;  
+    --sidebar-width-collapsed: 80px; /* Lebar Sidebar saat dikurangi */
     --navbar-height: 60px;      /* Tinggi Navbar (jika ada nanti) */
     --primary-color: #0d6efd;   /* Warna Biru Bootstrap */
     --sidebar-bg: #212529;      /* Warna Gelap Sidebar */
     --bg-light: #f8f9fa;        /* Warna Background Konten */
+    --hover-bg: #343a40;       /* Warna saat hover elemen */
     --transition-speed: 0.3s;   /* Kecepatan animasi */
 }
 
@@ -40,7 +42,12 @@ body {
     z-index: 1000;
     overflow-y: auto; /* Scroll kalau menu kepanjangan */
     transition: width var(--transition-speed);
+    white-space: nowrap; 
     box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+}
+
+.sidebar-wrapper.collapsed {
+    width: var(--sidebar-width-collapsed);
 }
 
 /* --- Main Content Area --- */
@@ -52,6 +59,11 @@ body {
     padding: 2rem; /* Jarak ke dalam (padding) yang konsisten */
     background-color: var(--bg-light);
     transition: margin-left var(--transition-speed), width var(--transition-speed);
+}
+
+.content-wrapper.collapsed {
+    margin-left: var(--sidebar-width-collapsed);
+    width: calc(100% - var(--sidebar-width-collapsed));
 }
 
 /* =========================================
