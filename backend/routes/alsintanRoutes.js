@@ -7,9 +7,19 @@ const upload = require('../middleware/upload');
 router.post('/', upload.single('gambar'), alsintanController.createAlsintan);
 
 // Route untuk mengambil semua data alsintan
-router.get('/alsintan', alsintanController.getAllAlsintan);
+router.get('/', alsintanController.getAllAlsintan);
 
 // Route untuk mengambil data alsintan berdasarkan ID
-router.get('/alsintan/:id', alsintanController.getAlsintanById);
+router.get('/:id', alsintanController.getAlsintanById);
+
+router.put('/:id', upload.single('gambar'), alsintanController.updateAlsintanStatus);
+
+router.delete('/:id', (req, res) => {
+    const db = require('../config/database');
+    db.query('DELETE FROM alsintan WHERE alsintan_id = ?', [req.params.id], (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.json({ pesan: 'Berhasil dihapus' });
+    });
+});
 
 module.exports = router;

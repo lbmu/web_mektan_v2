@@ -3,23 +3,24 @@ import { ref } from 'vue';
 import Sidebar from './components/Sidebar.vue';
 import { RouterView } from 'vue-router';
 
-const isCollapsed = ref(false);
-const toggleSidebar = () => {
-    isCollapsed.value = !isCollapsed.value;
+const isClosed = ref(false);
+const handleToggle = () => {
+    isClosed.value = !isClosed.value;
+    console.log('Sidebar is now', isClosed.value);
 };
 
 </script>
 
 <template>
     <div class="app-container">
-        <div class="sidebar-wrapper" :class="{ 'collapsed': isCollapsed }">
+        <div class="sidebar-wrapper" :class="{ 'closed': isClosed }">
             <Sidebar 
-                :isCollapsed="isCollapsed"
-                @toggle-sidebar="toggleSidebar"
+                :isClosed="isClosed"
+                @toggle-sidebar="handleToggle"
             />
         </div>
 
-        <main class="content-wrapper" :class="{ 'collapsed': isCollapsed }">
+        <main class="content-wrapper" :class="{ 'collapsed': isClosed }">
             <RouterView /> 
         </main>
         

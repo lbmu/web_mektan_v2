@@ -93,3 +93,45 @@ exports.createAlsintan = (req, res) => {
         });
     });
 };
+
+exports.updateAlsintanStatus = (req, res) => {
+    const id = req.params.id;
+
+    const {
+        kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
+        status, status_sensor, status_operasional, deskripsi, kapasitas_lahan
+    } = req.body;
+
+    let query = `
+        UPDATE alsintan SET
+            kode_perangkat = ?,
+            nama_alat = ?,
+            kategori_alat = ?,
+            merk_alat = ?,
+            nomor_seri = ?,
+            status = ?,
+            status_sensor = ?,
+            status_operasional = ?,
+            deskripsi = ?,
+            kapasitas_lahan = ?
+    `;
+
+    let values = [
+        kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, status, status_sensor, status_operasional, deskripsi, kapasitas_lahan
+    ]; 
+
+    if (req.file) {
+        query += `, gambar = ? `;
+        values.push(req.file.filename);
+    }   
+
+    query += ` WHERE alsintan_id = ?`;
+    values.push(id);
+    
+    db.query(query, values, (err, result) => {
+        if (err) {
+            return res.status(500).json({ pesan: 'Gagal memperbarui data alsintan', error: err.sqlMessage });
+        }
+        res.status(200).json({ pesan: 'Data alsintan berhasil diperbarui'});
+    });
+};

@@ -4,7 +4,7 @@
    ========================================= */
 :root {
     --sidebar-width: 260px;  
-    --sidebar-width-collapsed: 80px; /* Lebar Sidebar saat dikurangi */
+    --sidebar-width-close: 80px; /* Lebar Sidebar saat dikurangi */
     --navbar-height: 60px;      /* Tinggi Navbar (jika ada nanti) */
     --primary-color: #0d6efd;   /* Warna Biru Bootstrap */
     --sidebar-bg: #212529;      /* Warna Gelap Sidebar */
@@ -40,14 +40,14 @@ body {
     background-color: var(--sidebar-bg);
     color: white;
     z-index: 1000;
-    overflow-y: auto; /* Scroll kalau menu kepanjangan */
+    overflow-y: auto; 
     transition: width var(--transition-speed);
     white-space: nowrap; 
     box-shadow: 4px 0 10px rgba(0,0,0,0.1);
 }
 
-.sidebar-wrapper.collapsed {
-    width: var(--sidebar-width-collapsed);
+.sidebar-wrapper.closed {
+    width: var(--sidebar-width-close);
 }
 
 /* --- Main Content Area --- */
@@ -61,27 +61,39 @@ body {
     transition: margin-left var(--transition-speed), width var(--transition-speed);
 }
 
-.content-wrapper.collapsed {
-    margin-left: var(--sidebar-width-collapsed);
-    width: calc(100% - var(--sidebar-width-collapsed));
+.content-wrapper.closed {
+    margin-left: var(--sidebar-width-close);
+    width: calc(100% - var(--sidebar-width-close));
 }
 
 /* =========================================
-   4. COMPONENT STYLES
+        4. COMPONENT STYLES
    ========================================= */
 
 /* Nav Link di Sidebar */
-.nav-link {
-    color: rgba(255, 255, 255, 0.8) !important; /* Timpa warna bootstrap */
-    margin-bottom: 5px;
-    border-radius: 8px; /* Sudut tumpul biar modern */
-    transition: all 0.2s;
+.nav-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
-.nav-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: white !important;
-    transform: translateX(5px); /* Efek geser dikit pas di hover */
+.nav-link, .dropdown-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Agar panah ada di kanan */
+    padding: 15px;
+    color: var(--text-color);
+    text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    width: 100%;
+    font-size: 16px;
+    transition: background 0.2s;
+}
+
+.nav-link:hover, .dropdown-btn:hover {
+    background-color: var(--hover-color);
 }
 
 .nav-link.active {
@@ -89,6 +101,60 @@ body {
     color: white !important;
     font-weight: bold;
     box-shadow: 0 4px 6px rgba(13, 110, 253, 0.3); /* Bayangan biru */
+}
+
+/* Teks Menu (Hilang saat close) */
+.link-text {
+    flex-grow: 1;
+    margin-left: 10px;
+    transition: opacity 0.2s;
+}
+.sidebar.close .link-text,
+.sidebar.close .arrow-icon {
+    opacity: 0; /* Sembunyikan teks & panah dropdown saat sidebar tutup */
+    pointer-events: none;
+}
+
+/* --- SUBMENU (DROPDOWN) --- */
+.sub-menu {
+    display: none; /* Default sembunyi */
+    background-color: #1a1c29;
+    padding-left: 0;
+    list-style: none;
+}
+
+/* KELAS 'show' (Sesuai Referensi) */
+.sub-menu.show {
+    display: block; /* Munculkan saat ada class show */
+}
+
+.sub-menu a {
+    padding-left: 40px; /* Indentasi anak menu */
+    font-size: 14px;
+}
+
+/* --- ROTASI PANAH --- */
+.arrow-icon {
+    transition: transform 0.3s;
+}
+.arrow-icon.rotate {
+    transform: rotate(180deg);
+}
+
+/* --- HEADER SIDEBAR --- */
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    font-weight: bold;
+}
+.toggle-btn {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-size: 20px;
 }
 
 /* Peta Leaflet Container */

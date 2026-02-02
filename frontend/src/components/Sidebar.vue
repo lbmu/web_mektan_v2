@@ -1,24 +1,43 @@
 <script setup>
+import { ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 
-defineProps({
-    isCollapsed: Boolean 
+// Terima status 'close' dari Layout (Parent)
+const props = defineProps({
+    isClosed: Boolean
 });
 
-defineEmits(['toggle-click']);
+const emit = defineEmits(['toggle-sidebar']);
+
+const activeMenu = ref(null);
+
+const toggleSubMenu = (menuName) => {
+    if (props.isClosed) {
+        emit('toggle-sidebar'); 
+    }
+    activeMenu.value = activeMenu.value === menuName ? null : menuName;
+};
+
+watch(() => props.isClosed, (newVal) => {
+    if (newVal === true) {
+        activeMenu.value = null;
+    }
+});
 </script>
+
 
 <template>
     <div class="d-flex flex-column flex-shrink-0 p-3 h-100">
     
         <div class="d-flex align-items-center mb-3 mb-md-0 text-white text-decoration-none">
-            <span v-if="!isCollapsed" class="fs-4 fw-bold me-auto fade-in">🚜 Si-Alsintan</span>
+            <span v-if="!isClosed" class="fs-4 fw-bold me-auto fade-in">🚜 Si-Alsintan</span>
         <button 
-            @click="$emit('toggle-click')" 
+            @click="$emit('toggle-sidebar')" 
             class="btn btn-dark border-0 p-1 d-flex align-items-center justify-content-center"
-            :class="isCollapsed ? 'mx-auto' : 'ms-auto'"
+            :class="isClosed ? 'mx-auto' : 'ms-auto'"
             style="width: 30px; height: 30px;">
-            <i class="bi" :class="isCollapsed ? 'bi-list' : 'bi-chevron-left'"></i>
+            <i class="bi bi-chevron-left transition-icon" 
+            :class="{ 'rotate-180': isClosed }"></i>
         </button>
 
         </div>
@@ -26,27 +45,27 @@ defineEmits(['toggle-click']);
         <hr class="text-white-50"> 
         <ul class="nav nav-pills flex-column mb-auto">
             <li class="nav-item">
-                <RouterLink to="/" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isCollapsed }" active-class="active">
+                <RouterLink to="/" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
                     <i class="bi bi-bar-chart-fill fs-5"></i>
-                    <span v-if="!isCollapsed" class="ms-3 fade-in">Dashboard</span>
+                    <span v-if="!isClosed" class="ms-3 fade-in">Dashboard</span>
                 </RouterLink>
             </li>
             <li>
-                <RouterLink to="/aset" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isCollapsed }" active-class="active">
+                <RouterLink to="/aset" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
                     <i class="bi bi-tools fs-5"></i>
-                    <span v-if="!isCollapsed" class="ms-3 fade-in">Manajemen Aset</span>
+                    <span v-if="!isClosed" class="ms-3 fade-in">Manajemen Aset</span>
                 </RouterLink>
             </li>
             <li>
-                <RouterLink to="/monitoring" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isCollapsed }" active-class="active">
+                <RouterLink to="/monitoring" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
                     <i class="bi bi-globe-americas fs-5"></i>
-                    <span v-if="!isCollapsed" class="ms-3 fade-in">Monitoring Peta</span>
+                    <span v-if="!isClosed" class="ms-3 fade-in">Monitoring Peta</span>
                 </RouterLink>
             </li>
             <li>
-                <RouterLink to="/estimasi" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isCollapsed }" active-class="active">
+                <RouterLink to="/estimasi" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
                     <i class="bi bi-calculator fs-5"></i>
-                    <span v-if="!isCollapsed" class="ms-3 fade-in">
+                    <span v-if="!isClosed" class="ms-3 fade-in">
                     Estimasi Lahan
                     </span>
                 </RouterLink>
@@ -55,14 +74,14 @@ defineEmits(['toggle-click']);
     
         <hr class="text-white-50">
     
-        <div class="dropdown" :class="{ 'text-center': isCollapsed }">
+        <div class="dropdown" :class="{ 'text-center': isClosed }">
             <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" 
-                :class="{ 'justify-content-center': isCollapsed }"
+                :class="{ 'justify-content-center': isClosed }"
                 id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
         
                 <img src="https://github.com/mdo.png" alt="" width="32" height="32" class="rounded-circle">
         
-                <strong v-if="!isCollapsed" class="ms-2 fade-in">Admin</strong>
+                <strong v-if="!isClosed" class="ms-2 fade-in">Admin</strong>
             </a>
             <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
                 <li><a class="dropdown-item" href="#">Logout</a></li>
@@ -71,6 +90,7 @@ defineEmits(['toggle-click']);
 
     </div>
 </template>
+
 
 <style scoped>
 /* --- LOGIKA TAMPILAN (ADAPTASI DARI REFERENSI) --- */

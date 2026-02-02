@@ -21,16 +21,21 @@ const router = createRouter({
       name: 'aset-list',
       component: AsetListView
     },
-    // {
-    //   path: '/aset/tambah',
-    //   name: 'aset-add',
-    //   component: () => import('../views/aset/AsetAddView.vue')
-    // },
-    // {
-    //   path: '/aset/:id',
-    //   name: 'aset-detail',
-    //   component: () => import('../views/aset/AsetDetailView.vue')
-    // },
+    {
+      path: '/aset/tambah',
+      name: 'aset-add',
+      component: () => import('../views/aset/AsetAddView.vue')
+    },
+    {
+      path: '/aset/:id',
+      name: 'aset-detail',
+      component: () => import('../views/aset/AsetDetailView.vue')
+    },
+    {
+      path: '/aset/edit/:id',
+      name: 'aset-edit',
+      component: () => import('../views/aset/AsetEditView.vue')
+    },
     {
       path: '/estimasi',
       name: 'estimasi',

@@ -38,7 +38,7 @@ const updateMapPosition = (lat, lng) => {
 //Ambil Data dari API
 const fetchData = async () => {
     try {
-        const response = await axios.get('http://localhost:3000/api/monitoring/status/1')
+        const response = await axios.get('http://localhost:3000/api/monitoring/status/11') //BELUM FIX KARENA HARDSUB ID
         alsintan.value = response.data;
         
         if (!map) {

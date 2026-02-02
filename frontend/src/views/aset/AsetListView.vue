@@ -8,7 +8,7 @@ const loading = ref(true);
 
 const fetchData = async () => {
     try {
-        const response = await axios.get('http://localhost:8000/api/aset');
+        const response = await axios.get('http://localhost:3000/api/alsintan');
         items.value = response.data;
     } catch (error) {
         console.error('Error fetching data:', error);
