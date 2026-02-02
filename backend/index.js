@@ -7,6 +7,8 @@ const path = require('path');
 const monitoringRoutes = require('./routes/monitoringRoutes');
 const alsintanRoutes = require('./routes/alsintanRoutes');
 
+require('./services/mqttServices');
+
 const app = express();
 const port = 3000;
 
