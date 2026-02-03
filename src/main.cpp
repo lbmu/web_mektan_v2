@@ -8,17 +8,21 @@
 // Modul untuk sistem
 #include "GpsHandler.h"
 #include "PowerMonitor.h"
+#include "CommHandler.h"
 
 // --- CONFIGURATION ---
 #define SIM_RX_PIN 16
 #define SIM_TX_PIN 17
 #define GPS_RX_PIN 32
 #define GPS_TX_PIN 33
+#define COMM_BAUDRATE 115200
+#define SERVER_URL "masih localhost aja"
 
 HardwareSerial SerialAT(2);
 
 // Instansiasi Objek Modul Baru
 ESP_OTA remoteUpdate;
+CommHandler comm(SIM_RX_PIN, SIM_TX_PIN, COMM_BAUDRATE);
 GpsHandler gpsHandler(GPS_RX_PIN, GPS_TX_PIN);
 PowerMonitor powerMonitor;
 
@@ -37,7 +41,41 @@ SemaphoreHandle_t dataMutex;
 
 // --- TASKS ---
 
-// Task 1: GPS Reading
+// Task 1: Telemetry via 4G
+void TaskTelemetry(void *pvParameters) {
+    while (1) {
+        String jsonPayload = "";
+        bool readyToSend = false;
+
+        // Ambil data dari Shared Memory (Mutex)
+        if (xSemaphoreTake(dataMutex, (TickType_t) 100) == pdTRUE) {
+            // Buat JSON String manual atau pakai ArduinoJson
+            jsonPayload = "{";
+            jsonPayload += "\"lat\":" + String(latestData.lat, 6) + ",";
+            jsonPayload += "\"lng\":" + String(latestData.lng, 6) + ",";
+            jsonPayload += "\"voltage\":" + String(latestData.voltage_V, 2) + ",";
+            jsonPayload += "\"power\":" + String(latestData.power_mW, 2);
+            jsonPayload += "}";
+            
+            readyToSend = true;
+            xSemaphoreGive(dataMutex);
+        }
+
+        if (readyToSend) {
+            Serial.println("📡 Sending Data via 4G...");
+            if (comm.sendData(SERVER_URL, jsonPayload)) {
+                Serial.println("✅ Data Sent Successfully!");
+            } else {
+                Serial.println("❌ Send Failed");
+            }
+        }
+
+        // Kirim setiap 10 detik (Jangan terlalu cepat agar hemat kuota/baterai)
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
+    }
+}
+
+// Task 2: GPS Reading
 void TaskGPS(void *pvParameters) {
     while (1) {
         // Panggil method update() dari modul GpsHandler
@@ -58,7 +96,7 @@ void TaskGPS(void *pvParameters) {
     }
 }
 
-// Task 2: Sensor Monitor
+// Task 3: Sensor Monitor
 void TaskMonitor(void *pvParameters) {
     while (1) {
         // Baca data sensor melalui modul PowerMonitor
@@ -119,6 +157,14 @@ void setup() {
 
     Serial.println("\n\n=== FIRMWARE V2 (MODULAR) ===");
 
+    // Setup Comm Module
+    Serial.println("Initializing SIM7600 (4G)...");
+    if (!comm.begin()) {
+        Serial.println("❌ SIM7600 Init Failed! Check Power/Wiring.");
+    } else {
+        Serial.println("✅ SIM7600 Ready & Connected to LTE");
+    }
+
     // Init SIM Serial
     SerialAT.begin(115200, SERIAL_8N1, SIM_RX_PIN, SIM_TX_PIN);
     
@@ -136,6 +182,7 @@ void setup() {
     dataMutex = xSemaphoreCreateMutex();
 
     // Create Tasks
+    // xTaskCreate(TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, NULL);
     xTaskCreate(TaskGPS, "GPS_Task", 4096, NULL, 1, NULL);
     xTaskCreate(TaskMonitor, "Monitor_Task", 4096, NULL, 1, NULL);
     xTaskCreate(TaskBlink, "Blink_Task", 1024, NULL, 1, NULL);

@@ -1,0 +1,29 @@
+#ifndef COMM_HANDLER_H
+#define COMM_HANDLER_H
+
+#include <Arduino.h>
+
+class CommHandler {
+public:
+    // Constructor menerima pin RX, TX dan Baudrate
+    CommHandler(int rxPin, int txPin, long baudRate);
+
+    // Inisialisasi modul & koneksi ke jaringan
+    bool begin();
+
+    // Mengirim data ke server (POST Request)
+    // Mengembalikan true jika server merespons HTTP 200 OK
+    bool sendData(String url, String jsonData);
+
+private:
+    int _rxPin;
+    int _txPin;
+    long _baudRate;
+    HardwareSerial* _serialAT;
+
+    // Fungsi helper internal untuk kirim perintah AT
+    String sendATCommand(String command, int timeout, String expectedResponse);
+    bool configureNetwork();
+};
+
+#endif

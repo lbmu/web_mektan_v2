@@ -18,4 +18,4 @@ PowerData PowerMonitor::read() {
     data.loadVoltage_V = data.busVoltage_V + (data.shuntVoltage_mV / 1000);
     
     return data;
-}  
+}
