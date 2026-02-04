@@ -20,8 +20,8 @@ client.on('connect', () => {
     // 3. MULAI MENGIRIM DATA SETIAP 5 DETIK
     setInterval(() => {
         // Simulasi pergerakan (geser dikit-dikit)
-        lat += 0.0001; // Bergerak ke utara
-        long += 0.0001; // Bergerak ke timur
+        lat += 0.000001; // Bergerak ke utara
+        long += 0.000001; // Bergerak ke timur
 
         // Format data JSON
         const data = {
@@ -36,5 +36,5 @@ client.on('connect', () => {
         client.publish(TOPIC, payload);
         console.log(`📤 Mengirim data: Lat ${data.lat}, Long ${data.long}`);
 
-    }, 1000); // 5000 ms = 5 detik
+    }, 500); // 5000 ms = 5 detik
 });

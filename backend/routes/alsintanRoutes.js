@@ -12,7 +12,11 @@ router.get('/', alsintanController.getAllAlsintan);
 // Route untuk mengambil data alsintan berdasarkan ID
 router.get('/:id', alsintanController.getAlsintanById);
 
-router.put('/:id', upload.single('gambar'), alsintanController.updateAlsintanStatus);
+router.put('/:id', upload.single('gambar'), alsintanController.updateAlsintan);
+
+router.get('/:id/riwayat', alsintanController.getRiwayat);
+
+router.post('/:id/reset', alsintanController.resetArgo);
 
 router.delete('/:id', (req, res) => {
     const db = require('../config/database');

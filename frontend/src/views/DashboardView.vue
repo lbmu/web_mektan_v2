@@ -82,12 +82,27 @@ const updateMarker = (id, nama, lat, long, status) => {
 
 const generatePopupContent = (nama, status, lat, long, id) => {
   return `
-    <div style="text-align:center;">
-      <b style="font-size:14px;">${nama}</b><br>
-      <span class="badge ${status === 'ON' ? 'bg-success' : 'bg-secondary'}">${status}</span><br>
-      <small class="text-muted">Lat: ${lat.toFixed(6)}</small><br>
-      <small class="text-muted">Long: ${long.toFixed(6)}</small><br>
-      <a href="/aset/${id}" style="text-decoration:none; font-weight:bold; color:#0d6efd;">Lihat Detail</a>
+    <div style="text-align:center; min-width: 120px;">
+      <b style="font-size:14px; display:block; margin-bottom:4px;">${nama}</b>
+      
+      <span class="badge ${status === 'ON' ? 'bg-success' : 'bg-secondary'} mb-2">${status}</span><br>
+      
+      <div style="background:#f8f9fa; padding:4px; border-radius:4px; font-size:11px; margin-bottom:8px;" class="text-muted">
+        Lat: ${lat.toFixed(5)}<br>
+        Long: ${long.toFixed(5)}
+      </div>
+
+      <a href="/monitoring/${id}" 
+         class="btn btn-sm btn-primary w-100 text-white text-decoration-none py-1"
+         style="font-size: 12px;">
+         📡 Pantau Live
+      </a>
+      
+      <div class="mt-1">
+        <a href="/aset/${id}" class="text-muted" style="font-size:10px; text-decoration:none;">
+           Detail Aset &rarr;
+        </a>
+      </div>
     </div>
   `;
 };

@@ -37,6 +37,11 @@ const router = createRouter({
       component: () => import('../views/aset/AsetEditView.vue')
     },
     {
+      path: '/monitoring/:id', 
+      name: 'monitoring-detail',
+      component: () => import('../views/MonitoringDetailView.vue')
+    },
+    {
       path: '/estimasi',
       name: 'estimasi',
       component: DashboardView
