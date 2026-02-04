@@ -1,12 +1,19 @@
 #include "GpsHandler.h"
 
-// Menggunakan Serial1 (HardwareSerial 1) sesuai kode lama Anda
+
 GpsHandler::GpsHandler(int rxPin, int txPin) : _rxPin(rxPin), _txPin(txPin) {
-    _serial = new HardwareSerial(1);
+    _serial = new HardwareSerial(2); // Gunakan UART2 untuk GPS
 }
 
 void GpsHandler::begin(unsigned long baud) {
     _serial->begin(baud, SERIAL_8N1, _rxPin, _txPin);
+}
+
+void GpsHandler::echoRawData() {
+    while (_serial->available()) {
+        char c = _serial->read();
+        Serial.write(c); // Kirim langsung ke monitor (Passthrough)
+    }
 }
 
 bool GpsHandler::update() {

@@ -22,11 +22,12 @@ public:
     // Getter data
     double getLat();
     double getLng();
+    void echoRawData();
 
 private:
     int _rxPin;
     int _txPin;
-    HardwareSerial* _serial; // Pointer ke HardwareSerial
+    HardwareSerial* _serial;
     TinyGPSPlus _gps;
 };
 

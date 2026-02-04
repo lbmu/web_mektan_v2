@@ -3,7 +3,7 @@
 CommHandler::CommHandler(int rxPin, int txPin, long baudRate) 
     : _rxPin(rxPin), _txPin(txPin), _baudRate(baudRate) {
     // Menggunakan Serial2 (atau SerialAT yang didefinisikan sebelumnya)
-    _serialAT = new HardwareSerial(2);
+    _serialAT = new HardwareSerial(1);
 }
 
 bool CommHandler::begin() {
