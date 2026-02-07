@@ -10,8 +10,7 @@ const form = ref({
     nama_alat: '',
     kategori_alat: '',
     merk_alat: '',
-    nomor_seri: '',
-    status: 'OFF',            // Default OFF
+    nomor_seri: '',          
     status_sensor: 'Normal',  // Default Normal
     status_operasional: 'Siap Digunakan',
     deskripsi: '',
@@ -46,7 +45,6 @@ const submitForm = async () => {
         formData.append('kategori_alat', form.value.kategori_alat);
         formData.append('merk_alat', form.value.merk_alat);
         formData.append('nomor_seri', form.value.nomor_seri);
-        formData.append('status', form.value.status);
         formData.append('status_sensor', form.value.status_sensor);
         formData.append('status_operasional', form.value.status_operasional);
         formData.append('deskripsi', form.value.deskripsi);
@@ -132,60 +130,46 @@ const submitForm = async () => {
                             <h5 class="text-primary mb-3">Status & Detail</h5>
 
                             <div class="row">
-                                <div class="col-md-4 mb-3">
-                                <label class="form-label">Status Mesin</label>
-                                <select v-model="form.status" class="form-select bg-light">
-                                    <option value="OFF">OFF</option>
-                                    <option value="ON">ON</option>
-                                </select>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Status Operasional (Fisik)</label>
+                                    <select v-model="form.status_operasional" class="form-select bg-light fw-bold text-dark">
+                                        <option value="Siap Digunakan">Siap Digunakan</option>
+                                        <option value="Sedang Beroperasi">Sedang Beroperasi</option>
+                                        <option value="Maintenance">Maintenance</option>
+                                        <option value="Rusak">Rusak</option>
+                                    </select>
+                                    <div class="form-text">Status kondisi fisik alat (Administratif).</div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Kapasitas / Cakupan Lahan</label>
+                                    <input v-model="form.kapasitas_lahan" type="text" class="form-control" placeholder="Contoh: 5 Ha / Hari">
+                                </div>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Sensor</label>
-                                <select v-model="form.status_sensor" class="form-select">
-                                    <option value="Normal">Normal</option>
-                                    <option value="Warning">Warning</option>
-                                    <option value="Error">Error</option>
-                                </select>
+
+                            <div class="mb-3">
+                                <label class="form-label">Foto Alat</label>
+                                <input @change="handleFileUpload" type="file" class="form-control" accept="image/*">
+                                <div v-if="previewGambar" class="mt-2 text-center border rounded p-2 bg-light">
+                                    <img :src="previewGambar" alt="Preview" class="img-fluid" style="max-height: 150px;">
+                                </div>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Operasional</label>
-                                <select v-model="form.status_operasional" class="form-select">
-                                    <option value="Siap Digunakan">Siap Digunakan</option>
-                                    <option value="Sedang Beroperasi">Sedang Beroperasi</option>
-                                    <option value="Maintenance">Maintenance</option>
-                                    <option value="Rusak">Rusak</option>
-                                </select>
+
+                            <div class="mb-3">
+                                <label class="form-label">Deskripsi Tambahan</label>
+                                <textarea v-model="form.deskripsi" class="form-control" rows="3" placeholder="Keterangan kondisi alat..."></textarea>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Kapasitas / Cakupan Lahan</label>
-                            <input v-model="form.kapasitas_lahan" type="text" class="form-control" placeholder="Contoh: 5 Ha / Hari">
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Foto Alat</label>
-                            <input @change="handleFileUpload" type="file" class="form-control" accept="image/*">
-                            <div v-if="previewGambar" class="mt-2 text-center border rounded p-2 bg-light">
-                                <img :src="previewGambar" alt="Preview" class="img-fluid" style="max-height: 150px;">
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Deskripsi Tambahan</label>
-                            <textarea v-model="form.deskripsi" class="form-control" rows="3" placeholder="Keterangan kondisi alat..."></textarea>
-                        </div>
                     </div>
 
-                </div>
-
-                <div class="d-flex justify-content-end mt-4 pt-3 border-top">
-                    <button type="button" @click="router.back()" class="btn btn-light border me-2">Batal</button>
-                    <button type="submit" class="btn btn-primary px-4 fw-bold" :disabled="isSubmitting">
-                        <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
-                        {{ isSubmitting ? 'Menyimpan...' : 'Simpan Aset' }}
-                    </button>
-                </div>
+                    <div class="d-flex justify-content-end mt-4 pt-3 border-top">
+                        <button type="button" @click="router.back()" class="btn btn-light border me-2">Batal</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-bold" :disabled="isSubmitting">
+                            <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
+                            {{ isSubmitting ? 'Menyimpan...' : 'Simpan Aset' }}
+                        </button>
+                    </div>
 
                 </form>
 

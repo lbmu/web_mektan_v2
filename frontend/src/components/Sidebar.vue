@@ -1,6 +1,7 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
+import Swal from 'sweetalert2';
 
 // Terima status 'close' dari Layout (Parent)
 const props = defineProps({
@@ -10,12 +11,50 @@ const props = defineProps({
 const emit = defineEmits(['toggle-sidebar']);
 
 const activeMenu = ref(null);
+const userName = ref('Admin');
 
 const toggleSubMenu = (menuName) => {
     if (props.isClosed) {
         emit('toggle-sidebar'); 
     }
     activeMenu.value = activeMenu.value === menuName ? null : menuName;
+};
+
+onMounted(() => {
+    const session = localStorage.getItem('user');
+    if (session) {
+        try {
+            const userData = JSON.parse(session);
+            userName.value = userData.nama || 'Admin';
+        } catch (e) {
+            console.error("Gagal parsing user data");
+        }
+    }
+});  
+
+const handleLogout = () => {
+    Swal.fire({
+        title: 'Konfirmasi Logout',
+        text: 'Apakah Anda yakin ingin logout?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Ya, Logout',
+        cancelButtonText: 'Batal'
+    }) .then((result) => {
+        if (result.isConfirmed) {
+            localStorage.removeItem('user');
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Logout Berhasil',
+                timer: 1000,
+            }).then(() => {
+                window.location.href = '/login';
+            });
+        }
+    });
 };
 
 watch(() => props.isClosed, (newVal) => {
@@ -31,15 +70,14 @@ watch(() => props.isClosed, (newVal) => {
     
         <div class="d-flex align-items-center mb-3 mb-md-0 text-white text-decoration-none">
             <span v-if="!isClosed" class="fs-4 fw-bold me-auto fade-in">🚜 Si-Alsintan</span>
-        <button 
-            @click="$emit('toggle-sidebar')" 
-            class="btn btn-dark border-0 p-1 d-flex align-items-center justify-content-center"
-            :class="isClosed ? 'mx-auto' : 'ms-auto'"
-            style="width: 30px; height: 30px;">
-            <i class="bi bi-chevron-left transition-icon" 
-            :class="{ 'rotate-180': isClosed }"></i>
-        </button>
-
+            <button 
+                @click="$emit('toggle-sidebar')" 
+                class="btn btn-dark border-0 p-1 d-flex align-items-center justify-content-center"
+                :class="isClosed ? 'mx-auto' : 'ms-auto'"
+                style="width: 30px; height: 30px;">
+                <i class="bi bi-chevron-left transition-icon" 
+                :class="{ 'rotate-180': isClosed }"></i>
+            </button>
         </div>
     
         <hr class="text-white-50"> 
@@ -47,7 +85,7 @@ watch(() => props.isClosed, (newVal) => {
             <li class="nav-item">
                 <RouterLink to="/" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
                     <i class="bi bi-bar-chart-fill fs-5"></i>
-                    <span v-if="!isClosed" class="ms-3 fade-in">Dashboard</span>
+                    <span v-if="!isClosed" class="ms-3 fade-in">Home</span>
                 </RouterLink>
             </li>
             <li>
@@ -81,10 +119,10 @@ watch(() => props.isClosed, (newVal) => {
         
                 <img src="https://github.com/mdo.png" alt="" width="32" height="32" class="rounded-circle">
         
-                <strong v-if="!isClosed" class="ms-2 fade-in">Admin</strong>
+                <strong v-if="!isClosed" class="ms-2 fade-in">{{ userName }}</strong>
             </a>
             <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
-                <li><a class="dropdown-item" href="#">Logout</a></li>
+                <li><a class="dropdown-item" href="#" @click.prevent="handleLogout">Logout</a></li>
             </ul>
         </div>
 
@@ -93,10 +131,7 @@ watch(() => props.isClosed, (newVal) => {
 
 
 <style scoped>
-/* --- LOGIKA TAMPILAN (ADAPTASI DARI REFERENSI) --- */
-
 /* 1. Header Area */
-/* Kita set min-width agar layout tidak berantakan saat transisi */
 .header-area {
     min-width: 200px; 
     overflow: hidden;
@@ -118,7 +153,6 @@ watch(() => props.isClosed, (newVal) => {
 }
 
 /* 4. Ikon Menu */
-/* Penting: flex-shrink-0 agar ikon tidak mengecil/gepeng saat sidebar menutup */
 .icon-fixed {
     min-width: 24px;
     text-align: center;

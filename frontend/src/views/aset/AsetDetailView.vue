@@ -26,6 +26,10 @@ const fetchDetail = async () => {
     }
 };
 
+const goBack = () => {
+    router.push({ name: 'aset-list' });
+}; 
+
 // Fungsi Hapus Aset (Opsional, untuk melengkapi fitur)
 const deleteAset = async () => {
     if (confirm('Apakah Anda yakin ingin menghapus aset ini? Data tidak bisa dikembalikan.')) {
@@ -48,7 +52,7 @@ onMounted(() => {
     <div class="container-fluid">
     
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <button @click="router.back()" class="btn btn-outline-secondary">
+            <button @click="goBack" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Kembali
             </button>
 

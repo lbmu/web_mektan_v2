@@ -14,7 +14,6 @@ const form = ref({
   kategori_alat: '',
   merk_alat: '',
   nomor_seri: '',
-  status: 'OFF',
   status_sensor: 'Normal',
   status_operasional: 'Siap Digunakan',
   deskripsi: '',
@@ -41,7 +40,6 @@ const fetchDetail = async () => {
         kategori_alat: data.kategori_alat,
         merk_alat: data.merk_alat,
         nomor_seri: data.nomor_seri,
-        status: data.status,
         status_sensor: data.status_sensor,
         status_operasional: data.status_operasional,
         deskripsi: data.deskripsi,
@@ -80,7 +78,6 @@ const submitForm = async () => {
     formData.append('kategori_alat', form.value.kategori_alat);
     formData.append('merk_alat', form.value.merk_alat);
     formData.append('nomor_seri', form.value.nomor_seri);
-    formData.append('status', form.value.status);
     formData.append('status_sensor', form.value.status_sensor);
     formData.append('status_operasional', form.value.status_operasional);
     formData.append('deskripsi', form.value.deskripsi);
@@ -124,6 +121,7 @@ onMounted(() => {
 
     <div v-if="isLoading" class="text-center py-5">
         <div class="spinner-border text-primary"></div>
+        <p class="mt-2 text-muted">Memuat data...</p>
     </div>
 
     <div v-else class="card border-0 shadow-sm">
@@ -172,35 +170,20 @@ onMounted(() => {
               <h5 class="text-primary mb-3">Status & Gambar</h5>
 
               <div class="row">
-                <div class="col-md-4 mb-3">
-                  <label class="form-label">Status</label>
-                  <select v-model="form.status" class="form-select bg-light">
-                    <option value="OFF">OFF</option>
-                    <option value="ON">ON</option>
-                  </select>
-                </div>
-                <div class="col-md-4 mb-3">
-                  <label class="form-label">Sensor</label>
-                  <select v-model="form.status_sensor" class="form-select">
-                    <option value="Normal">Normal</option>
-                    <option value="Warning">Warning</option>
-                    <option value="Error">Error</option>
-                  </select>
-                </div>
-                <div class="col-md-4 mb-3">
-                  <label class="form-label">Operasional</label>
-                  <select v-model="form.status_operasional" class="form-select">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Status Operasional (Fisik)</label>
+                  <select v-model="form.status_operasional" class="form-select fw-bold bg-light">
                     <option value="Siap Digunakan">Siap Digunakan</option>
                     <option value="Sedang Beroperasi">Sedang Beroperasi</option>
                     <option value="Maintenance">Maintenance</option>
                     <option value="Rusak">Rusak</option>
                   </select>
                 </div>
-              </div>
 
-              <div class="mb-3">
-                <label class="form-label">Kapasitas Lahan</label>
-                <input v-model="form.kapasitas_lahan" type="text" class="form-control">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Kapasitas Lahan</label>
+                    <input v-model="form.kapasitas_lahan" type="text" class="form-control">
+                </div>
               </div>
 
               <div class="mb-3">
