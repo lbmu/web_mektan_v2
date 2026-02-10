@@ -7,7 +7,7 @@
 class GpsHandler {
 public:
     // Constructor menerima pin RX dan TX
-    GpsHandler(int rxPin, int txPin);
+    GpsHandler(int rxPin, int txPin, int serialPort);
     
     // Inisialisasi serial GPS
     void begin(unsigned long baud);

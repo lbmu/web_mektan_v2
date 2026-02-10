@@ -9,6 +9,9 @@ include/secrets.h
 platformio.ini
 test/README
 
+# Manual SIM7600G
+MODULE-SIM7600G
+
 # Website
 backend/node_modules
 backend/uploads

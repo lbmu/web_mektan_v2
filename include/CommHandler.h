@@ -6,7 +6,7 @@
 class CommHandler {
 public:
     // Constructor menerima pin RX, TX dan Baudrate
-    CommHandler(int rxPin, int txPin, long baudRate);
+    CommHandler(int rxPin, int txPin, long baudRate, int serialPort);
 
     // Inisialisasi modul & koneksi ke jaringan
     bool begin();

@@ -1,8 +1,8 @@
 #include "GpsHandler.h"
 
 
-GpsHandler::GpsHandler(int rxPin, int txPin) : _rxPin(rxPin), _txPin(txPin) {
-    _serial = new HardwareSerial(2); // Gunakan UART2 untuk GPS
+GpsHandler::GpsHandler(int rxPin, int txPin, int serialPort): _rxPin(rxPin), _txPin(txPin) {
+    _serial = new HardwareSerial(serialPort);
 }
 
 void GpsHandler::begin(unsigned long baud) {

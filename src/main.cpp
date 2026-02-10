@@ -12,28 +12,26 @@
 #include "SystemDiagnostics.h"
 
 // Pin modul SIM7600G
-#define SIM_RX_PIN 32
-#define SIM_TX_PIN 33
+#define SIM_RX_PIN 16
+#define SIM_TX_PIN 17
 #define COMM_BAUDRATE 115200
+#define SIM_SERIAL_PORT 1
 
 // Pin modul GPS NEO M8N (mereun)
-#define GPS_RX_PIN 16
-#define GPS_TX_PIN 17
+#define GPS_RX_PIN 32
+#define GPS_TX_PIN 33
+#define GPS_SERIAL_PORT 2
 
 #define SERVER_URL "belum kocak"
 
-// cek notip
-#define RUN_DIAGNOSTICS // <-- Buat cek kabel
-// #define RUN_TEST // <- Buat run task biasa
-
-// UART mode yang rebutan
-HardwareSerial SerialAT(1);
-HardwareSerial SerialGPS(2);
+// cek notip (komentar untuk disable)
+// #define RUN_DIAGNOSTICS // <-- Buat cek kabel/
+#define RUN_TEST // <- Buat run task biasa
 
 // Instansiasi Objek Modul Baru
 ESP_OTA remoteUpdate;
-CommHandler comm(SIM_RX_PIN, SIM_TX_PIN, COMM_BAUDRATE);
-GpsHandler gpsHandler(GPS_RX_PIN, GPS_TX_PIN);
+CommHandler comm(SIM_RX_PIN, SIM_TX_PIN, COMM_BAUDRATE, SIM_SERIAL_PORT);
+GpsHandler gpsHandler(GPS_RX_PIN, GPS_TX_PIN, GPS_SERIAL_PORT);
 PowerMonitor powerMonitor;
 SystemDiagnostics diagnostics(&powerMonitor, &gpsHandler, &comm);
 
@@ -177,10 +175,10 @@ void setup() {
     }
 
     // Init SIM Serial
-    SerialAT.begin(115200, SERIAL_8N1, SIM_RX_PIN, SIM_TX_PIN);
+    comm.begin();
     
     // Init GPS Module
-    SerialGPS.begin(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+    gpsHandler.begin(9600);
 
     // Init Power Module
     if (!powerMonitor.begin()) {
@@ -192,10 +190,8 @@ void setup() {
     // Create Mutex
     dataMutex = xSemaphoreCreateMutex();
 
-    // Create Tasks
-    // xTaskCreate(TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, NULL);
-    
     #ifdef RUN_TEST
+    // xTaskCreate(TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, NULL);
     xTaskCreate(TaskGPS, "GPS_Task", 4096, NULL, 1, NULL);
     xTaskCreate(TaskMonitor, "Monitor_Task", 4096, NULL, 1, NULL);
     xTaskCreate(TaskBlink, "Blink_Task", 1024, NULL, 1, NULL);
@@ -205,6 +201,7 @@ void setup() {
 
     #ifdef RUN_DIAGNOSTICS
     diagnostics.run(TEST_LAB_PASSTHROUGH);
+    
     #endif
 }
 
