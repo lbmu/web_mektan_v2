@@ -3,6 +3,8 @@
 
 // Modul untuk OTA
 #include <espOTA.h>
+
+// Modul untuk kredensial
 #include <secrets.h>
 
 // Modul untuk sistem
@@ -22,11 +24,19 @@
 #define GPS_TX_PIN 33
 #define GPS_SERIAL_PORT 2
 
-#define SERVER_URL "belum kocak"
+// Pin hiasan
+#define LED_PIN 2
 
 // cek notip (komentar untuk disable)
 // #define RUN_DIAGNOSTICS // <-- Buat cek kabel/
 #define RUN_TEST // <- Buat run task biasa
+
+ /* @brief
+ /  semua data sensitif meliputi SSID, PASS, OTA PASS, SERVER URL
+ /  didefinisikan di file 'secrets.h'
+ /  agar mudah diatur tanpa mengubah kode utama
+ /  dan menghindari upload data sensitif ke repo publik 
+*/
 
 // Instansiasi Objek Modul Baru
 ESP_OTA remoteUpdate;
@@ -36,6 +46,7 @@ PowerMonitor powerMonitor;
 SystemDiagnostics diagnostics(&powerMonitor, &gpsHandler, &comm);
 
 // --- SHARED DATA & MUTEX ---
+// Struktur data bersama antar task
 struct SharedData {
     double lat;
     double lng;
@@ -149,11 +160,11 @@ void TaskMonitor(void *pvParameters) {
 }
 
 void TaskBlink(void *pvParameters) {
-    pinMode(2, OUTPUT);
+    pinMode(LED_PIN, OUTPUT);
     for (;;) {
-        digitalWrite(2, HIGH);
+        digitalWrite(LED_PIN, HIGH);
         vTaskDelay(pdMS_TO_TICKS(500));
-        digitalWrite(2, LOW);
+        digitalWrite(LED_PIN, LOW);
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
@@ -201,7 +212,6 @@ void setup() {
 
     #ifdef RUN_DIAGNOSTICS
     diagnostics.run(TEST_LAB_PASSTHROUGH);
-    
     #endif
 }
 
