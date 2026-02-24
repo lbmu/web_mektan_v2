@@ -1,23 +1,16 @@
-# CD-1
+# Deskripsi Umum
 
-# CD-2
-
-# CD-3
-
-# CD-4
-## Deskripsi Umum
-
-## Detail Implementasi
+# Detail Implementasi
 
 ## Lingkungan Pengembangan
 
 Jelasin pake software dan tools apa aja, kaya VSCode, EasyEDA, dsb.
 
-### Hardware
+## Hardware
 
 Jelasin Hardware berperan sebagai apa dalam keseluruhan sistem.
 
-#### Komponen
+### Komponen
 
 * Modul Mikrokontroler ESP32
 * Modul Komunikasi Seluler SIM7600G
@@ -26,44 +19,67 @@ Jelasin Hardware berperan sebagai apa dalam keseluruhan sistem.
 * Modul Regulasi Listrik
 * Modul Pendukung lainnya
 
-#### Desain
+### Desain
 
 * Desain PCB
 * Desain Casing
 
-#### Skematik
+### Skematik
 
 Gambar skematik sistem
 
-#### Implementasi
+### Implementasi
 
 Jelasin 'magic' nya per komponen/modul
 
-##### Mikro
+> [!NOTE]
+> source code nya masih pake header, yang cpp nanti di alur kerja
+
+#### Mikro
+* Spesifikasi
+* Pinout
+* Source Code 
+
+#### KomSel
 * Spesifikasi
 * Pinout
 * Source Code
 
-##### KomSel
+#### GPS
 * Spesifikasi
 * Pinout
 * Source Code
 
-##### GPS
+#### Sensor Tegangan
 * Spesifikasi
 * Pinout
 * Source Code
 
-##### Sensor Tegangan
-* Spesifikasi
-* Pinout
-* Source Code
-
-##### Regulasi Listrik
+#### Regulasi Listrik
 apa lah jelasin
 
-##### Modul lain
+#### Modul lain
 apa lah jelasin
 
+## Software
 
-## Prosedur Pengoperasian
+apa lah jelasin
+
+## Alur Kerja Sistem
+
+The Delusion of something something
+
+### Perception Layer
+
+'magic' per modul sampai data dikirim ke network
+
+### Network Layer
+
+API yang dipakai, atau apalah gnanti dicoba
+
+### Application Layer
+
+tampilan data yang diterima oleh backend(?)
+
+# Prosedur Pengoperasian
+
