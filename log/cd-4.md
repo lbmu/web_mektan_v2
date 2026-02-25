@@ -2,15 +2,19 @@
 
 # Detail Implementasi
 
+paragraf pengantar *lorem ipsum*
+
 ## Lingkungan Pengembangan
 
-Jelasin pake software dan tools apa aja, kaya VSCode, EasyEDA, dsb.
+Jelasin pake software dan tools apa aja yang digunakan untuk mengembangkan proyek, kaya VSCode, EasyEDA, dsb.
 
 ## Hardware
 
 Jelasin Hardware berperan sebagai apa dalam keseluruhan sistem.
 
 ### Komponen
+
+Paragraf pengantar *lorem ipsum*
 
 * Modul Mikrokontroler ESP32
 * Modul Komunikasi Seluler SIM7600G
@@ -30,14 +34,15 @@ Gambar skematik sistem
 
 ### Implementasi
 
-Jelasin 'magic' nya per komponen/modul
+paragraf pengantar *lorem ipsum*
 
 > [!NOTE]
-> source code nya masih pake header, yang cpp nanti di alur kerja
+> source code nya masih pake header, yang cpp nanti di alur kerja sistem
 
 #### Mikro
 * Spesifikasi
-* Pinout
+* GPIO Matrix
+* OTA brief
 * Source Code 
 
 #### KomSel
@@ -63,7 +68,27 @@ apa lah jelasin
 
 ## Software
 
-apa lah jelasin
+paragraf pengantar *lorem ipsum*
+
+### Framework
+
+framework teh apa? (serius nanya)
+* Arduino
+
+### Library
+
+* mikalhart/TinyGPSPlus@^1.1.0
+* adafruit/Adafruit INA219@^1.2.3
+
+### FreeRTOS
+
+Perbedaan superloop dan FreeRTOS
+Pemilihan arsitektur FreeRTOS pada sistem ini didasarkan pada kebutuhan akan keandalan dan responsivitas tinggi yang menjadi karakteristik perangkat IoT modern. Berbeda dengan arsitektur Superloop yang menjalankan tugas secara sekuensial dan berisiko mengalami delay signifikan pada sistem yang kompleks, RTOS memungkinkan pembagian tugas secara independen dengan prioritas yang jelas. Hal ini memastikan bahwa pengambilan data sensor dan koordinat GPS tetap berjalan akurat meskipun sistem sedang melakukan proses pengiriman data yang memiliki latensi jaringan.
+Tekankan terutama di `delay(x);` dan `vTaskDelay(x / portTICK_PERIOD_MS);`
+
+### OTA
+
+OTA biar gak usah tiduran, kotor-kotoran bongkar pasang traktor
 
 ## Alur Kerja Sistem
 
@@ -71,15 +96,20 @@ The Delusion of something something
 
 ### Perception Layer
 
-'magic' per modul sampai data dikirim ke network
+* RTOS
+* UART
+* I2C
 
 ### Network Layer
 
-API yang dipakai, atau apalah gnanti dicoba
+1. AT Command
+2. HTTP
 
-### Application Layer
+### Service/Application Layer
 
 tampilan data yang diterima oleh backend(?)
 
 # Prosedur Pengoperasian
 
+kalimat pengantar *lorem ipsum*
+> Ini mah dari README GitHub aja lah

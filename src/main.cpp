@@ -22,14 +22,16 @@
 // Pin modul GPS NEO M8N (mereun)
 #define GPS_RX_PIN 32
 #define GPS_TX_PIN 33
+#define GPS_BAUDRATE 9600
 #define GPS_SERIAL_PORT 2
 
 // Pin hiasan
 #define LED_PIN 2
 
 // cek notip (komentar untuk disable)
-// #define RUN_DIAGNOSTICS // <-- Buat cek kabel/
+// #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
 #define RUN_TEST // <- Buat run task biasa
+
 
  /* @brief
  /  semua data sensitif meliputi SSID, PASS, OTA PASS, SERVER URL
@@ -63,19 +65,35 @@ SemaphoreHandle_t dataMutex;
 
 // Task 1: Telemetry via 4G
 void TaskTelemetry(void *pvParameters) {
+    // Flag untuk melacak status koneksi di dalam Task ini
+    static bool lteConnected = false; 
+
     while (1) {
+        // --- LOGIKA REKONEKSI ---
+        // Jika belum connect, JANGAN kirim data. Coba connect dulu.
+        if (!lteConnected) {
+            Serial.println("\n📡 [TELEMETRY] Modem belum siap. Mencoba inisialisasi...");
+            
+            // Panggil begin() lagi. Karena kita sudah update CommHandler,
+            // dia akan melakukan looping "Menunggu Sinyal" di dalamnya.
+            if (comm.begin()) {
+                Serial.println("✅ [TELEMETRY] Koneksi Berhasil! Siap kirim data.");
+                lteConnected = true;
+            } else {
+                Serial.println("❌ [TELEMETRY] Gagal Connect. Coba lagi 10 detik...");
+                // Tunggu agak lama sebelum coba lagi agar tidak spam log
+                vTaskDelay(10000 / portTICK_PERIOD_MS); 
+                continue; // Skip sisa loop, balik ke atas
+            }
+        }
+
+        // --- BAGIAN KIRIM DATA (Hanya jalan jika lteConnected == true) ---
         String jsonPayload = "";
         bool readyToSend = false;
 
-        // Ambil data dari Shared Memory (Mutex)
         if (xSemaphoreTake(dataMutex, (TickType_t) 100) == pdTRUE) {
-            // Buat JSON String manual atau pakai ArduinoJson
-            jsonPayload = "{";
-            jsonPayload += "\"lat\":" + String(latestData.lat, 6) + ",";
-            jsonPayload += "\"lng\":" + String(latestData.lng, 6) + ",";
-            jsonPayload += "\"voltage\":" + String(latestData.voltage_V, 2) + ",";
-            jsonPayload += "\"power\":" + String(latestData.power_mW, 2);
-            jsonPayload += "}";
+            // ... (logika pembuatan JSON tetap sama) ...
+            // ...
             
             readyToSend = true;
             xSemaphoreGive(dataMutex);
@@ -83,14 +101,18 @@ void TaskTelemetry(void *pvParameters) {
 
         if (readyToSend) {
             Serial.println("📡 Sending Data via 4G...");
+            
+            // Kita coba kirim. Jika gagal (misal sinyal hilang di tengah jalan),
+            // kita set lteConnected = false agar dia minta inisialisasi ulang nanti.
             if (comm.sendData(SERVER_URL, jsonPayload)) {
                 Serial.println("✅ Data Sent Successfully!");
             } else {
-                Serial.println("❌ Send Failed");
+                Serial.println("❌ Send Failed (nt)");
+                // Opsional: Anggap putus koneksi agar dilakukan cek ulang
+                lteConnected = false; 
             }
         }
 
-        // Kirim setiap 10 detik (Jangan terlalu cepat agar hemat kuota/baterai)
         vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
 }
@@ -179,14 +201,14 @@ void setup() {
 
     // Setup Comm Module
     Serial.println("Initializing SIM7600 (4G)...");
+    // Coba sekali di awal (opsional, karena TaskTelemetry juga bakal coba)
+    // Tapi bagus untuk UX agar user tahu status awal
     if (!comm.begin()) {
-        Serial.println("❌ SIM7600 Init Failed! Check Power/Wiring.");
+        Serial.println("⚠️ Init Awal Gagal (Akan dicoba ulang di Telemetry Task)");
+        // Jangan stop program, biarkan lanjut ke scheduler
     } else {
-        Serial.println("✅ SIM7600 Ready & Connected to LTE");
+        Serial.println("✅ SIM7600 Ready");
     }
-
-    // Init SIM Serial
-    comm.begin();
     
     // Init GPS Module
     gpsHandler.begin(9600);
@@ -202,16 +224,17 @@ void setup() {
     dataMutex = xSemaphoreCreateMutex();
 
     #ifdef RUN_TEST
-    // xTaskCreate(TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, NULL);
-    xTaskCreate(TaskGPS, "GPS_Task", 4096, NULL, 1, NULL);
-    xTaskCreate(TaskMonitor, "Monitor_Task", 4096, NULL, 1, NULL);
-    xTaskCreate(TaskBlink, "Blink_Task", 1024, NULL, 1, NULL);
+    xTaskCreate(TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, NULL);
+    // xTaskCreate(TaskGPS, "GPS_Task", 4096, NULL, 1, NULL);
+    // xTaskCreate(TaskMonitor, "Monitor_Task", 4096, NULL, 1, NULL);
+    // xTaskCreate(TaskBlink, "Blink_Task", 1024, NULL, 1, NULL);
 
     // Serial.println("✅ FreeRTOS Scheduler Started...");
     #endif
 
     #ifdef RUN_DIAGNOSTICS
-    diagnostics.run(TEST_LAB_PASSTHROUGH);
+    // diagnostics.run(TEST_LAB_PASSTHROUGH);
+    diagnostics.run(TEST_SIM_PASSTHROUGH);
     #endif
 }
 

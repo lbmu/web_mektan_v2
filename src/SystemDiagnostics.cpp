@@ -12,6 +12,9 @@ void SystemDiagnostics::run(DiagnosticMode mode) {
     if (mode == TEST_LAB_PASSTHROUGH) {
         runLabTest();
     }
+    else if (mode == TEST_SIM_PASSTHROUGH) {
+        runSimTest();
+    }
     // ... mode lain bisa ditambahkan nanti ...
 }
 
@@ -48,5 +51,21 @@ void SystemDiagnostics::runLabTest() {
         
         // Wajib: Delay kecil untuk Watchdog (jaga-jaga)
         vTaskDelay(1 / portTICK_PERIOD_MS); 
+    }
+}
+
+void SystemDiagnostics::runSimTest() {
+    Serial.println(">> MODE: SIM7600 AT COMMAND PASSTHROUGH");
+    Serial.println(">> Pastikan Serial Monitor tersetting 'Both NL & CR'");
+    Serial.println(">> Ketik perintah AT di kolom input di atas...\n");
+    
+    _cell->begin();
+    
+    // Looping tanpa batas menahan FreeRTOS agar fokus di sini
+    while (1) {
+        _cell->serialPassthrough(); // Panggil fungsi dari CommHandler
+        
+        // Wajib ada delay untuk me-reset Watchdog Timer (TWDT)
+        vTaskDelay(10 / portTICK_PERIOD_MS); 
     }
 }

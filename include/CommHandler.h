@@ -15,6 +15,9 @@ public:
     // Mengembalikan true jika server merespons HTTP 200 OK
     bool sendData(String url, String jsonData);
 
+    // Meneruskan data AT Command
+    void serialPassthrough();
+
 private:
     int _rxPin;
     int _txPin;

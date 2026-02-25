@@ -9,7 +9,8 @@
 enum DiagnosticMode {
     TEST_CONNECTION_CHECK,    // Cek sekilas (True/False)
     TEST_DATA_MONITOR,        // Data matang (Latitude, Voltage)
-    TEST_LAB_PASSTHROUGH      // <--- MODE BARU: Raw NMEA & Sensor Check
+    TEST_LAB_PASSTHROUGH,     // Raw NMEA & Sensor Check
+    TEST_SIM_PASSTHROUGH      // Cek Modul 4G
 };
 
 class SystemDiagnostics {
@@ -22,7 +23,8 @@ private:
     GpsHandler* _gps;
     CommHandler* _cell;
 
-    void runLabTest(); // Fungsi khusus meniru tes manual Anda
+    void runLabTest();
+    void runSimTest();
 };
 
 #endif

@@ -7,7 +7,7 @@ CommHandler::CommHandler(int rxPin, int txPin, long baudRate, int serialPort)
 
 bool CommHandler::begin() {
     _serialAT->begin(_baudRate, SERIAL_8N1, _rxPin, _txPin);
-    delay(3000); // Tunggu modul booting
+    delay(20000); // Tunggu modul booting
 
     // 1. Cek Koneksi Dasar
     if (sendATCommand("AT", 1000, "OK") == "") return false;
@@ -20,18 +20,38 @@ bool CommHandler::begin() {
 }
 
 bool CommHandler::configureNetwork() {
-    // BEDA UTAMA: SIM7600 menggunakan CGDCONT untuk LTE Context
-    // Ganti "internet" dengan APN provider Anda (misal: "telkomsel", "indosatgprs")
+    // 1. Set APN (Penting!)
     sendATCommand("AT+CGDCONT=1,\"IP\",\"internet\"", 2000, "OK");
 
-    // Cek registrasi jaringan LTE (CEREG) bukan cuma CREG
-    // 0,1 = Registered Home Network, 0,5 = Roaming (masih oke)
-    String reg = sendATCommand("AT+CEREG?", 1000, "+CEREG: 0,1");
-    if (reg == "") {
-        reg = sendATCommand("AT+CEREG?", 1000, "+CEREG: 0,5");
-    }
+    // 2. Loop menunggu registrasi (Maksimal 30 detik)
+    // Kita tunggu sampai statusnya 0,1 (Home) atau 0,5 (Roaming)
+    int maxRetries = 15; // 15 x 2 detik = 30 detik
     
-    return reg != ""; // Return true jika terdaftar
+    Serial.print("Menunggu Sinyal 4G...");
+    
+    for (int i = 0; i < maxRetries; i++) {
+        String response = sendATCommand("AT+CEREG?", 1000, "OK");
+        
+        // Cek apakah ada "0,1" atau "0,5" di dalam respon
+        if (response.indexOf("0,1") != -1 || response.indexOf("0,5") != -1) {
+            Serial.println(" SIAP!\n");
+            return true; // Berhasil!
+        }
+        
+        if (response.indexOf("0,4") != -1) {
+             Serial.print(" (Unknown).\n");
+        } else if (response.indexOf("0,2") != -1) {
+             Serial.print(" (Searching).\n");
+        } else {
+             Serial.print(".");
+        }
+        
+        // Tunggu 2 detik sebelum tanya lagi
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+    }
+
+    Serial.println(" Gagal/Timeout!");
+    return false; // Nyerah setelah 30 detik
 }
 
 bool CommHandler::sendData(String url, String jsonData) {
@@ -81,10 +101,29 @@ String CommHandler::sendATCommand(String command, int timeout, String expectedRe
         if (response.indexOf(expectedResponse) != -1) {
             return response;
         }
+        
+        // --- SOLUSI: Pindahkan delay ke dalam loop ---
+        // Memberikan waktu 10ms bagi FreeRTOS untuk menjalankan task IDLE & Watchdog
+        vTaskDelay(10 / portTICK_PERIOD_MS); 
     }
+    
     // Debugging (Opsional)
     Serial.print("CMD: "); Serial.println(command);
     Serial.print("RSP: "); Serial.println(response);
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    
     return ""; // Timeout atau fail
+}
+
+void CommHandler::serialPassthrough() {
+    // 1. Dari Laptop (Keyboard) --> Kirim ke Modul SIM7600
+    while (Serial.available()) {
+        char c = Serial.read();
+        _serialAT->write(c);
+    }
+    
+    // 2. Dari Modul SIM7600 --> Tampilkan ke Laptop
+    while (_serialAT->available()) {
+        char c = _serialAT->read();
+        Serial.write(c);
+    }
 }
