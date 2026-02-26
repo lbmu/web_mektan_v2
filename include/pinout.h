@@ -12,8 +12,13 @@
 #define GPS_BAUDRATE 9600
 #define GPS_SERIAL_PORT 2
 
-// Pin hiasan
-#define LED_PIN 2
+// Pin INA219
+
+/* @brief
+ * default:
+ * SDA: 21 
+ * SCL: 22
+ */
 
 // URL
 #define SERVER_URL "http://httpbin.org/post"
