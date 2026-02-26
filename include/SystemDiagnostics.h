@@ -1,5 +1,4 @@
-#ifndef SYSTEM_DIAGNOSTICS_H
-#define SYSTEM_DIAGNOSTICS_H
+#pragma once
 
 #include <Arduino.h>
 #include "PowerMonitor.h"
@@ -26,5 +25,3 @@ private:
     void runLabTest();
     void runSimTest();
 };
-
-#endif

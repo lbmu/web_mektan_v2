@@ -1,5 +1,4 @@
-#ifndef ESP_OTA_H
-#define ESP_OTA_H
+#pragma once
 
 #include <Arduino.h> // Wajib di PlatformIO
 
@@ -11,5 +10,3 @@ public:
 private:
     static void otaTask(void *pvParameters);
 };
-
-#endif

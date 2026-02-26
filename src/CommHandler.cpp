@@ -101,8 +101,6 @@ String CommHandler::sendATCommand(String command, int timeout, String expectedRe
         if (response.indexOf(expectedResponse) != -1) {
             return response;
         }
-        
-        // --- SOLUSI: Pindahkan delay ke dalam loop ---
         // Memberikan waktu 10ms bagi FreeRTOS untuk menjalankan task IDLE & Watchdog
         vTaskDelay(10 / portTICK_PERIOD_MS); 
     }

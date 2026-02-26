@@ -27,11 +27,9 @@
 
 #include "pinout.h"
 
-// cek notip (komentar untuk disable)
-#define RUN_TEST // <- Buat run task biasa
-// #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
-
-
+// cek notip (komentar untuk disable) [shortcut di VS Code: Ctrl + /]
+// #define RUN_TEST // <- Buat run task biasa
+#define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
 
 // Instansiasi Objek Modul Baru
 ESP_OTA remoteUpdate;
@@ -215,7 +213,7 @@ void setup() {
     #endif
 
     #ifdef RUN_DIAGNOSTICS
-    diagnostics.run(TEST_LAB_PASSTHROUGH);
+    // diagnostics.run(TEST_LAB_PASSTHROUGH);
     diagnostics.run(TEST_SIM_PASSTHROUGH);
     #endif
 }

@@ -52,28 +52,20 @@ RSP:
 ```
 
 > [!TIP]
-> SOLUTION
+> **SOLUTION**
 > CEK WIRING
 
 TX si modul ke RX si board, and vice versa
 
 ---
 
-- [ ] ***ERROR RESPONSE***
+- [x] ***ERROR RESPONSE***
 
 > [!CAUTION]
 > **PROBLEM**
 > MODUL NYA RESPON TAPI ERROR
 
 ```
-+CEREG: 0CMD: AT+CEREG?
-RSP: 
-+CEREG: 0CMD: AT+CEREG?
-RSP: 
-+CEREG: 0CMD: AT+CEREG?
-RSP: 
-+CEREG: 0CMD: AT+CEREG?
-RSP: 
 +CEREG: 0CMD: AT+CEREG?
 RSP: 
 +CEREG: 0CMD: 
@@ -125,3 +117,10 @@ ERROR
 ❌ Send Failed
 ```
 
+> [!TIP]
+> **SOLUTION**
+> ada-ada saja
+
+Belum pasang antena jir
+
+---

@@ -1,5 +1,4 @@
-#ifndef COMM_HANDLER_H
-#define COMM_HANDLER_H
+#pragma once
 
 #include <Arduino.h>
 
@@ -28,5 +27,3 @@ private:
     String sendATCommand(String command, int timeout, String expectedResponse);
     bool configureNetwork();
 };
-
-#endif

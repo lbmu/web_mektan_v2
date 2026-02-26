@@ -1,5 +1,4 @@
-#ifndef GPS_HANDLER_H
-#define GPS_HANDLER_H
+#pragma once
 
 #include <Arduino.h>
 #include <TinyGPS++.h>
@@ -30,5 +29,3 @@ private:
     HardwareSerial* _serial;
     TinyGPSPlus _gps;
 };
-
-#endif

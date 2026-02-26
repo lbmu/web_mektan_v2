@@ -1,5 +1,4 @@
-#ifndef POWER_MONITOR_H
-#define POWER_MONITOR_H
+#pragma once
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -23,5 +22,3 @@ public:
 private:
     Adafruit_INA219 _ina219;
 };
-
-#endif
