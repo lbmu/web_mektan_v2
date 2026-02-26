@@ -4,7 +4,13 @@
 // Modul untuk OTA
 #include <espOTA.h>
 
-// Modul untuk kredensial
+/* @brief
+ *  semua data sensitif meliputi SSID, PASS, OTA PASS, SERVER URL
+ *  didefinisikan di file 'secrets.h'
+ *  agar mudah diatur tanpa mengubah kode utama
+ *  dan menghindari upload data sensitif ke repo publik 
+ */
+
 #include <secrets.h>
 
 // Modul untuk sistem
@@ -13,32 +19,19 @@
 #include "CommHandler.h"
 #include "SystemDiagnostics.h"
 
-// Pin modul SIM7600G
-#define SIM_RX_PIN 16
-#define SIM_TX_PIN 17
-#define COMM_BAUDRATE 115200
-#define SIM_SERIAL_PORT 1
+/* @brief
+ * pinout juga sama 
+ * disimpen di pinout.h
+ * biar kalo ngulik-ngulik gausah buka main.cpp (bosen)
+ */
 
-// Pin modul GPS NEO M8N (mereun)
-#define GPS_RX_PIN 32
-#define GPS_TX_PIN 33
-#define GPS_BAUDRATE 9600
-#define GPS_SERIAL_PORT 2
-
-// Pin hiasan
-#define LED_PIN 2
+#include "pinout.h"
 
 // cek notip (komentar untuk disable)
-// #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
 #define RUN_TEST // <- Buat run task biasa
+// #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
 
 
- /* @brief
- /  semua data sensitif meliputi SSID, PASS, OTA PASS, SERVER URL
- /  didefinisikan di file 'secrets.h'
- /  agar mudah diatur tanpa mengubah kode utama
- /  dan menghindari upload data sensitif ke repo publik 
-*/
 
 // Instansiasi Objek Modul Baru
 ESP_OTA remoteUpdate;
@@ -181,16 +174,6 @@ void TaskMonitor(void *pvParameters) {
     }
 }
 
-void TaskBlink(void *pvParameters) {
-    pinMode(LED_PIN, OUTPUT);
-    for (;;) {
-        digitalWrite(LED_PIN, HIGH);
-        vTaskDelay(pdMS_TO_TICKS(500));
-        digitalWrite(LED_PIN, LOW);
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
-}
-
 void setup() {
     Serial.begin(115200);
     
@@ -225,15 +208,14 @@ void setup() {
 
     #ifdef RUN_TEST
     xTaskCreate(TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, NULL);
-    // xTaskCreate(TaskGPS, "GPS_Task", 4096, NULL, 1, NULL);
-    // xTaskCreate(TaskMonitor, "Monitor_Task", 4096, NULL, 1, NULL);
-    // xTaskCreate(TaskBlink, "Blink_Task", 1024, NULL, 1, NULL);
+    xTaskCreate(TaskGPS, "GPS_Task", 4096, NULL, 1, NULL);
+    xTaskCreate(TaskMonitor, "Monitor_Task", 4096, NULL, 1, NULL);
 
     // Serial.println("✅ FreeRTOS Scheduler Started...");
     #endif
 
     #ifdef RUN_DIAGNOSTICS
-    // diagnostics.run(TEST_LAB_PASSTHROUGH);
+    diagnostics.run(TEST_LAB_PASSTHROUGH);
     diagnostics.run(TEST_SIM_PASSTHROUGH);
     #endif
 }
