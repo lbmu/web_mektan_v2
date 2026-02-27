@@ -1,12 +1,10 @@
-# Hardware
+# ESP
 
-## ESP
-
-- [x] TWDT TRIGGER
+- [x] ***TWDT TRIGGER***
 
 > [!CAUTION]
 > **PROBLEM**
-> CPU nya laper jir
+> *CPU nya laper jir*
 
 ```
 E (34816) task_wdt: Task watchdog got triggered. The following tasks did not reset the watchdog in time:
@@ -25,16 +23,15 @@ ELF file SHA256: 37ef943e1d7fe57b
 
 > [!TIP]
 > SOLUTION
+> Kasih `vTaskDelay(10 / portTICK_PERIOD_MS);` di dalem nested loop fungsi `sendATCommand` pada file `commHandler.cpp`
 
-Kasih `vTaskDelay(10 / portTICK_PERIOD_MS);` di dalem nested loop fungsi `sendATCommand` pada file `commHandler.cpp`
+# MODUL SIM
 
-## MODUL SIM
-
-- [x] ZERO RESPONSE
+- [x] ***ZERO RESPONSE***
 
 > [!CAUTION]
 > **PROBLEM**
-> Modul nya ga respon
+> *Modul nya ga respon*
 
 ```
 Sending Data via 4G...
@@ -53,9 +50,8 @@ RSP:
 
 > [!TIP]
 > **SOLUTION**
-> CEK WIRING
-
-TX si modul ke RX si board, and vice versa
+> *CEK WIRING*
+> TX si modul ke RX si board, and vice versa
 
 ---
 
@@ -63,7 +59,7 @@ TX si modul ke RX si board, and vice versa
 
 > [!CAUTION]
 > **PROBLEM**
-> MODUL NYA RESPON TAPI ERROR
+> *MODUL NYA RESPON TAPI ERROR*
 
 ```
 +CEREG: 0CMD: AT+CEREG?
@@ -119,8 +115,56 @@ ERROR
 
 > [!TIP]
 > **SOLUTION**
-> ada-ada saja
+> *ada-ada saja*
+> Belum pasang antena jir
 
-Belum pasang antena jir
+---
 
+- [x] ***NO SERVICE***
+
+> [!CAUTION]
+> **PROBLEM**
+> *NO SERVICE*
+
+```
+AT+CPSI?
+AT+CPSI?
++CPSI: NO SERVICE,Online
+
+OK
+AT+CPSI?
+AT+CPSI?
++CPSI: NO SERVICE,Online
+
+OK
+AT+CPSI?
+AT+CPSI?
++CPSI: NO SERVICE,Online
+```
+> [!TIP]
+> **SOLUTION**
+> *sabar*
+> Pindah ruangan, atau tunggu sampe modul nya blinking LED yang warna hijau
+> (di lab pake kartu by.u sinyal nya jelek)
+
+```
+AT+CPSI?
+AT+CPSI?
++CPSI: NO SERVICE,Online
+
+OK
+AT+CPSI?
+AT+CPSI?
++CPSI: NO SERVICE,Online
+
+OK
+AT+CPSI?
+AT+CPSI?
++CPSI: NO SERVICE,Online
+
+OK
+AT+CPSI?
+AT+CPSI?
++CPSI: LTE,Online,510-10,0x0830,110132496,22,EUTRAN-BAND40,39092,3,3,-200,-1057,-660,4
+```
 ---

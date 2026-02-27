@@ -62,7 +62,7 @@ upload_flags =
 > Jika ingin mengubah konfigurasi OTA, disarankan menggunakan micro-USB terlebih dahulu.
 Kredensial Wi-Fi pada `main.cpp` menggunakan header file `secrets.h`. Kode tidak ada di repo GitHub agar oknum tidak bisa upload kode sembarangan. Kode `secrets.h` dibuat di dalam folder `include` .
 
-Contoh kode `secrets.h`
+Template header `secrets.h`
 ```cpp
 #pragma once
 
@@ -131,7 +131,7 @@ AT+CCID
 ```
 
 ## NETWORK
-Panduan pada layer jaringan, basically AT Command dan API
+Dokumentasi pada layer jaringan, basically AT Command dan API
 
 ### SIM7600G
 > [!IMPORTANT]
@@ -148,7 +148,10 @@ AT+CSCS="GSM"
 AT+CUSD=1,"*888#"
 ```
 
-3. Dengarkan notifnya
+3. Dengarkan notifnya (balikin ke LTE)
+```bash
+AT+CNMP=38
+```
 
 #### Sinyal
 1. Kekuatan Sinyal
@@ -164,18 +167,62 @@ AT+CEREG?
 AT+CPSI?
 ```
 
-#### Aplikasi HTTP
-1. Mode APN 
-```bash
+#### Set-Up Jaringan
+1. Pastikan modul menggunakan mode 4G.
+```
+AT+CNMP=2
+```
+atau
+```
+AT+CNMP=38
+```
+2. Verifikasi mode
+```
+AT+CPSI?
+```
+3. Set Profil
+```
 AT+CGDCONT=1,"IP","internet"
 ```
-2. Inisialisasi HTTP
-```bash
+> [!NOTE]
+> argumen `internet` bisa berubah-ubah tergantung provider
+4. Aktifkan PDP Context untuk terhubung ke internet
+```
+AT+CGACT=1,1
+```
+5. Verifikasi IP Address
+```
+AT+CGPADDR=1
+```
+#### Koneksi Internet
+1. Inisialisasi HTTP
+```
 AT+HTTPINIT
 ```
-3. Cek Konektivitas ke HTTP
-```bash
-AT+HTTPACTION=1
+2. Set URL Dummy
+```
+AT+HTTPPARA="URL","http://httpbin.org/get"
+```
+> [!NOTE]
+> URL `http://httpbin.org/get` bebas dipilih selama pake metode GET
+
+3. Eksekusi
+```
+AT+HTTPACTION=0
+```
+Tunggu balasan setelah OK. Contoh balasan adalah `+HTTPACTION: 0,200,254`, dimana:
+* `0` adalah metode yang dipilih (GET)
+* `200` adalah kode status HTTP
+* `254` adalah ukuran dalam byte
+
+4. Membaca balasan dari server
+```
+AT+HTTPREAD=0,500
+```
+Kalo ada ada text format `json` berarti udah aman
+5. Tutup Sesi HTTP
+```
+AT+HTTPTERM
 ```
 
 ## APPLICATION
