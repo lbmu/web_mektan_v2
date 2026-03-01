@@ -12,7 +12,9 @@ const emit = defineEmits(['toggle-sidebar']);
 
 const activeMenu = ref(null);
 const userName = ref('Admin');
+const userPhoto = ref(null);
 
+// Fungsi Toggle (Tidak berubah)
 const toggleSubMenu = (menuName) => {
     if (props.isClosed) {
         emit('toggle-sidebar'); 
@@ -20,18 +22,29 @@ const toggleSubMenu = (menuName) => {
     activeMenu.value = activeMenu.value === menuName ? null : menuName;
 };
 
+// --- [PERBAIKAN 1: Logic Foto Profil] ---
 onMounted(() => {
     const session = localStorage.getItem('user');
     if (session) {
         try {
             const userData = JSON.parse(session);
             userName.value = userData.nama || 'Admin';
+
+            // Cek 'foto' (sesuai screenshot localStorage Anda) ATAU 'foto_profil' (untuk jaga-jaga)
+            const fotoFilename = userData.foto || userData.foto_profil;
+
+            if (fotoFilename) {
+                userPhoto.value = `http://localhost:3000/uploads/profiles/${fotoFilename}`;
+            } else {
+                userPhoto.value = `https://ui-avatars.com/api/?name=${userName.value}&background=0D6EFD&color=fff`;
+            }
         } catch (e) {
             console.error("Gagal parsing user data");
         }
     }
 });  
 
+// Fungsi Logout (Tidak berubah)
 const handleLogout = () => {
     Swal.fire({
         title: 'Konfirmasi Logout',
@@ -50,6 +63,7 @@ const handleLogout = () => {
                 icon: 'success',
                 title: 'Logout Berhasil',
                 timer: 1000,
+                showConfirmButton: false
             }).then(() => {
                 window.location.href = '/login';
             });
@@ -64,12 +78,11 @@ watch(() => props.isClosed, (newVal) => {
 });
 </script>
 
-
 <template>
-    <div class="d-flex flex-column flex-shrink-0 p-3 h-100">
+    <div class="d-flex flex-column flex-shrink-0 p-3 h-100 sidebar-container">
     
         <div class="d-flex align-items-center mb-3 mb-md-0 text-white text-decoration-none">
-            <span v-if="!isClosed" class="fs-4 fw-bold me-auto fade-in">🚜 Si-Alsintan</span>
+            <span v-if="!isClosed" class="fs-4 fw-bold me-auto fade-in text-nowrap">🚜 Si-Alsintan</span>
             <button 
                 @click="$emit('toggle-sidebar')" 
                 class="btn btn-dark border-0 p-1 d-flex align-items-center justify-content-center"
@@ -81,29 +94,30 @@ watch(() => props.isClosed, (newVal) => {
         </div>
     
         <hr class="text-white-50"> 
-        <ul class="nav nav-pills flex-column mb-auto">
+        
+        <ul class="nav nav-pills flex-column mb-auto overflow-hidden">
             <li class="nav-item">
                 <RouterLink to="/" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
-                    <i class="bi bi-bar-chart-fill fs-5"></i>
-                    <span v-if="!isClosed" class="ms-3 fade-in">Home</span>
+                    <i class="bi bi-bar-chart-fill fs-5 flex-shrink-0"></i>
+                    <span v-if="!isClosed" class="ms-3 fade-in text-nowrap">Home</span>
                 </RouterLink>
             </li>
             <li>
                 <RouterLink to="/aset" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
-                    <i class="bi bi-tools fs-5"></i>
-                    <span v-if="!isClosed" class="ms-3 fade-in">Manajemen Aset</span>
+                    <i class="bi bi-tools fs-5 flex-shrink-0"></i>
+                    <span v-if="!isClosed" class="ms-3 fade-in text-nowrap">Manajemen Aset</span>
                 </RouterLink>
             </li>
             <li>
                 <RouterLink to="/monitoring" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
-                    <i class="bi bi-globe-americas fs-5"></i>
-                    <span v-if="!isClosed" class="ms-3 fade-in">Monitoring Peta</span>
+                    <i class="bi bi-globe-americas fs-5 flex-shrink-0"></i>
+                    <span v-if="!isClosed" class="ms-3 fade-in text-nowrap">Monitoring Peta</span>
                 </RouterLink>
             </li>
             <li>
                 <RouterLink to="/estimasi" class="nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
-                    <i class="bi bi-calculator fs-5"></i>
-                    <span v-if="!isClosed" class="ms-3 fade-in">
+                    <i class="bi bi-calculator fs-5 flex-shrink-0"></i>
+                    <span v-if="!isClosed" class="ms-3 fade-in text-nowrap">
                     Estimasi Lahan
                     </span>
                 </RouterLink>
@@ -112,16 +126,24 @@ watch(() => props.isClosed, (newVal) => {
     
         <hr class="text-white-50">
     
-        <div class="dropdown" :class="{ 'text-center': isClosed }">
+        <div class="dropdown" :class="{ 'text-center': isClosed, 'dropend': isClosed }">
+            
             <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" 
                 :class="{ 'justify-content-center': isClosed }"
                 id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
         
-                <img src="https://github.com/mdo.png" alt="" width="32" height="32" class="rounded-circle">
+                <img :src="userPhoto" alt="Profile" width="32" height="32" class="rounded-circle object-fit-cover border border-secondary">
         
-                <strong v-if="!isClosed" class="ms-2 fade-in">{{ userName }}</strong>
+                <strong v-if="!isClosed" class="ms-2 fade-in text-nowrap">{{ userName }}</strong>
             </a>
-            <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
+            
+            <ul class="dropdown-menu dropdown-menu-dark text-small shadow"
+                aria-labelledby="dropdownUser1" 
+                :class="{ 'fixed-menu': isClosed }">
+                <li>
+                    <RouterLink to="/profile" class="dropdown-item">Profil Saya</RouterLink>
+                </li>
+                <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="#" @click.prevent="handleLogout">Logout</a></li>
             </ul>
         </div>
@@ -129,47 +151,37 @@ watch(() => props.isClosed, (newVal) => {
     </div>
 </template>
 
-
 <style scoped>
-/* 1. Header Area */
-.header-area {
-    min-width: 200px; 
-    overflow: hidden;
+/* 1. Wrapper Utama: Kunci agar dropdown melayang di atas konten lain */
+.sidebar-wrapper {
+    transition: width 0.3s ease;
+    overflow: visible !important; /* Biarkan dropdown keluar batas */
+    position: relative;
+    z-index: 1050; /* Z-Index tinggi agar di atas dashboard */
 }
 
-/* 2. Tombol Toggle */
-.toggle-btn {
-    width: 30px; 
-    height: 30px;
-    cursor: pointer;
+/* 2. Rotasi Icon Panah */
+.transition-icon { transition: transform 0.3s ease; }
+.rotate-180 { transform: rotate(180deg); }
+
+/* 3. Animasi Text Muncul */
+.fade-in { animation: fadeIn 0.4s; }
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-/* 3. Rotasi Ikon Panah (Fitur Referensi) */
-.transition-icon {
-    transition: transform 0.3s ease;
-}
-.rotate-180 {
-    transform: rotate(180deg);
-}
+/* 4. Mencegah Teks Turun Baris */
+.text-nowrap { white-space: nowrap; }
 
-/* 4. Ikon Menu */
-.icon-fixed {
-    min-width: 24px;
-    text-align: center;
-}
-
-/* 5. Teks Menu */
-/* Transisi opacity agar teks muncul/hilang halus */
-.menu-text, .logo-text {
-    transition: opacity 0.2s;
-  white-space: nowrap; /* Mencegah teks turun ke bawah */
-}
-
-/* Style Active Link (Bootstrap Override) */
-.nav-link.active {
-    background-color: #0d6efd !important;
-}
-.nav-link:hover {
-    background-color: rgba(255,255,255,0.1);
+/* SOLUSI DROPDOWN TERPOTONG */
+.fixed-menu {
+    position: fixed !important;
+    left: 80px !important; /* Sesuaikan dengan lebar sidebar saat tertutup */
+    bottom: 20px !important; 
+    top: auto !important;
+    transform: none !important;
+    margin-left: 10px;
+    z-index: 9999 !important; /* Paksa muncul paling depan */
 }
 </style>

@@ -2,10 +2,12 @@
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
+import Swal from 'sweetalert2';
 
 const router = useRouter();
 const items = ref([]);
 const loading = ref(true);
+const userRole = ref(''); // State untuk menyimpan role pengguna
 
 // --- AMBIL DATA ---
 const fetchData = async () => {
@@ -26,7 +28,7 @@ const deleteItem = async (id) => {
     await axios.delete(`http://localhost:3000/api/alsintan/${id}`);
     fetchData(); 
   } catch (error) {
-    alert("Gagal menghapus data");
+    Swal.fire("Error", "Gagal menghapus data", "error");
   }
 };
 
@@ -38,11 +40,17 @@ const formatLastSeen = (dateString) => {
 
 // --- NAVIGASI ---
 const goToTambah = () => router.push({ name: 'aset-add' });
-const goToEdit = (id) => router.push({ name: 'aset-edit', params: { id: id } });
-const goToDetail = (id) => router.push({ name: 'aset-detail', params: { id: id } }); // NEW BUTTON
+const goToDetail = (id) => router.push({ name: 'aset-detail', params: { id: id } }); 
 const goToMonitoring = (id) => router.push({ name: 'monitoring-detail', params: { id: id } });
 
-onMounted(() => fetchData());
+onMounted(() => {
+    // Cek Siapa yang Login
+    const session = JSON.parse(localStorage.getItem('user'));
+    if (session) {
+        userRole.value = session.role;
+    }
+    fetchData();
+});
 </script>
 
 <template>
@@ -50,9 +58,10 @@ onMounted(() => fetchData());
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
         <h3 class="fw-bold text-dark mb-0">🚜 Daftar Aset Alsintan</h3>
-        <p class="text-muted small">Manajemen data dan status alat.</p>
+        <p class="text-muted small">Manajemen data dan status armada.</p>
       </div>
-      <button @click="goToTambah" class="btn btn-primary shadow-sm">
+      
+      <button v-if="['super_admin'].includes(userRole)" @click="goToTambah" class="btn btn-primary shadow-sm">
         <i class="bi bi-plus-lg me-1"></i> Tambah Aset
       </button>
     </div>
@@ -89,8 +98,7 @@ onMounted(() => fetchData());
                   </div>
                 </td>
                 <td>
-                  <span class="badge rounded-pill" 
-                        :class="item.status_mesin === 'ON' ? 'bg-success animate-pulse' : 'bg-secondary'">
+                  <span class="badge rounded-pill" :class="item.status_mesin === 'ON' ? 'bg-success animate-pulse' : 'bg-secondary'">
                     <i class="bi" :class="item.status_mesin === 'ON' ? 'bi-lightning-fill' : 'bi-power'"></i>
                     {{ item.status_mesin || 'OFF' }}
                   </span>
@@ -108,18 +116,14 @@ onMounted(() => fetchData());
                 
                 <td class="text-end pe-4">
                   <div class="btn-group">
-                    <button @click="goToDetail(item.alsintan_id)" 
-                            class="btn btn-sm btn-outline-info" title="Lihat Detail">
+                    <button @click="goToDetail(item.alsintan_id)" class="btn btn-sm btn-outline-info" title="Detail Administrasi">
                       <i class="bi bi-info-circle"></i>
                     </button>
-
-                    <button @click="goToMonitoring(item.alsintan_id)" 
-                            class="btn btn-sm btn-outline-primary" title="Pantau Live">
+                    <button @click="goToMonitoring(item.alsintan_id)" class="btn btn-sm btn-outline-primary" title="Kendali Peta & Argo">
                       <i class="bi bi-geo-alt-fill"></i>
                     </button>
 
-                    <button @click="deleteItem(item.alsintan_id)" 
-                            class="btn btn-sm btn-outline-danger" title="Hapus">
+                    <button v-if="['super_admin'].includes(userRole)" @click="deleteItem(item.alsintan_id)" class="btn btn-sm btn-outline-danger" title="Hapus Permanen">
                       <i class="bi bi-trash"></i>
                     </button>
                   </div>

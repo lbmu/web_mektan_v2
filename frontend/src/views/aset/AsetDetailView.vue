@@ -12,6 +12,7 @@ const id = route.params.id;
 const item = ref(null);
 const loading = ref(true);
 const errorMessage = ref('');
+const userRole = ref(''); // [BARU] State untuk menyimpan role pengguna
 
 // Fungsi Ambil Data Detail
 const fetchDetail = async () => {
@@ -44,6 +45,11 @@ const deleteAset = async () => {
 };
 
 onMounted(() => {
+    // [BARU] Cek Siapa yang Login saat halaman dimuat
+    const session = JSON.parse(localStorage.getItem('user'));
+    if (session) {
+        userRole.value = session.role;
+    }
     fetchDetail();
 });
 </script>
@@ -57,13 +63,15 @@ onMounted(() => {
             </button>
 
             <div v-if="item">
-                <RouterLink :to="`/aset/edit/${item.alsintan_id}`" class="btn btn-warning btn-sm me-2">
-                    <i class="bi bi-pencil"></i> Edit
-                </RouterLink>
-                
-                <button @click="deleteAset" class="btn btn-danger btn-sm">
-                    <i class="bi bi-trash"></i> Hapus Aset
-                </button>
+                <template v-if="['super_admin'].includes(userRole)">
+                    <RouterLink :to="`/aset/edit/${item.alsintan_id}`" class="btn btn-warning btn-sm me-2">
+                        <i class="bi bi-pencil"></i> Edit
+                    </RouterLink>
+                    
+                    <button @click="deleteAset" class="btn btn-danger btn-sm">
+                        <i class="bi bi-trash"></i> Hapus Aset
+                    </button>
+                </template>
             </div>
         </div>
 
@@ -91,8 +99,8 @@ onMounted(() => {
                                 @error="$event.target.src='https://via.placeholder.com/300x200?text=No+Image'"
                             >
                             <span class="position-absolute top-0 end-0 badge rounded-pill m-2 fs-6"
-                                :class="item.status === 'ON' ? 'bg-success' : 'bg-secondary'">
-                                {{ item.status }}
+                                :class="item.status_mesin === 'ON' ? 'bg-success' : 'bg-secondary'">
+                                {{ item.status_mesin || 'OFF' }}
                             </span>
                         </div>
 

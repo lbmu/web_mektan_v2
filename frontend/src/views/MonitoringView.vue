@@ -1,165 +1,247 @@
 <script setup>
-import {ref, onMounted, onUnmounted, nextTick, watch} from 'vue';
+import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue';
 import axios from 'axios';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useRouter } from 'vue-router';
 
-const alsintan = ref(null);     //Data Mesin
-const loading = ref(true);      //Status Loading
-const selectedId = ref(1);     //ID Alat Terpilih
-let polling = null;            //Timer Update
-let map = null;                //Objek Peta
-let marker = null;             //Objek Marker Peta
+const router = useRouter();
 
-//Inisialisasi Peta Leaflet
-const initMap = () => {
-    if (map) return;
-    
-    map = L.map('mapContainer').setView([-6.9175, 107.6191], 13);
+// --- STATE APLIKASI ---
+const loading = ref(true);
+const alsintanList = ref([]);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
-};
+// State Panel Kiri
+const searchQuery = ref('');
+const filterStatus = ref('ALL');
 
-//Perbarui Posisi Marker pada Peta
-const updateMapPosition = (lat, lng) => {
-    if (!map) return;
-    const posisi = [lat, lng];
-    if (!marker){
-        marker = L.marker(posisi).addTo(map);
-    } else {
-        marker.setLatLng(posisi);
-    }
-    map.setView(posisi, 15);
-};
+// State Peta & MQTT
+let map = null;
+let markers = {};
+let mqttClient = null;
+const MQTT_BROKER = 'ws://broker.hivemq.com:8000/mqtt';
+const MQTT_TOPIC = 'project-mektan/v1/data';
 
-//Ambil Data dari API
-const fetchData = async () => {
-    try {
-        const response = await axios.get('http://localhost:3000/api/monitoring/status/11') //BELUM FIX KARENA HARDSUB ID
-        alsintan.value = response.data;
-        
-        if (!map) {
-        // if (loading.value) {
-        //     loading.value = false;
-            await nextTick();
-            initMap();
-        }
-
-        if (alsintan.value.latitude && alsintan.value.longitude) {
-            updateMapPosition(alsintan.value.latitude, alsintan.value.longitude);
-        }
-
-    } catch (error) {
-        console.error("Gagal mengambil data:", error);
-        loading.value = false;
-
-    }
-};
-
-//Watcher untuk perubahan selectedId
-watch(selectedId, () => {
-   alsintan.value = null;
-    loading.value = true;
-    fetchData().then(() => {
-        loading.value = false;
+// --- COMPUTED PROPERTIES ---
+const filteredAlsintan = computed(() => {
+    return alsintanList.value.filter(item => {
+        const matchSearch = item.nama_alat.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
+                            item.kode_perangkat.toLowerCase().includes(searchQuery.value.toLowerCase());
+        const matchStatus = filterStatus.value === 'ALL' || item.status_mesin === filterStatus.value;
+        return matchSearch && matchStatus;
     });
 });
 
+// --- 1. FETCH DATA UTAMA ---
+const fetchAllData = async () => {
+    try {
+        const response = await axios.get('http://localhost:3000/api/alsintan');
+        alsintanList.value = response.data;
+        
+        await nextTick();
+        if (!map) initMap();
+        renderGlobalMarkers();
+    } catch (error) {
+        console.error("Gagal load data:", error);
+    } finally {
+        loading.value = false;
+    }
+};
 
-//Lifecycle Halaman Dibuka
-onMounted(async () => {
-    fetchData();
-    polling = setInterval(fetchData, 2000); //Perbarui setiap 2 detik
+// --- 2. LOGIKA PETA (LEAFLET) ---
+const initMap = () => {
+    map = L.map('main-map', { zoomControl: false }).setView([-6.9175, 107.6191], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+};
+
+const createIcon = (status) => {
+    const isON = status === 'ON';
+    const color = isON ? 'text-success' : 'text-secondary';
+    const border = isON ? 'border-success' : 'border-secondary';
+    const bg = isON ? 'bg-success bg-opacity-10' : 'bg-light';
+    
+    return L.divIcon({
+        className: 'custom-tractor-icon',
+        html: `
+            <div class="d-flex justify-content-center align-items-center rounded-circle border border-2 ${border} ${bg} shadow-sm position-relative" 
+                 style="width: 36px; height: 36px; background-color: white;">
+                 <i class="bi bi-truck-front-fill ${color}" style="font-size: 18px;"></i>
+                 ${isON ? '<div class="pulse-ring"></div>' : ''}
+            </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -20]
+    });
+};
+
+const renderGlobalMarkers = () => {
+    // Hapus marker lama
+    Object.values(markers).forEach(m => map.removeLayer(m));
+    markers = {};
+
+    let group = [];
+    filteredAlsintan.value.forEach(alat => {
+        if (alat.latitude && alat.longitude) {
+            const latLng = [parseFloat(alat.latitude), parseFloat(alat.longitude)];
+            const marker = L.marker(latLng, { icon: createIcon(alat.status_mesin) }).addTo(map);
+            
+            marker.bindTooltip(`<b>${alat.kode_perangkat}</b>`, { direction: 'top', offset: [0, -15] });
+            
+            // JIKA MARKER DI PETA DIKLIK -> LEMPAR KE HALAMAN DETAIL
+            marker.on('click', () => goToDetail(alat.alsintan_id)); 
+            
+            markers[alat.alsintan_id] = marker;
+            group.push(latLng);
+        }
+    });
+
+    if (group.length > 0) {
+        map.fitBounds(group, { padding: [50, 50] });
+    }
+};
+
+// --- 3. NAVIGASI KE HALAMAN DETAIL YANG SUDAH ADA ---
+const goToDetail = (id) => {
+    router.push({ name: 'monitoring-detail', params: { id } });
+};
+
+// --- 4. MQTT REAL-TIME ---
+const connectMqtt = () => {
+    if (!window.mqtt) return;
+    mqttClient = window.mqtt.connect(MQTT_BROKER);
+
+    mqttClient.on('connect', () => {
+        mqttClient.subscribe(MQTT_TOPIC);
+    });
+
+    mqttClient.on('message', (topic, message) => {
+        try {
+            const data = JSON.parse(message.toString());
+            const index = alsintanList.value.findIndex(i => i.alsintan_id == data.id_alat);
+            
+            if (index !== -1) {
+                // Update State Lokal
+                alsintanList.value[index].status_mesin = data.status_mesin;
+                alsintanList.value[index].latitude = data.lat;
+                alsintanList.value[index].longitude = data.long;
+
+                // Update Marker di Peta
+                const marker = markers[data.id_alat];
+                if (marker) {
+                    marker.setLatLng([data.lat, data.long]);
+                    marker.setIcon(createIcon(data.status_mesin));
+                }
+            }
+        } catch (err) {}
+    });
+};
+
+// Jika filter atau search diubah, gambar ulang markernya
+watch([searchQuery, filterStatus], () => {
+    renderGlobalMarkers();
 });
 
-//Lifecycle Halaman Ditutup
 onMounted(() => {
-    clearInterval(polling);
-    if (map) {
-        map.remove();
-        map = null;
-    }
+    fetchAllData();
+    connectMqtt();
+});
+
+onUnmounted(() => {
+    if (mqttClient) mqttClient.end();
+    if (map) map.remove();
 });
 </script>
 
 <template>
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="fw-bold text-dark mb-0">🌍 Monitoring Aktivitas</h2>
+  <div class="row g-0 bg-light" style="height: calc(100vh - 4rem); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+    
+    <div class="col-md-4 col-lg-3 bg-white d-flex flex-column border-end position-relative" style="height: 100%;">
+        
+        <div class="p-3 border-bottom bg-light">
+            <h5 class="fw-bold mb-0 text-primary">
+                <i class="bi bi-geo-alt-fill me-1"></i> Lokasi Traktor
+            </h5>
+        </div>
 
-            <div class="d-flex align-items-center">
-                <label class="me-2 fw-bold">Pilih Alat:</label>
-                <select v-model="selectedId" class="form-select" style="width: 200px;">
-                    <option :value="1">Traktor Roda 4</option>
-                    <option :value="2">Combine Harvester</option>
-                    </select>
+        <div class="d-flex flex-column h-100">
+            <div class="p-3 border-bottom">
+                <input v-model="searchQuery" type="text" class="form-control mb-2 bg-light border-0" placeholder="🔍 Cari nama / kode alat...">
+                <div class="btn-group w-100 shadow-sm" role="group">
+                    <input type="radio" class="btn-check" name="btnradio" id="btnAll" value="ALL" v-model="filterStatus">
+                    <label class="btn btn-outline-primary btn-sm" for="btnAll">Semua</label>
+
+                    <input type="radio" class="btn-check" name="btnradio" id="btnOn" value="ON" v-model="filterStatus">
+                    <label class="btn btn-outline-success btn-sm" for="btnOn">Live (ON)</label>
+
+                    <input type="radio" class="btn-check" name="btnradio" id="btnOff" value="OFF" v-model="filterStatus">
+                    <label class="btn btn-outline-secondary btn-sm" for="btnOff">Offline</label>
                 </div>
             </div>
 
-            <div v-if="!alsintan && loading" class="text-center mt-5">
-                <div class="spinner-border text-primary" role="status"></div>
-                <p class="mt-2 text-muted">Mencari sinyal GPS...</p>
-            </div>
+            <div class="overflow-auto flex-grow-1 p-2 custom-scrollbar">
+                <div v-if="loading" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm"></div> Memuat...</div>
+                
+                <div v-else-if="filteredAlsintan.length === 0" class="text-center py-4 text-muted small">
+                    Tidak ada armada yang sesuai filter.
+                </div>
 
-            <div v-else class="row">
-
-            <div class="col-md-4 mb-3">
-                <div class="card card-modern bg-white h-100">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="card-title mb-0">Status Operasional</h5>
-                    </div>
-                    <div class="card-body" v-if="alsintan">
-                        <h3 class="fw-bold">{{ alsintan.nama_alat }}</h3>
-            
-                        <p class="text-muted mb-4">
-                            <i class="bi bi-tag-fill"></i> {{ alsintan.kategori_alat }} <br>
-                            <i class="bi bi-award-fill"></i> {{ alsintan.merk_alat }}
-                        </p>
-
-                        <hr>
-
-                        <div class="mb-3">
-                            <label class="small text-muted">Kondisi Mesin:</label>
-                            <div class="d-grid">
-                                <button class="btn btn-lg fw-bold" :class="alsintan.status_mesin === 'ON' ? 'btn-success' : 'btn-danger'">
-                                    MESIN {{ alsintan.status_mesin }}
-                                </button>
+                <div v-for="alat in filteredAlsintan" :key="alat.alsintan_id" 
+                     @click="goToDetail(alat.alsintan_id)"
+                     class="card border-0 shadow-sm mb-2 cursor-pointer alat-card">
+                    <div class="card-body p-3 d-flex align-items-center">
+                        <div class="me-3 position-relative">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center bg-light" style="width: 40px; height: 40px;">
+                                <i class="bi bi-truck-front fs-5 text-secondary"></i>
                             </div>
+                            <span class="position-absolute bottom-0 end-0 p-1 border border-white rounded-circle"
+                                  :class="alat.status_mesin === 'ON' ? 'bg-success' : 'bg-secondary'"
+                                  style="width: 12px; height: 12px;"></span>
                         </div>
-
-                        <div class="alert alert-light border">
-                            <small>
-                                <strong>Latitude:</strong> {{ alsintan.latitude }} <br>
-                                <strong>Longitude:</strong> {{ alsintan.longitude }}
-                            </small>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0 fw-bold">{{ alat.kode_perangkat }}</h6>
+                            <small class="text-muted" style="font-size: 11px;">{{ alat.nama_alat }}</small>
                         </div>
-            
-                        <p class="text-muted small mt-2">
-                            Update Terakhir: {{ new Date(alsintan.updated_at).toLocaleTimeString() }}
-                        </p>
-                    </div>
-
-                    <div class="card-body text-center" v-else>
-                        <p class="text-danger">Data alat ID {{ selectedId }} tidak ditemukan.<br>Pastikan alat sudah didaftarkan.</p>
+                        <i class="bi bi-chevron-right text-muted opacity-50"></i>
                     </div>
                 </div>
             </div>
-
-            <div class="col-md-8 mb-3">
-                <div class="card card-modern bg-white h-100">
-                    <div class="card-body p-0 position-relative">
-                        <div id="mapContainer" class="map-responsive" style="height: 500px; border-radius: 0 12px 12px 0;"></div>
-            
-                        <div class="position-absolute top-0 end-0 m-3 p-2 bg-white rounded shadow" style="z-index: 999;">
-                            <small class="fw-bold">📍 Lokasi Real-time</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         </div>
     </div>
+
+    <div class="col-md-8 col-lg-9 position-relative bg-dark h-100">
+        <div id="main-map" style="height: 100%; width: 100%;"></div>
+    </div>
+
+  </div>
 </template>
+
+<style scoped>
+.cursor-pointer { cursor: pointer; }
+.alat-card { transition: all 0.2s; border: 1px solid transparent !important; }
+.alat-card:hover { border-color: #0d6efd !important; background-color: #f8f9fa; transform: translateX(5px); }
+
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #dee2e6; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #adb5bd; }
+
+.custom-tractor-icon { background: transparent; border: none; }
+.pulse-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 2px solid #198754;
+    animation: mapPulse 1.5s infinite;
+    z-index: -1;
+}
+@keyframes mapPulse {
+    0% { width: 36px; height: 36px; opacity: 1; }
+    100% { width: 70px; height: 70px; opacity: 0; }
+}
+</style>

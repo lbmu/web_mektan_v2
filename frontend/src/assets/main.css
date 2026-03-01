@@ -18,7 +18,7 @@
    ========================================= */
 body {
     background-color: var(--bg-light);
-    overflow-x: hidden; /* Mencegah scroll ke samping */
+    /* overflow-x: hidden; */ /* Mencegah scroll ke samping */
 }
 
 /* =========================================
@@ -40,7 +40,7 @@ body {
     background-color: var(--sidebar-bg);
     color: white;
     z-index: 1000;
-    overflow-y: auto; 
+    /* overflow-y: auto;*/
     transition: width var(--transition-speed);
     white-space: nowrap; 
     box-shadow: 4px 0 10px rgba(0,0,0,0.1);

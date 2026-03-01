@@ -23,6 +23,8 @@ const handleLogin = async () => {
             password: password.value
         });
 
+        console.log("Response Data:", response.data);
+
         if (response.data.status) {
             const userData = response.data.data;
             localStorage.setItem('user', JSON.stringify(userData));
@@ -30,7 +32,7 @@ const handleLogin = async () => {
             Swal.fire({
                 icon: 'success',
                 title: 'Login Berhasil',
-                text: `Selamat datang, ${userData.name}`,
+                text: `Selamat datang, ${userData.nama || userData.username || 'user'}`,
                 timer: 1500,
                 showConfirmButton: false
             }).then(() => {

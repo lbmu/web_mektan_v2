@@ -9,8 +9,8 @@ const CONFIG = {
     TOPIC: 'project-mektan/v1/data', 
     BROKER: 'mqtt://broker.hivemq.com',
     // Lokasi Awal (Misal: Tengah Sawah di Subang)
-    START_LAT: -6.5566,
-    START_LONG: 107.7602
+    START_LAT: -6.972258,
+    START_LONG: 107.629303
 };
 
 // --- STATE TRAKTOR ---
@@ -44,7 +44,7 @@ client.on('connect', () => {
 // Loop Pengiriman Data (Detak Jantung Alat)
 setInterval(() => {
     publishData();
-}, 2000); // Kirim data setiap 2 detik
+}, 500); // Kirim data setiap 2 detik
 
 function publishData() {
     // Payload Data Lengkap (Sesuai Request Backend Baru)

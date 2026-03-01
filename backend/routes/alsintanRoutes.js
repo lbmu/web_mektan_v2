@@ -20,7 +20,7 @@ router.post('/:id/reset', alsintanController.resetArgo);
 
 router.delete('/:id', (req, res) => {
     const db = require('../config/database');
-    db.query('DELETE FROM alsintan WHERE alsintan_id = ?', [req.params.id], (err, result) => {
+    db.query('DELETE FROM alsintan WHERE alsintan_id = $1', [req.params.id], (err, result) => {
         if (err) return res.status(500).json(err);
         res.json({ pesan: 'Berhasil dihapus' });
     });

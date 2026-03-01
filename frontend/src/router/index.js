@@ -1,8 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import Swal from 'sweetalert2'
+
+
 import DashboardView from '../views/DashboardView.vue'
 import MonitoringView from '../views/MonitoringView.vue'
 import AsetListView from '../views/aset/AsetListView.vue'
 import LoginView from '../views/LoginView.vue'
+import ProfileView from '../views/ProfileView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -20,29 +24,15 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/profile',
+      name: 'profile',
+      component: ProfileView,
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/monitoring',
       name: 'monitoring',
       component: MonitoringView
-    },
-    {
-      path: '/aset',
-      name: 'aset-list',
-      component: AsetListView
-    },
-    {
-      path: '/aset/tambah',
-      name: 'aset-add',
-      component: () => import('../views/aset/AsetAddView.vue')
-    },
-    {
-      path: '/aset/:id',
-      name: 'aset-detail',
-      component: () => import('../views/aset/AsetDetailView.vue')
-    },
-    {
-      path: '/aset/edit/:id',
-      name: 'aset-edit',
-      component: () => import('../views/aset/AsetEditView.vue')
     },
     {
       path: '/monitoring/:id', 
@@ -53,44 +43,80 @@ const router = createRouter({
       path: '/estimasi',
       name: 'estimasi',
       component: () => import('../views/EstimasiView.vue')
+    },
+    // --- SEGMENTED ROLES --- //
+    {
+      path: '/aset',
+      name: 'aset-list',
+      component: AsetListView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/aset/tambah',
+      name: 'aset-add',
+      component: () => import('../views/aset/AsetAddView.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['super_admin'] }
+    },
+    {
+      path: '/aset/:id',
+      name: 'aset-detail',
+      component: () => import('../views/aset/AsetDetailView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/aset/edit/:id',
+      name: 'aset-edit',
+      component: () => import('../views/aset/AsetEditView.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['super_admin'] }
     }
   ]
 })
 
 router.beforeEach((to, from, next) => {
-  // 1. Ambil data dari LocalStorage
   const sessionString = localStorage.getItem('user');
   let isAuthenticated = false;
+  let userRole = '';
 
-  // 2. Validasi sederhana: Apakah datanya ada dan valid JSON-nya?
   if (sessionString) {
       try {
           const userData = JSON.parse(sessionString);
           if (userData && userData.id) {
-              isAuthenticated = true; // Dianggap Login jika ada ID user
+              isAuthenticated = true;
+              userRole = userData.role || 'operator'; // Ambil role
           }
       } catch (e) {
-          console.error("Session rusak, dianggap logout.");
-          localStorage.removeItem('user'); // Bersihkan sampah
+          localStorage.removeItem('user'); 
       }
   }
 
-  // [DEBUG] Lihat di Console kenapa dia menendang/mengizinkan
-  console.log(`Navigasi ke: ${to.name} | Login? ${isAuthenticated}`);
-
-  // 3. Logika Satpam
+  // 1. Cek Login
   if (to.meta.requiresAuth && !isAuthenticated) {
-    // Mau ke Dashboard TAPI belum login -> Tendang ke Login
-    console.warn("Ditolak: Butuh login.");
     next({ name: 'login' });
-  } else if (to.name === 'login' && isAuthenticated) {
-    // Sudah login TAPI mau ke halaman Login -> Lempar ke Home
-    console.log("Sudah login, dialihkan ke Home.");
+    return;
+  } 
+  
+  // 2. Cegah orang yang sudah login masuk ke halaman login lagi
+  if (to.name === 'login' && isAuthenticated) {
     next({ name: 'home' });
-  } else {
-    // Silakan lewat
-    next();
+    return;
   }
+
+  // 3. Cek Hak Akses (RBAC)
+  if (to.meta.allowedRoles) {
+      // Jika role user saat ini TIDAK ADA di dalam daftar allowedRoles
+      if (!to.meta.allowedRoles.includes(userRole)) {
+          Swal.fire({
+              icon: 'error',
+              title: 'Akses Ditolak!',
+              text: 'Anda tidak memiliki izin untuk membuka halaman ini.',
+          });
+          next(from.path); // Kembalikan ke halaman sebelumnya
+          return;
+      }
+  }
+
+  // Lolos semua pemeriksaan
+  next();
 });
 
 export default router

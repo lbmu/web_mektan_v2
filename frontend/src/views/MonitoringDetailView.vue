@@ -1,9 +1,10 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import Swal from 'sweetalert2';
 
 const MQTT_BROKER = 'ws://broker.hivemq.com:8000/mqtt';
 const MQTT_TOPIC = 'project-mektan/v1/data'; 
@@ -13,222 +14,263 @@ const router = useRouter();
 const id = route.params.id;
 
 // --- STATE ---
+const activeTab = ref('LIVE'); // LIVE atau HISTORY
 const infoAlat = ref({});
-const statusMesin = ref('OFF'); // ON / OFF
+const statusMesin = ref('OFF');
 const teganganAki = ref(0);
-const totalJarak = ref(0); // Meter (Akumulasi dari DB + Live)
-const totalHM = ref(0); // Hour Meter (Jam)
+const totalHM = ref(0); 
 
-//Local State Map
-const historyCoords = ref([]); 
+// State Live Mode
+const totalJarakLive = ref(0); 
+const historyCoordsLive = ref([]); 
+
+// State History Mode
+const historyDate = ref(new Date().toISOString().substr(0, 10)); // Default hari ini
+const historyCoordsPast = ref([]);
+const totalJarakPast = ref(0);
+const tarifPerHa = ref(1500000); // Rp 1.500.000 per Hektar
+
+// Local State Map
 let map = null;
-let polyline = null;
+let polyline = null; // Garis lintasan
 let marker = null;
 let mqttClient = null;
 
+// --- INIT DATA ALAT ---
 const fetchData = async () => {
     try {
         const resALat = await axios.get(`http://localhost:3000/api/alsintan/${id}`);
         const data = resALat.data;
-
         infoAlat.value = data;
-
-        //State awal
         statusMesin.value = data.status_mesin || 'OFF';
-        totalJarak.value = parseFloat(data.total_jarak_kerja || 0);
+        totalJarakLive.value = parseFloat(data.total_jarak_kerja || 0);
         totalHM.value = parseFloat(data.total_hour_meter || 0);
         teganganAki.value = parseFloat(data.tegangan_aki || 0);
         
+        // Ambil riwayat live (sejak reset terakhir)
         const resHistory = await axios.get(`http://localhost:3000/api/alsintan/${id}/riwayat`);
-        historyCoords.value = resHistory.data.map(h => [parseFloat(h.latitude), parseFloat(h.longitude)]);
+        historyCoordsLive.value = resHistory.data.map(h => [parseFloat(h.latitude), parseFloat(h.longitude)]);
 
         initMap();
         connectMqtt();
-
     } catch (error) {
-    console.error("Error load data:", error);
+        console.error("Error load data:", error);
     }
 };
 
+// --- LOGIKA PETA ---
 const initMap = () => {
     const container = document.getElementById('monitor-map');
     if (!container) return;
-
-    const startPos = historyCoords.value.length > 0 
-    ? historyCoords.value[historyCoords.value.length - 1] 
-    : [-6.974001, 107.630001];
-
     if (map) { map.remove(); map = null; }
 
-    map = L.map('monitor-map').setView(startPos, 18);
+    const startPos = historyCoordsLive.value.length > 0 
+        ? historyCoordsLive.value[historyCoordsLive.value.length - 1] 
+        : [-6.9175, 107.6191];
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    map = L.map('monitor-map').setView(startPos, 17);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
 
     const tractorIcon = L.divIcon({
         className: 'custom-div-icon',
-        html: "<div style='background-color:#0d6efd; width:15px; height:15px; border-radius:50%; border:2px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5);'></div>",
-        iconSize: [15, 15],
-        iconAnchor: [7, 7]
+        html: "<div style='background-color:#0d6efd; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5);'></div>",
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
     });
 
-    marker = L.marker(startPos, { icon: tractorIcon }).addTo(map)
-        .bindPopup(`<b>${infoAlat.value.nama_alat}</b><br>Sedang Beroperasi`).openPopup();
-
-    polyline = L.polyline(historyCoords.value, { color: 'red', weight: 4}).addTo(map);
+    marker = L.marker(startPos, { icon: tractorIcon }).addTo(map).bindPopup(`<b>${infoAlat.value.nama_alat || 'Alat'}</b>`).openPopup();
+    
+    renderPolyline();
 };
 
-const connectMqtt = () => {
-    if (!window.mqtt) {
-        console.error("Library MQTT belum terload! Cek koneksi internet.");
-        return;
+const renderPolyline = () => {
+    if (polyline) map.removeLayer(polyline);
+    
+    // Tentukan array kordinat mana yang akan digambar berdasarkan Tab
+    const coordsToDraw = activeTab.value === 'LIVE' ? historyCoordsLive.value : historyCoordsPast.value;
+    const lineColor = activeTab.value === 'LIVE' ? 'blue' : 'red';
+
+    if (coordsToDraw.length > 0) {
+        polyline = L.polyline(coordsToDraw, { color: lineColor, weight: 4, opacity: 0.8 }).addTo(map);
+        map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
     }
+};
 
+// --- LOGIKA FETCH HISTORY BERDASARKAN TANGGAL ---
+const fetchHistoryByDate = async () => {
+    try {
+        const response = await axios.get(`http://localhost:3000/api/alsintan/${id}/riwayat?tanggal=${historyDate.value}`);
+        const dataCoords = response.data.map(h => [parseFloat(h.latitude), parseFloat(h.longitude)]);
+        historyCoordsPast.value = dataCoords;
+
+        // Hitung jarak manual khusus hari itu
+        totalJarakPast.value = 0;
+        if (dataCoords.length > 1) {
+            for (let i = 1; i < dataCoords.length; i++) {
+                totalJarakPast.value += map.distance(dataCoords[i-1], dataCoords[i]);
+            }
+        }
+        renderPolyline();
+    } catch (error) {
+        console.error("Gagal load history spesifik:", error);
+    }
+};
+
+// --- MQTT (Hanya Berpengaruh di Tab Live) ---
+const connectMqtt = () => {
+    if (!window.mqtt) return;
     mqttClient = mqtt.connect(MQTT_BROKER);
-
-    mqttClient.on('connect', () => {
-        console.log("Monitoring Terhubung ke MQTT");
-    mqttClient.subscribe(MQTT_TOPIC);
-    });
+    mqttClient.on('connect', () => mqttClient.subscribe(MQTT_TOPIC));
 
     mqttClient.on('message', (topic, message) => {
-    try {
-        const data = JSON.parse(message.toString());
-    
-    // Cek apakah data ini milik alat yang sedang dibuka?
-        if (data.id_alat == id) {
+        try {
+            const data = JSON.parse(message.toString());
+            if (data.id_alat == id) {
+                statusMesin.value = data.status_mesin;
+                const newPoint = [parseFloat(data.lat), parseFloat(data.long)];
 
-            statusMesin.value = data.status_mesin;
-
-            const newPoint = [parseFloat(data.lat), parseFloat(data.long)];
-
-      // Geser Marker
-            if (marker) marker.setLatLng(newPoint);
-            if (map) map.panTo(newPoint);
-
-        // Update Hour Meter jika mesin ON
-            if (statusMesin.value === 'ON') {
-        
-      // Tambah Garis
-                if (polyline) polyline.addLatLng(newPoint);
-
-      // Tambah Hitungan Jarak (Argo)
-                const lastPoint = historyCoords.value[historyCoords.value.length - 1];
-                if (lastPoint) {
-                    const dist = map.distance(lastPoint, newPoint);
-
-                    if (dist > 0.5){  // Filter noise kecil
-                        totalJarak.value += dist;
-                    }
+                if (marker && activeTab.value === 'LIVE') {
+                    marker.setLatLng(newPoint);
+                    map.panTo(newPoint);
                 }
-                historyCoords.value.push(newPoint);
 
-                }  else {
-                    // Jika Mesin OFF: Marker bergerak tapi garis TIDAK ditarik
-                    // (Status Transport / Parkir)
+                if (statusMesin.value === 'ON') {
+                    if (activeTab.value === 'LIVE' && polyline) polyline.addLatLng(newPoint);
+                    const lastPoint = historyCoordsLive.value[historyCoordsLive.value.length - 1];
+                    if (lastPoint) {
+                        const dist = map.distance(lastPoint, newPoint);
+                        if (dist > 0.5) totalJarakLive.value += dist;
+                    }
+                    historyCoordsLive.value.push(newPoint);
                 }
             }
-        }   catch (err) {
-            console.error("MQTT Error:", err);
-        }
+        } catch (err) {}
     });
 };
 
-//Rumus Estimasi (Konversi meter ke hektar & biaya)
+// --- COMPUTED ESTIMASI ---
 const luasHektar = computed(() => {
-    return totalJarak.value / 2500;
+    const jarak = activeTab.value === 'LIVE' ? totalJarakLive.value : totalJarakPast.value;
+    return jarak / 2500;
 });
+const estimasiBiaya = computed(() => luasHektar.value * tarifPerHa.value);
 
-// Estimasi Biaya (Misal Rp 1.000.000 per Hektar - Placeholder)
-const estimasiBiaya = computed(() => {
-    return luasHektar.value * 1000000; 
-});
-
+// --- AKSI RESET ---
 const resetArgo = async () => {
-    if (!confirm("Reset Argo? Jarak akan kembali ke 0 untuk sesi lahan baru.")) return;
+    const confirm = await Swal.fire({
+        title: 'Reset Argo (Sesi Baru)?',
+        text: "Jarak Live akan dikembalikan ke 0. Lakukan ini saat pindah ke lahan petani lain.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Reset!'
+    });
 
-    try {
-        await axios.post(`http://localhost:3000/api/alsintan/${id}/reset`);
-        // Reset state lokal
-        totalJarak.value = 0;
-        historyCoords.value = []; // Kosongkan array history lokal
-    
-        // Re-init map agar garis merah hilang
-        initMap(); 
-    
-        alert("Sesi Baru Dimulai!");
-    }   catch (error) {
-        alert("Gagal reset");
+    if (confirm.isConfirmed) {
+        try {
+            await axios.post(`http://localhost:3000/api/alsintan/${id}/reset`);
+            totalJarakLive.value = 0;
+            historyCoordsLive.value = [];
+            if (activeTab.value === 'LIVE') renderPolyline();
+            Swal.fire('Sesi Baru Dimulai!', '', 'success');
+        } catch (error) {
+            Swal.fire('Gagal reset', '', 'error');
+        }
     }
 };
 
-onMounted(() => {
-    fetchData();
+// --- WATCHERS ---
+watch(activeTab, (newTab) => {
+    if (newTab === 'HISTORY') fetchHistoryByDate();
+    else renderPolyline(); // Balik ke Live
 });
 
-onUnmounted(() => {
-    if (mqttClient) mqttClient.end();
+watch(historyDate, () => {
+    if (activeTab.value === 'HISTORY') fetchHistoryByDate();
 });
 
+onMounted(() => fetchData());
+onUnmounted(() => { if (mqttClient) mqttClient.end(); });
 </script>
 
 <template>
-  <div class="container-fluid">
+  <div class="container-fluid pb-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <div>
-        <h4 class="fw-bold mb-0">📡 Smart Monitoring: {{ infoAlat.nama_alat }}</h4>
-        <div class="d-flex align-items-center mt-1 gap-3">
-            <span class="badge bg-secondary">{{ infoAlat.kode_perangkat }}</span>
-            <span class="badge" 
-                  :class="statusMesin === 'ON' ? 'bg-success animate-pulse' : 'bg-dark text-white-50'">
+        <h4 class="fw-bold mb-0">📡 Dashboard Kendali: {{ infoAlat.nama_alat }}</h4>
+        <div class="d-flex align-items-center mt-1 gap-2">
+            <span class="badge border border-secondary text-secondary">{{ infoAlat.kode_perangkat }}</span>
+            <span class="badge" :class="statusMesin === 'ON' ? 'bg-success animate-pulse' : 'bg-dark text-white-50'">
               <i class="bi bi-power"></i> MESIN: {{ statusMesin }}
             </span>
         </div>
       </div>
-      <button @click="router.back()" class="btn btn-outline-secondary btn-sm">Kembali</button>
+      <button @click="router.back()" class="btn btn-outline-secondary btn-sm shadow-sm">
+          <i class="bi bi-arrow-left"></i> Kembali ke Radar
+      </button>
     </div>
 
     <div class="row g-3">
       <div class="col-lg-8">
-        <div class="card shadow-sm border-0 h-100">
-          <div class="card-body p-0 position-relative">
-            <div v-if="statusMesin === 'OFF'" 
-                 class="position-absolute top-0 start-0 w-100 bg-dark bg-opacity-75 text-white d-flex justify-content-center align-items-center p-2"
-                 style="z-index: 1000; height: 40px;">
-                 <small>⚠️ Mode Transport/Parkir (Argo Paused)</small>
-            </div>
-            
-            <div id="monitor-map" style="height: 500px; width: 100%;"></div>
+        <div class="card shadow-sm border-0 h-100 position-relative overflow-hidden">
+          
+          <div class="position-absolute top-0 start-50 translate-middle-x mt-3 z-3 bg-white rounded-pill shadow-sm p-1 d-flex gap-1 border">
+              <button class="btn btn-sm rounded-pill px-4 fw-bold" 
+                      :class="activeTab === 'LIVE' ? 'btn-primary' : 'btn-light text-muted'"
+                      @click="activeTab = 'LIVE'">
+                  <i class="bi bi-broadcast"></i> Live Mode
+              </button>
+              <button class="btn btn-sm rounded-pill px-4 fw-bold" 
+                      :class="activeTab === 'HISTORY' ? 'btn-danger' : 'btn-light text-muted'"
+                      @click="activeTab = 'HISTORY'">
+                  <i class="bi bi-clock-history"></i> Riwayat Lintasan
+              </button>
           </div>
+
+          <div v-if="activeTab === 'LIVE' && statusMesin === 'OFF'" 
+               class="position-absolute bottom-0 start-0 w-100 bg-dark bg-opacity-75 text-white text-center p-2 z-3"
+               style="font-size: 12px;">
+               <i class="bi bi-info-circle text-warning"></i> Traktor sedang parkir/transport. Argo jarak tidak dihitung.
+          </div>
+
+          <div id="monitor-map" style="height: 550px; width: 100%;"></div>
         </div>
       </div>
 
       <div class="col-lg-4">
         <div class="card border-0 shadow-sm h-100">
-          <div class="card-header bg-dark text-white py-3">
-             <h6 class="mb-0 fw-bold"><i class="bi bi-speedometer2"></i> PANEL KONTROL LAHAN</h6>
+          
+          <div class="card-header py-3" :class="activeTab === 'LIVE' ? 'bg-primary text-white' : 'bg-danger text-white'">
+             <h6 class="mb-0 fw-bold text-center">
+                 <i class="bi" :class="activeTab === 'LIVE' ? 'bi-speedometer2' : 'bi-receipt'"></i> 
+                 {{ activeTab === 'LIVE' ? 'PANEL TELEMETRI LIVE' : 'PEMBUKUAN & ESTIMASI' }}
+             </h6>
           </div>
+
           <div class="card-body bg-light d-flex flex-column gap-3">
             
+            <div v-if="activeTab === 'HISTORY'" class="bg-white p-3 rounded border shadow-sm">
+                <label class="small fw-bold text-muted mb-1">Pilih Tanggal Operasi:</label>
+                <input type="date" v-model="historyDate" class="form-control">
+            </div>
+
             <div class="card border-0 shadow-sm bg-white">
               <div class="card-body text-center">
                 <span class="text-muted small text-uppercase fw-bold">Estimasi Luas Tergarap</span>
-                <h2 class="display-4 fw-bold text-success my-2">
+                <h2 class="display-4 fw-bold my-2" :class="activeTab === 'LIVE' ? 'text-primary' : 'text-danger'">
                   {{ luasHektar.toFixed(3) }} <span class="fs-6 text-muted">Ha</span>
                 </h2>
                 <small class="text-muted border-top pt-2 d-block">
-                  Jarak Kerja: {{ (totalJarak / 1000).toFixed(2) }} km
+                  Jarak Kerja: {{ ((activeTab === 'LIVE' ? totalJarakLive : totalJarakPast) / 1000).toFixed(2) }} km
                 </small>
               </div>
             </div>
 
-            <div class="row g-2">
+            <div v-if="activeTab === 'LIVE'" class="row g-2">
               <div class="col-6">
                 <div class="card border-0 shadow-sm bg-white h-100">
                   <div class="card-body text-center p-2">
                     <small class="text-muted d-block mb-1">Hour Meter</small>
-                    <h5 class="fw-bold mb-0">{{ totalHM }} <small>Jam</small></h5>
+                    <h5 class="fw-bold mb-0 text-dark">{{ totalHM }} <small>Jam</small></h5>
                   </div>
                 </div>
               </div>
@@ -236,26 +278,29 @@ onUnmounted(() => {
                 <div class="card border-0 shadow-sm bg-white h-100">
                   <div class="card-body text-center p-2">
                     <small class="text-muted d-block mb-1">Voltase Aki</small>
-                    <h5 class="fw-bold mb-0 text-primary">{{ teganganAki }} <small>V</small></h5>
+                    <h5 class="fw-bold mb-0 text-success">{{ teganganAki }} <small>V</small></h5>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="card border-0 shadow-sm bg-warning bg-opacity-10">
+            <div class="card border border-warning shadow-sm bg-warning bg-opacity-10 mt-auto">
               <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                  <span class="fw-bold text-warning-emphasis">Estimasi Biaya</span>
+                <label class="small text-muted fw-bold d-block mb-1">Tarif Jasa per Hektar</label>
+                <div class="input-group input-group-sm mb-3">
+                    <span class="input-group-text bg-white">Rp</span>
+                    <input type="number" v-model="tarifPerHa" class="form-control fw-bold border-start-0">
+                </div>
+                <div class="d-flex justify-content-between align-items-center border-top border-warning pt-2">
+                  <span class="fw-bold text-warning-emphasis">Total Tagihan</span>
                   <span class="h5 mb-0 fw-bold text-dark">Rp {{ estimasiBiaya.toLocaleString('id-ID') }}</span>
                 </div>
               </div>
             </div>
 
-            <div class="mt-auto">
-               <button @click="resetArgo" class="btn btn-danger w-100 shadow-sm py-2">
-                 <i class="bi bi-arrow-repeat"></i> Reset Sesi Baru
-               </button>
-            </div>
+            <button @click="resetArgo" class="btn btn-dark w-100 shadow-sm py-2">
+                <i class="bi bi-arrow-repeat"></i> Reset Argo (Mulai Lahan Baru)
+            </button>
 
           </div>
         </div>
@@ -265,12 +310,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.animate-pulse {
-  animation: pulse 1s infinite;
-}
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
-}
+.animate-pulse { animation: pulse 1s infinite; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+.z-3 { z-index: 1000 !important; }
 </style>
