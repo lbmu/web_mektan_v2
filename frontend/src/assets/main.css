@@ -1,28 +1,31 @@
 /* =========================================
-   1. GLOBAL VARIABLES (Jantung Desain Kamu)
-   Ubah angka di sini, satu aplikasi berubah semua.
+   1. GLOBAL VARIABLES (Kerangka Asli Anda)
    ========================================= */
 :root {
     --sidebar-width: 260px;  
-    --sidebar-width-close: 80px; /* Lebar Sidebar saat dikurangi */
-    --navbar-height: 60px;      /* Tinggi Navbar (jika ada nanti) */
-    --primary-color: #0d6efd;   /* Warna Biru Bootstrap */
-    --sidebar-bg: #212529;      /* Warna Gelap Sidebar */
-    --bg-light: #f8f9fa;        /* Warna Background Konten */
-    --hover-bg: #343a40;       /* Warna saat hover elemen */
-    --transition-speed: 0.3s;   /* Kecepatan animasi */
+    --sidebar-width-close: 80px; 
+    --navbar-height: 60px;      
+    --primary-color: #2563eb;   /* Biru cerah modern ala startup */
+    --sidebar-bg: #1e293b;      /* Warna Gelap Sidebar (Slate modern) */
+    --bg-light: #f8fafc;        /* Warna Background Konten abu-abu sangat muda */
+    --hover-bg: #334155;        /* Warna saat hover elemen */
+    --transition-speed: 0.3s;   
+    --text-color: #e2e8f0;      /* Teks sidebar */
+    --hover-color: #334155;
 }
 
 /* =========================================
-   2. RESET & BASE STYLES
+   2. GLOBAL TYPOGRAPHY & RESET
    ========================================= */
 body {
     background-color: var(--bg-light);
-    /* overflow-x: hidden; */ /* Mencegah scroll ke samping */
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    color: #334155 !important;
+    -webkit-font-smoothing: antialiased;
 }
 
 /* =========================================
-   3. LAYOUT STRUCTURE (Penting!)
+   3. LAYOUT STRUCTURE (Pondasi Asli Anda)
    ========================================= */
 .app-container {
     display: flex;
@@ -34,16 +37,15 @@ body {
 .sidebar-wrapper {
     width: var(--sidebar-width);
     height: 100vh;
-    position: fixed; /* Melayang di kiri */
+    position: fixed; 
     top: 0;
     left: 0;
     background-color: var(--sidebar-bg);
     color: white;
     z-index: 1000;
-    /* overflow-y: auto;*/
     transition: width var(--transition-speed);
     white-space: nowrap; 
-    box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+    box-shadow: 4px 0 15px rgba(0,0,0,0.05); /* Shadow diperhalus */
 }
 
 .sidebar-wrapper.closed {
@@ -52,11 +54,10 @@ body {
 
 /* --- Main Content Area --- */
 .content-wrapper {
-    /* Margin kiri otomatis sebesar lebar sidebar */
     margin-left: var(--sidebar-width); 
     width: calc(100% - var(--sidebar-width));
     min-height: 100vh;
-    padding: 2rem; /* Jarak ke dalam (padding) yang konsisten */
+    padding: 2rem; 
     background-color: var(--bg-light);
     transition: margin-left var(--transition-speed), width var(--transition-speed);
 }
@@ -67,10 +68,9 @@ body {
 }
 
 /* =========================================
-        4. COMPONENT STYLES
+   4. COMPONENT STYLES (Menu & Interaksi)
    ========================================= */
 
-/* Nav Link di Sidebar */
 .nav-list {
     list-style: none;
     padding: 0;
@@ -80,7 +80,7 @@ body {
 .nav-link, .dropdown-btn {
     display: flex;
     align-items: center;
-    justify-content: space-between; /* Agar panah ada di kanan */
+    justify-content: space-between; 
     padding: 15px;
     color: var(--text-color);
     text-decoration: none;
@@ -88,52 +88,58 @@ body {
     background: none;
     border: none;
     width: 100%;
-    font-size: 16px;
-    transition: background 0.2s;
+    font-size: 15px; /* Sedikit dikecilkan agar elegan */
+    transition: background 0.2s, color 0.2s;
 }
 
 .nav-link:hover, .dropdown-btn:hover {
-    background-color: var(--hover-color);
+    background-color: var(--hover-bg);
+    color: #ffffff;
 }
 
 .nav-link.active {
     background-color: var(--primary-color) !important;
     color: white !important;
-    font-weight: bold;
-    box-shadow: 0 4px 6px rgba(13, 110, 253, 0.3); /* Bayangan biru */
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2); 
+    border-radius: 0 8px 8px 0; /* Aksen lengkung di kanan menu aktif */
+    margin-right: 10px;
 }
 
-/* Teks Menu (Hilang saat close) */
 .link-text {
     flex-grow: 1;
-    margin-left: 10px;
+    margin-left: 12px;
     transition: opacity 0.2s;
 }
+
 .sidebar.close .link-text,
 .sidebar.close .arrow-icon {
-    opacity: 0; /* Sembunyikan teks & panah dropdown saat sidebar tutup */
+    opacity: 0; 
     pointer-events: none;
 }
 
-/* --- SUBMENU (DROPDOWN) --- */
+/* --- SUBMENU --- */
 .sub-menu {
-    display: none; /* Default sembunyi */
-    background-color: #1a1c29;
+    display: none; 
+    background-color: #0f172a; /* Warna submenu lebih gelap dari sidebar */
     padding-left: 0;
     list-style: none;
 }
 
-/* KELAS 'show' (Sesuai Referensi) */
 .sub-menu.show {
-    display: block; /* Munculkan saat ada class show */
+    display: block; 
 }
 
 .sub-menu a {
-    padding-left: 40px; /* Indentasi anak menu */
-    font-size: 14px;
+    padding-left: 45px; 
+    font-size: 13.5px;
+    color: #94a3b8;
 }
 
-/* --- ROTASI PANAH --- */
+.sub-menu a:hover {
+    color: #ffffff;
+}
+
 .arrow-icon {
     transition: transform 0.3s;
 }
@@ -146,8 +152,9 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px;
-    font-weight: bold;
+    padding: 20px 15px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
 }
 .toggle-btn {
     background: none;
@@ -155,26 +162,76 @@ body {
     color: white;
     cursor: pointer;
     font-size: 20px;
+    transition: opacity 0.2s;
+}
+.toggle-btn:hover {
+    opacity: 0.7;
 }
 
-/* Peta Leaflet Container */
+/* =========================================
+   5. POLESAN NEO-MINIMALIST (Suntikan Baru)
+   ========================================= */
+
+/* Peta */
 .map-responsive {
     width: 100%;
-    height: 75vh; /* Tinggi peta menyesuaikan layar (75%) */
-    border-radius: 12px;
+    height: 75vh; 
+    border-radius: 16px;
     overflow: hidden;
     position: relative;
     z-index: 1;
+    border: 1px solid rgba(0,0,0,0.05);
 }
 
-/* Card Modern */
-.card-modern {
-    border: none;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    transition: transform 0.2s;
+/* Menyatukan Card Modern Anda dengan Card Bootstrap */
+.card, .card-modern {
+    border: 1px solid rgba(0,0,0,0.03) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background-color: #ffffff;
 }
 
-.card-modern:hover {
-    transform: translateY(-5px); /* Efek naik pas di hover */
+a.card:hover, .cursor-pointer.card:hover, .card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.08) !important;
 }
+
+/* Polesan Tombol */
+.btn {
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 1.25rem !important;
+    transition: all 0.2s ease !important;
+    letter-spacing: 0.3px;
+}
+
+.btn-primary {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25) !important;
+}
+
+.btn-primary:hover {
+    background-color: #1d4ed8 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(37, 99, 235, 0.35) !important;
+}
+
+/* Polesan Input Form */
+.form-control, .form-select {
+    border-radius: 10px !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 0.65rem 1rem !important;
+    background-color: #f8fafc !important;
+    font-size: 0.95rem !important;
+    transition: all 0.2s;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: #ffffff !important;
+    border-color: #93c5fd !important;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
+}
+
+/*

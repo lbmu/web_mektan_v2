@@ -3,6 +3,8 @@ import { onMounted, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import Swal from 'sweetalert2';
 
+const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL;
+
 // Terima status 'close' dari Layout (Parent)
 const props = defineProps({
     isClosed: Boolean
@@ -34,7 +36,7 @@ onMounted(() => {
             const fotoFilename = userData.foto || userData.foto_profil;
 
             if (fotoFilename) {
-                userPhoto.value = `http://localhost:3000/uploads/profiles/${fotoFilename}`;
+                userPhoto.value = `${IMAGE_BASE_URL}/profiles/${fotoFilename}`;
             } else {
                 userPhoto.value = `https://ui-avatars.com/api/?name=${userName.value}&background=0D6EFD&color=fff`;
             }

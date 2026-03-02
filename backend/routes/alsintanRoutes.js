@@ -14,6 +14,8 @@ router.get('/:id', alsintanController.getAlsintanById);
 
 router.put('/:id', upload.single('gambar'), alsintanController.updateAlsintan);
 
+router.delete('/:id', alsintanController.deleteAlsintan);
+
 router.get('/:id/riwayat', alsintanController.getRiwayat);
 
 router.post('/:id/reset', alsintanController.resetArgo);

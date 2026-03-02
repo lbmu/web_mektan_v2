@@ -3,6 +3,9 @@ import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL;
+
 const formData = ref({
     id: '',
     username: '',
@@ -36,7 +39,7 @@ onMounted(async () => {
 
 
     try {
-        const response = await axios.get(`http://localhost:3000/api/users/profile/${session.id}`);
+        const response = await axios.get(`${API_BASE_URL}/users/profile/${session.id}`);
         const user = response.data.data || response.data;
 
         if (!user) {
@@ -55,7 +58,7 @@ onMounted(async () => {
         };
 
         if (user.foto_profil) {
-            previewFoto.value = `http://localhost:3000/uploads/profiles/${user.foto_profil}`;
+            previewFoto.value = `${IMAGE_BASE_URL}/profiles/${user.foto_profil}`;
         }
 
     } catch (error) {
@@ -95,7 +98,7 @@ const handleUpdate = async () => {
 
     try {
         const session = getSession();
-        const response = await axios.put(`http://localhost:3000/api/users/update/${session.id}`, form, {
+        const response = await axios.put(`${API_BASE_URL}/users/update/${session.id}`, form, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
 

@@ -6,8 +6,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Swal from 'sweetalert2';
 
-const MQTT_BROKER = 'ws://broker.hivemq.com:8000/mqtt';
-const MQTT_TOPIC = 'project-mektan/v1/data'; 
+const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
+const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
 
 const route = useRoute();
 const router = useRouter();
@@ -39,7 +39,7 @@ let mqttClient = null;
 // --- INIT DATA ALAT ---
 const fetchData = async () => {
     try {
-        const resALat = await axios.get(`http://localhost:3000/api/alsintan/${id}`);
+        const resALat = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}`);
         const data = resALat.data;
         infoAlat.value = data;
         statusMesin.value = data.status_mesin || 'OFF';
@@ -48,7 +48,7 @@ const fetchData = async () => {
         teganganAki.value = parseFloat(data.tegangan_aki || 0);
         
         // Ambil riwayat live (sejak reset terakhir)
-        const resHistory = await axios.get(`http://localhost:3000/api/alsintan/${id}/riwayat`);
+        const resHistory = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}/riwayat`);
         historyCoordsLive.value = resHistory.data.map(h => [parseFloat(h.latitude), parseFloat(h.longitude)]);
 
         initMap();
@@ -99,7 +99,7 @@ const renderPolyline = () => {
 // --- LOGIKA FETCH HISTORY BERDASARKAN TANGGAL ---
 const fetchHistoryByDate = async () => {
     try {
-        const response = await axios.get(`http://localhost:3000/api/alsintan/${id}/riwayat?tanggal=${historyDate.value}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}/riwayat?tanggal=${historyDate.value}`);
         const dataCoords = response.data.map(h => [parseFloat(h.latitude), parseFloat(h.longitude)]);
         historyCoordsPast.value = dataCoords;
 
@@ -167,7 +167,7 @@ const resetArgo = async () => {
 
     if (confirm.isConfirmed) {
         try {
-            await axios.post(`http://localhost:3000/api/alsintan/${id}/reset`);
+            await axios.post(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}/reset`);
             totalJarakLive.value = 0;
             historyCoordsLive.value = [];
             if (activeTab.value === 'LIVE') renderPolyline();

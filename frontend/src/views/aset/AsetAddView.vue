@@ -56,7 +56,7 @@ const submitForm = async () => {
         }
 
     // Kirim ke Backend
-    await axios.post('http://localhost:3000/api/alsintan', formData, {
+    await axios.post(`${import.meta.env.VITE_API_BASE_URL}/alsintan`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
     });
 

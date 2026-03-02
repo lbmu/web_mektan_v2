@@ -11,7 +11,7 @@ const tarifPerHa = ref(1500000);
 
 const fetchData = async () => {
     try {
-        const response = await axios.get('http://localhost:3000/api/alsintan');
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan`);
         items.value = response.data;
     } catch (error) {
         console.error("Gagal ambil data:", error);

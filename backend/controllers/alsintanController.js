@@ -1,4 +1,6 @@
 const db = require('../config/database');
+const fs = require('fs');
+const path = require('path');
 
 // 1. GET ALL (JOIN Data Profil + Data Sensor Live)
 exports.getAllAlsintan = (req, res) => {
@@ -17,7 +19,6 @@ exports.getAllAlsintan = (req, res) => {
     
     db.query(query, (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        // PERUBAHAN POSTGRES: Gunakan results.rows
         res.status(200).json(results.rows);
     });
 };
@@ -40,7 +41,6 @@ exports.getAlsintanById = (req, res) => {
 
     db.query(query, [id], (err, results) => {
         if (err) return res.status(500).json({ error: err.message });
-        // PERUBAHAN POSTGRES: Gunakan results.rows
         if (results.rows.length === 0) return res.status(404).json({ pesan : 'Data alat tidak tersedia'});
         res.status(200).json(results.rows[0]);
     });
@@ -59,7 +59,6 @@ exports.createAlsintan = (req, res) => {
         return res.status(400).json({ pesan: 'Kode perangkat dan nama alat harus diisi' });
     }
 
-
     const queryAlat = `
         INSERT INTO alsintan (
             kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
@@ -75,17 +74,14 @@ exports.createAlsintan = (req, res) => {
 
     db.query(queryAlat, values, (err, result) => {
         if (err) {
-
             if (err.code === '23505') {
                 return res.status(400).json({ pesan: 'Kode perangkat sudah terdaftar' });
             }
             return res.status(500).json({ pesan: 'Gagal insert alsintan', error: err.message });
         }
 
-
         const newId = result.rows[0].alsintan_id;
 
-        // PERUBAHAN POSTGRES: INSERT IGNORE diganti ON CONFLICT DO NOTHING
         const queryStatus = `
             INSERT INTO monitoring_status (alsintan_id, status_mesin) 
             VALUES ($1, 'OFF') 
@@ -103,7 +99,7 @@ exports.createAlsintan = (req, res) => {
     });
 };
 
-// 4. UPDATE
+// 4. UPDATE (DENGAN SAPU OTOMATIS FILE LAMA)
 exports.updateAlsintan = (req, res) => {
     const id = req.params.id;
     const {
@@ -111,57 +107,102 @@ exports.updateAlsintan = (req, res) => {
         status_sensor, status_operasional, deskripsi, kapasitas_lahan
     } = req.body;
     
+    // INTIP GAMBAR LAMA DULU
+    db.query(`SELECT gambar FROM alsintan WHERE alsintan_id = $1`, [id], (errCheck, rowsResult) => {
+        if (errCheck) return res.status(500).json({ pesan: 'Gagal mengecek data lama', error: errCheck.message });
+        
+        const gambarLama = rowsResult.rows.length > 0 ? rowsResult.rows[0].gambar : null;
 
-    let query = `
-        UPDATE alsintan SET
-            kode_perangkat = $1, nama_alat = $2, kategori_alat = $3, merk_alat = $4,
-            nomor_seri = $5, status_sensor = $6, status_operasional = $7,
-            deskripsi = $8, kapasitas_lahan = $9
-    `;
+        let query = `
+            UPDATE alsintan SET
+                kode_perangkat = $1, nama_alat = $2, kategori_alat = $3, merk_alat = $4,
+                nomor_seri = $5, status_sensor = $6, status_operasional = $7,
+                deskripsi = $8, kapasitas_lahan = $9
+        `;
 
-    let values = [
-        kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
-        status_sensor, status_operasional, deskripsi, kapasitas_lahan
-    ]; 
-    let paramCounter = 10;
+        let values = [
+            kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
+            status_sensor, status_operasional, deskripsi, kapasitas_lahan
+        ]; 
+        let paramCounter = 10;
 
-    if (req.file) {
-        query += `, gambar = $${paramCounter} `;
-        values.push(req.file.filename);
-        paramCounter++;
-    }   
+        if (req.file) {
+            query += `, gambar = $${paramCounter} `;
+            values.push(req.file.filename);
+            paramCounter++;
 
-    query += ` WHERE alsintan_id = $${paramCounter}`;
-    values.push(id);
-    
-    db.query(query, values, (err, result) => {
-        if (err) return res.status(500).json({ pesan: 'Gagal update data', error: err.message });
-        res.status(200).json({ pesan: 'Data alsintan berhasil diperbarui'});
+            // EKSEKUSI SAPU: Hapus gambar fisik yang lama jika ada gambar baru
+            if (gambarLama && gambarLama !== 'default.jpg') {
+                const filePath = path.join(__dirname, '../uploads', gambarLama);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath); // Hapus file dari folder uploads
+                    console.log(`🗑️ File sampah dibersihkan: ${gambarLama}`);
+                }
+            }
+        }   
+
+        query += ` WHERE alsintan_id = $${paramCounter}`;
+        values.push(id);
+        
+        db.query(query, values, (err, result) => {
+            if (err) return res.status(500).json({ pesan: 'Gagal update data', error: err.message });
+            res.status(200).json({ pesan: 'Data alsintan berhasil diperbarui'});
+        });
     });
 };
 
-// 5. GET RIWAYAT (DENGAN FILTER TANGGAL)
+// 5. DELETE (FUNGSI BARU BESERTA SAPU OTOMATIS)
+exports.deleteAlsintan = (req, res) => {
+    const id = req.params.id;
+
+    // INTIP GAMBAR LAMA
+    db.query(`SELECT gambar FROM alsintan WHERE alsintan_id = $1`, [id], (errCheck, rowsResult) => {
+        if (errCheck) return res.status(500).json({ error: errCheck.message });
+        if (rowsResult.rows.length === 0) return res.status(404).json({ pesan: 'Data tidak ditemukan' });
+
+        const gambarLama = rowsResult.rows[0].gambar;
+
+        // HAPUS DATA DARI DATABASE (Tabel anak dihapus duluan agar tidak error Foreign Key)
+        db.query(`DELETE FROM riwayat_perjalanan WHERE alsintan_id = $1`, [id], () => {
+            db.query(`DELETE FROM monitoring_status WHERE alsintan_id = $1`, [id], () => {
+                db.query(`DELETE FROM alsintan WHERE alsintan_id = $1`, [id], (errDel) => {
+                    if (errDel) return res.status(500).json({ error: errDel.message });
+
+                    // EKSEKUSI SAPU: Hapus gambar fisiknya
+                    if (gambarLama && gambarLama !== 'default.jpg') {
+                        const filePath = path.join(__dirname, '../uploads', gambarLama);
+                        if (fs.existsSync(filePath)) {
+                            fs.unlinkSync(filePath);
+                            console.log(`🗑️ File traktor terhapus: ${gambarLama}`);
+                        }
+                    }
+                    res.status(200).json({ pesan: 'Data alsintan dan gambar berhasil dihapus permanen' });
+                });
+            });
+        });
+    });
+};
+
+// 6. GET RIWAYAT (DENGAN FILTER TANGGAL)
 exports.getRiwayat = (req, res) => {
     const id = req.params.id;
-    const tanggal = req.query.tanggal; // Menangkap filter tanggal dari Frontend
+    const tanggal = req.query.tanggal;
 
-    // JIKA ADA FILTER TANGGAL (Mode Riwayat)
     if (tanggal) {
-        // Query Postgres untuk mencocokkan tanggal (abaikan jam)
         const queryHistory = `
             SELECT latitude, longitude, waktu_rekam 
             FROM riwayat_perjalanan 
-            WHERE alsintan_id = $1 AND DATE(waktu_rekam) = $2 
+            WHERE alsintan_id = $1 
+            AND DATE(waktu_rekam AT TIME ZONE 'Asia/Jakarta') = $2 
             ORDER BY waktu_rekam ASC
         `;
         db.query(queryHistory, [id, tanggal], (errHist, results) => {
             if (errHist) return res.status(500).json({ error: errHist.message });
             res.json(results.rows);
         });
-        return; // Hentikan fungsi di sini
+        return; 
     }
 
-    // JIKA TIDAK ADA TANGGAL (Mode Live - Tarik data sejak waktu_reset)
     const queryCheck = `SELECT waktu_reset FROM alsintan WHERE alsintan_id = $1`;
     db.query(queryCheck, [id], (err, rowsResult) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -178,12 +219,12 @@ exports.getRiwayat = (req, res) => {
 
         db.query(queryHistory, params, (errHist, results) => {
             if (errHist) return res.status(500).json({ error: errHist.message });
-            res.json(results.rows); // PERUBAHAN POSTGRES: Gunakan results.rows
+            res.json(results.rows);
         });
     });
 };
 
-// 6. RESET ARGO
+// 7. RESET ARGO
 exports.resetArgo = (req, res) => {
     const id = req.params.id;
     const queryResetTime = `UPDATE alsintan SET waktu_reset = NOW() WHERE alsintan_id = $1`;

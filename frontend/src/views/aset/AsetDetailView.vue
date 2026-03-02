@@ -3,6 +3,8 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
+const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL;
+
 const route = useRoute();
 const router = useRouter();
 
@@ -17,7 +19,7 @@ const userRole = ref(''); // [BARU] State untuk menyimpan role pengguna
 // Fungsi Ambil Data Detail
 const fetchDetail = async () => {
     try {
-        const response = await axios.get(`http://localhost:3000/api/alsintan/${id}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}`);
         item.value = response.data;
     } catch (error) {
         console.error("Gagal ambil detail:", error);
@@ -35,7 +37,7 @@ const goBack = () => {
 const deleteAset = async () => {
     if (confirm('Apakah Anda yakin ingin menghapus aset ini? Data tidak bisa dikembalikan.')) {
         try {
-            await axios.delete(`http://localhost:3000/api/alsintan/${id}`);
+            await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}`);
             alert('Aset berhasil dihapus.');
             router.push('/aset');
         } catch (error) {
@@ -92,7 +94,7 @@ onMounted(() => {
             
                         <div class="mb-4 position-relative d-inline-block">
                             <img 
-                                :src="`http://localhost:3000/uploads/${item.gambar}`" 
+                                :src="`${IMAGE_BASE_URL}/${item.gambar}`" 
                                 class="img-fluid rounded shadow-sm"
                                 style="max-height: 300px; object-fit: cover;"
                                 alt="Foto Alat"

@@ -19,8 +19,8 @@ const filterStatus = ref('ALL');
 let map = null;
 let markers = {};
 let mqttClient = null;
-const MQTT_BROKER = 'ws://broker.hivemq.com:8000/mqtt';
-const MQTT_TOPIC = 'project-mektan/v1/data';
+const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
+const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
 
 // --- COMPUTED PROPERTIES ---
 const filteredAlsintan = computed(() => {
@@ -35,7 +35,7 @@ const filteredAlsintan = computed(() => {
 // --- 1. FETCH DATA UTAMA ---
 const fetchAllData = async () => {
     try {
-        const response = await axios.get('http://localhost:3000/api/alsintan');
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan`);
         alsintanList.value = response.data;
         
         await nextTick();

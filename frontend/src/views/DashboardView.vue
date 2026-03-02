@@ -15,13 +15,13 @@ let markers = {};
 let mqttClient = null;
 let chartInstance = null;
 
-const MQTT_BROKER = 'ws://broker.hivemq.com:8000/mqtt';
-const MQTT_TOPIC = 'project-mektan/v1/data';
+const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
+const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
 
 // --- 1. FETCH DATA UTAMA ---
 const fetchData = async () => {
   try {
-    const response = await axios.get('http://localhost:3000/api/alsintan');
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan`);
     items.value = response.data;
   } catch (error) {
     console.error("Gagal load dashboard:", error);
@@ -257,10 +257,10 @@ onUnmounted(() => { if(mqttClient) mqttClient.end(); });
                             <div v-if="totalLive > 0" class="radar-container">
                                 <div class="radar-ring"></div>
                                 <div class="radar-ring delay-1"></div>
-                                <i class="bi bi-truck-front-fill position-relative z-2 fs-4"></i>
+                                <!-- <i class="bi bi-activity position-relative z-2 fs-3"></i> -->
                             </div>
                             <div v-else class="opacity-50">
-                                <i class="bi bi-pause-circle fs-2"></i>
+                                <!-- <i class="bi bi-power fs-2 opacity-50"></i> -->
                             </div>
                         </div>
                     </div>
@@ -270,7 +270,7 @@ onUnmounted(() => { if(mqttClient) mqttClient.end(); });
             <div class="col-md-3">
                 <div class="card border-0 shadow-sm bg-info text-white h-100 position-relative overflow-hidden">
                     <div class="position-absolute bottom-0 end-0 p-2 opacity-25" style="transform: rotate(-15deg) scale(1.5);">
-                        <i class="bi bi-layers-fill fs-1"></i>
+                        
                     </div>
                     <div class="card-body position-relative z-1">
                         <h6 class="text-white-50 mb-2 text-uppercase fw-bold" style="font-size: 11px;">Total Cakupan Lahan</h6>
@@ -280,7 +280,7 @@ onUnmounted(() => { if(mqttClient) mqttClient.end(); });
             </div>
 
             <div class="col-md-3">
-                <div class="card border-0 shadow-sm h-100" :class="warningList.length > 0 ? 'bg-danger text-white' : 'bg-light'">
+                <div class="card border-0 shadow-sm h-100" :class="warningList.length > 0 ? 'bg-danger text-white' : 'bg-danger text-white'">
                     <div class="card-body">
                         <h6 :class="warningList.length > 0 ? 'text-white-50' : 'text-muted'">Perlu Perhatian</h6>
                         <h2 class="fw-bold mb-0">{{ warningList.length }} <small class="fs-6">Isu</small></h2>
@@ -313,9 +313,9 @@ onUnmounted(() => { if(mqttClient) mqttClient.end(); });
                         <div class="card-body">
                             <div style="height: 220px; position: relative;">
                                 <canvas id="statusChart"></canvas>
-                                <div class="position-absolute top-50 start-50 translate-middle text-center" style="pointer-events: none;">
-                                    <h3 class="fw-bold mb-0 text-dark">{{ totalAset }}</h3>
-                                    <small class="text-muted" style="font-size: 10px;">Unit</small>
+                                <div class="position-absolute start-50 translate-middle text-center" style="top: 35%; pointer-events: none;">
+                                    <div class="fw-bolder" style="font-size: 3rem; color: #1e293b; line-height: 1;">{{ totalAset }}</div>
+                                    <div class="text-uppercase fw-bold" style="font-size: 0.7rem; color: #94a3b8; letter-spacing: 2px; margin-top: 2px;">Unit</div>
                                 </div>
                             </div>
                         </div>

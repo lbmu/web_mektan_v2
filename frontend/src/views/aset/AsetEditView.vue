@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { useRoute, useRouter } from 'vue-router';
 
+const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL;
 const route = useRoute();
 const router = useRouter();
 const id = route.params.id; // Ambil ID dari URL
@@ -30,7 +31,7 @@ const isLoading = ref(true);
 // 1. AMBIL DATA LAMA (Saat halaman dibuka)
 const fetchDetail = async () => {
   try {
-    const response = await axios.get(`http://localhost:3000/api/alsintan/${id}`);
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}`);
     const data = response.data;
     
     // Isi form dengan data dari database
@@ -89,7 +90,7 @@ const submitForm = async () => {
     }
 
     // PENTING: Method PUT untuk Update
-    await axios.put(`http://localhost:3000/api/alsintan/${id}`, formData, {
+    await axios.put(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
 
@@ -199,7 +200,7 @@ onMounted(() => {
                   >
                   <img 
                     v-else-if="gambarLama" 
-                    :src="`http://localhost:3000/uploads/${gambarLama}`" 
+                    :src="`${IMAGE_BASE_URL}/${gambarLama}`" 
                     class="img-fluid" style="max-height: 150px;"
                     @error="$event.target.style.display='none'"
                   >

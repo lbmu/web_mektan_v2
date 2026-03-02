@@ -17,8 +17,8 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c; 
 }
 
-const BROKER_URL = 'mqtt://broker.hivemq.com';
-const TOPIC = 'project-mektan/v1/data';
+const BROKER_URL = process.env.MQTT_BROKER;
+const TOPIC = process.env.MQTT_TOPIC;
 
 const client = mqtt.connect(BROKER_URL);
 

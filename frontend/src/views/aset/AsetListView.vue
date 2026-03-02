@@ -4,6 +4,8 @@ import axios from 'axios';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
+const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL;
+
 const router = useRouter();
 const items = ref([]);
 const loading = ref(true);
@@ -12,7 +14,7 @@ const userRole = ref(''); // State untuk menyimpan role pengguna
 // --- AMBIL DATA ---
 const fetchData = async () => {
   try {
-    const response = await axios.get('http://localhost:3000/api/alsintan');
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan`);
     items.value = response.data;
   } catch (error) {
     console.error("Gagal mengambil data:", error);
@@ -25,7 +27,7 @@ const fetchData = async () => {
 const deleteItem = async (id) => {
   if (!confirm("Hapus data ini permanen?")) return;
   try {
-    await axios.delete(`http://localhost:3000/api/alsintan/${id}`);
+    await axios.delete(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}`);
     fetchData(); 
   } catch (error) {
     Swal.fire("Error", "Gagal menghapus data", "error");
@@ -87,7 +89,7 @@ onMounted(() => {
               <tr v-for="item in items" :key="item.alsintan_id">
                 <td class="ps-4">
                   <div class="d-flex align-items-center">
-                    <img :src="`http://localhost:3000/uploads/${item.gambar}`" 
+                    <img :src="`${IMAGE_BASE_URL}/${item.gambar}`" 
                          class="rounded border object-fit-cover me-3" 
                          width="50" height="50" 
                          @error="$event.target.src='https://via.placeholder.com/50?text=IMG'">
