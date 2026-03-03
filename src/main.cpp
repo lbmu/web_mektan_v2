@@ -5,10 +5,12 @@
 #include <espOTA.h>
 
 /* @brief
- *  semua data sensitif meliputi SSID, PASS, OTA PASS, SERVER URL
- *  didefinisikan di file 'secrets.h'
- *  agar mudah diatur tanpa mengubah kode utama
- *  dan menghindari upload data sensitif ke repo publik 
+ * semua data sensitif meliputi SSID, PASS, OTA PASS, SERVER URL
+ * didefinisikan di file 'secrets.h'
+ * agar mudah diatur tanpa mengubah kode utama
+ * dan menghindari upload data sensitif ke repo publik 
+ * brief ini di-generate sama CoPilot VS Code btw
+ * makanya bahasa nya semi baku
  */
 
 #include <secrets.h>
@@ -54,53 +56,64 @@ SemaphoreHandle_t dataMutex;
 
 // --- TASKS ---
 
-// Task 1: Telemetry via 4G
+// Task 1: Telemetry via 4G (MQTT HiveMQ)
 void TaskTelemetry(void *pvParameters) {
-    // Flag untuk melacak status koneksi di dalam Task ini
-    static bool lteConnected = false; 
+    static bool lteConnected = false;
+    static bool mqttConnected = false; 
 
     while (1) {
-        // --- LOGIKA REKONEKSI ---
-        // Jika belum connect, JANGAN kirim data. Coba connect dulu.
+        // 1. Cek Koneksi Jaringan 4G
         if (!lteConnected) {
             Serial.println("\n📡 [TELEMETRY] Modem belum siap. Mencoba inisialisasi...");
-            
-            // Panggil begin() lagi. Karena kita sudah update CommHandler,
-            // dia akan melakukan looping "Menunggu Sinyal" di dalamnya.
             if (comm.begin()) {
-                Serial.println("✅ [TELEMETRY] Koneksi Berhasil! Siap kirim data.");
                 lteConnected = true;
             } else {
-                Serial.println("❌ [TELEMETRY] Gagal Connect. Coba lagi 10 detik...");
-                // Tunggu agak lama sebelum coba lagi agar tidak spam log
+                Serial.println("❌ [TELEMETRY] Gagal Connect 4G. Coba lagi 10 detik...");
                 vTaskDelay(10000 / portTICK_PERIOD_MS); 
-                continue; // Skip sisa loop, balik ke atas
+                continue; 
             }
         }
 
-        // --- BAGIAN KIRIM DATA (Hanya jalan jika lteConnected == true) ---
+        // 2. Cek Koneksi ke Broker MQTT
+        if (lteConnected && !mqttConnected) {
+            Serial.println("📡 [TELEMETRY] Menghubungkan ke Broker HiveMQ...");
+            // Menggunakan konstanta dari secrets.h
+            if (comm.connectMQTT(MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS)) {
+                Serial.println("✅ [TELEMETRY] Terhubung ke Broker! Siap publish data.");
+                mqttConnected = true;
+            } else {
+                Serial.println("❌ [TELEMETRY] Gagal Login MQTT. Coba lagi 10 detik...");
+                vTaskDelay(10000 / portTICK_PERIOD_MS); 
+                continue; 
+            }
+        }
+
+        // 3. Rakit JSON & Publish (Hanya jalan jika MQTT Connected)
         String jsonPayload = "";
         bool readyToSend = false;
 
         if (xSemaphoreTake(dataMutex, (TickType_t) 100) == pdTRUE) {
-            // ... (logika pembuatan JSON tetap sama) ...
-            // ...
+            jsonPayload = "{";
+            jsonPayload += "\"lat\":" + String(latestData.lat, 6) + ",";
+            jsonPayload += "\"lng\":" + String(latestData.lng, 6) + ",";
+            jsonPayload += "\"voltage\":" + String(latestData.voltage_V, 2) + ",";
+            jsonPayload += "\"power\":" + String(latestData.power_mW, 2);
+            jsonPayload += "}";
             
             readyToSend = true;
             xSemaphoreGive(dataMutex);
         }
 
-        if (readyToSend) {
-            Serial.println("📡 Sending Data via 4G...");
+        if (readyToSend && mqttConnected) {
+            Serial.println("📡 Mempublikasikan Data via MQTT...");
             
-            // Kita coba kirim. Jika gagal (misal sinyal hilang di tengah jalan),
-            // kita set lteConnected = false agar dia minta inisialisasi ulang nanti.
-            if (comm.sendData(SERVER_URL, jsonPayload)) {
-                Serial.println("✅ Data Sent Successfully!");
+            // Masukkan Topik MQTT yang diinginkan di sini
+            if (comm.publishMQTT("alsintan/traktor1/telemetri", jsonPayload)) {
+                Serial.println("✅ Data Published Successfully!");
             } else {
-                Serial.println("❌ Send Failed (nt)");
-                // Opsional: Anggap putus koneksi agar dilakukan cek ulang
-                lteConnected = false; 
+                Serial.println("❌ Publish Failed (Koneksi Terputus)");
+                // Reset flag agar modul mencoba re-connect pada loop berikutnya
+                mqttConnected = false; 
             }
         }
 

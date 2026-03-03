@@ -10,9 +10,8 @@ public:
     // Inisialisasi modul & koneksi ke jaringan
     bool begin();
 
-    // Mengirim data ke server (POST Request)
-    // Mengembalikan true jika server merespons HTTP 200 OK
-    bool sendData(String url, String jsonData);
+    bool connectMQTT(String broker, int port, String clientId, String user = "", String pass = "");
+    bool publishMQTT(String topic, String payload);
 
     // Meneruskan data AT Command
     void serialPassthrough();

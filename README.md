@@ -66,9 +66,15 @@ Template header `secrets.h`
 ```cpp
 #pragma once
 
-#define WIFI_SSID "nama ssid"
+#define WIFI_SSID "nama_ssid"
 #define WIFI_PASS "P4$$word" // <-- Usahakan lower/UPPERcase, s!mbo|, dan 4ngk4>
 #define OTA_PASS  "####" // <-- samain sama --auth pada platformio.ini>
+
+#define MQTT_BROKER "broker.hivemq.com" // <-- Sesuaikan jika pakai cluster private
+#define MQTT_PORT 1883                  // <-- Gunakan 8883 jika pakai TLS/SSL
+#define MQTT_CLIENT_ID "apa_lah"
+#define MQTT_USER "NAMA_U$ER"
+#define MQTT_PASS "P4SSW0RD"butuh password
 ```
 
 #### Debugging
@@ -90,6 +96,11 @@ Aktifkan Mode Diagnosis
 #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
 ```
 Sistem akan mengeksekusi baris program yang diawali oleh `#ifdef RUN_DIAGNOSTICS` dan diakhiri oleh `#endif`
+
+### GPS
+
+> [!IMPORTANT]
+> Modul GPS harus di bawa keluar, karena kalau diuji coba di lab, letak koordinatnya gak akan muncul.
 
 ### SIM7600G
 

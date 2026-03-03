@@ -21,4 +21,4 @@
  */
 
 // URL
-#define SERVER_URL "http://httpbin.org/post"
+#define SERVER_URL "mqtt://broker.hivemq.com"

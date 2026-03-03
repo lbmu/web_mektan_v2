@@ -7,7 +7,7 @@ CommHandler::CommHandler(int rxPin, int txPin, long baudRate, int serialPort)
 
 bool CommHandler::begin() {
     _serialAT->begin(_baudRate, SERIAL_8N1, _rxPin, _txPin);
-    delay(20000); // Tunggu modul booting
+    delay(15000); // Tunggu modul booting
 
     // 1. Cek Koneksi Dasar
     if (sendATCommand("AT", 1000, "OK") == "") return false;
@@ -20,7 +20,7 @@ bool CommHandler::begin() {
 }
 
 bool CommHandler::configureNetwork() {
-    // 1. Set APN (Penting!)
+    // 1. Set APN
     sendATCommand("AT+CGDCONT=1,\"IP\",\"internet\"", 2000, "OK");
 
     // 2. Loop menunggu registrasi (Maksimal 30 detik)
@@ -54,37 +54,49 @@ bool CommHandler::configureNetwork() {
     return false; // Nyerah setelah 30 detik
 }
 
-bool CommHandler::sendData(String url, String jsonData) {
-    // 1. Inisialisasi HTTP Service
-    sendATCommand("AT+HTTPINIT", 1000, "OK");
+// MQTT Connect
+bool CommHandler::connectMQTT(String broker, int port, String clientId, String user, String pass) {
+    // 1. Start MQTT Service
+    // Mengabaikan error jika service sudah pernah start sebelumnya
+    sendATCommand("AT+CMQTTSTART", 2000, ""); 
 
-    // 2. Set Parameter URL & Content Type
-    sendATCommand("AT+HTTPPARA=\"URL\",\"" + url + "\"", 1000, "OK");
-    sendATCommand("AT+HTTPPARA=\"CONTENT\",\"application/json\"", 1000, "OK");
+    // 2. Acquire Client
+    String accqCmd = "AT+CMQTTACCQ=0,\"" + clientId + "\"";
+    if (sendATCommand(accqCmd, 2000, "OK") == "") return false;
 
-    // 3. Masukkan Data JSON
-    // Command: AT+HTTPDATA=<latency>,<time>
-    String cmdData = "AT+HTTPDATA=" + String(jsonData.length()) + ",10000";
-    _serialAT->println(cmdData);
+    // 3. Connect ke Broker
+    String connCmd;
+    if (user == "" && pass == "") {
+        // Tanpa Autentikasi
+        connCmd = "AT+CMQTTCONNECT=0,\"tcp://" + broker + ":" + String(port) + "\",60,1";
+    } else {
+        // Dengan Autentikasi
+        connCmd = "AT+CMQTTCONNECT=0,\"tcp://" + broker + ":" + String(port) + "\",60,1,\"" + user + "\",\"" + pass + "\"";
+    }
     
-    // Tunggu prompt "DOWNLOAD" dari modem
-    delay(100); 
-    // Kirim Payload
-    _serialAT->print(jsonData);
-    
-    // Tunggu OK setelah kirim data
-    delay(1000); 
+    // Tunggu respon +CMQTTCONNECT: 0,0 yang menandakan sukses konek ke broker
+    String connRes = sendATCommand(connCmd, 15000, "+CMQTTCONNECT: 0,0"); 
+    return (connRes.indexOf("+CMQTTCONNECT: 0,0") != -1);
+}
 
-    // 4. Eksekusi POST (Action 1 = POST, 0 = GET)
-    // Respon format: +HTTPACTION: 1,200,xxxx (Method, StatusCode, DataLen)
-    String response = sendATCommand("AT+HTTPACTION=1", 10000, "+HTTPACTION: 1,200");
-    
-    bool success = (response.indexOf("200") != -1);
+// MQTT send
+bool CommHandler::publishMQTT(String topic, String payload) {
+    // 1. Set Topic
+    String topicCmd = "AT+CMQTTTOPIC=0," + String(topic.length());
+    _serialAT->println(topicCmd);
+    delay(100); // Modem akan membalas dengan '>' minta input
+    if (sendATCommand(topic, 2000, "OK") == "") return false;
 
-    // 5. Matikan HTTP Service (Penting di SIM7600 agar tidak hang)
-    sendATCommand("AT+HTTPTERM", 1000, "OK");
+    // 2. Set Payload
+    String payloadCmd = "AT+CMQTTPAYLOAD=0," + String(payload.length());
+    _serialAT->println(payloadCmd);
+    delay(100); // Modem akan membalas dengan '>' minta input
+    if (sendATCommand(payload, 2000, "OK") == "") return false;
 
-    return success;
+    // 3. Publish (QoS 1, Timeout 60 detik)
+    // +CMQTTPUB: 0,0 menandakan publish berhasil
+    String pubRes = sendATCommand("AT+CMQTTPUB=0,1,60", 10000, "+CMQTTPUB: 0,0");
+    return (pubRes.indexOf("+CMQTTPUB: 0,0") != -1);
 }
 
 // Helper Function: Kirim AT dan tunggu respon spesifik
