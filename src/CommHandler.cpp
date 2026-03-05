@@ -5,6 +5,7 @@ CommHandler::CommHandler(int rxPin, int txPin, long baudRate, int serialPort)
     _serialAT = new HardwareSerial(serialPort);
 }
 
+// Inisialisasi modul
 bool CommHandler::begin() {
     _serialAT->begin(_baudRate, SERIAL_8N1, _rxPin, _txPin);
     delay(15000); // Tunggu modul booting
@@ -19,6 +20,7 @@ bool CommHandler::begin() {
     return configureNetwork();
 }
 
+// Settingan sebelum konektivitas ke internet
 bool CommHandler::configureNetwork() {
     // 1. Set APN
     sendATCommand("AT+CGDCONT=1,\"IP\",\"internet\"", 2000, "OK");

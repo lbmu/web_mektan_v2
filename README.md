@@ -19,10 +19,10 @@
 
 ## VERSION CONTROL
 
-untuk sekarang, upload kode ke repo remote bisa menggunakan script yang sudah dibuat. Script yang digunakan adalah `git_sync.bat` untuk **Windows** atau `git_sync.sh` untuk **Shell**.
+untuk sekarang, upload kode ke repo remote bisa menggunakan script yang sudah dibuat. Script yang digunakan adalah `git_sync.bat` untuk :window: atau `git_sync.sh` untuk :shell:.
 > [!NOTE]
-> Untuk Windows, jalankan `git_sync.bat` dengan privilege admin (mereun)
-> Untuk shell, gunakan command di bawah ini terlebih dahulu.
+> Untuk **Windows**, jalankan `git_sync.bat` dengan privilege admin (mereun)
+> Untuk **Shell**, gunakan command di bawah ini.
 ```bash
 # Biar mode execution
 chmod +x git_sync.sh
@@ -37,19 +37,30 @@ Panduan pada sensing/perception layer, basically mikro dan baca sensor
 > Di sini, arsitektur yang dipakai adalah FreeRTOS dengan bahasa C++.
 
 ### Mikro ESP32
-
-
+esp32 DevKitC V4 adalah mikro yang kaya esp32 DevKitC V4 :electric_plug::computer:
 
 #### Pinout
 Pinout sistem terdapat di dalam header file `include/pinout.h`.
+
+[di sini nanti bakal ada gambar skematik]
+
 ESP32 mendukung GPIO Matrix, dimana GPIO nya fleksibel bisa di-set sebagai periferal yang diinginkan. Baca panduannya [di sini](https://randomnerdtutorials.com/esp32-pinout-reference-gpios/).
 
+#### Library
+
+Library yang digunakan adalah:
+* TinyGPSPlus (GPS)
+* Adafruit INA219 (Sensor daya)
+
+File library dapat ditemukan di dalam environment konfigurasi PlatformIO. Defaultnya adalah `.pio/libdeps/rymcu-esp32-devkitc`. Konfigurasi library bisa dilakukan di dalam file `platformio.ini` bagian `lib_deps`. Explore library yang didukung oleh PlatformIO di PIO Home (Yang logo  alien), dan detail library nya [di sini](https://registry.platformio.org/search?t=library).
+
 #### Upload Kode
-Kode berada di dalam `platformio.ini`
+Konfigurasi berada di dalam file `platformio.ini`
 1. Menggunakan kabel micro USB (default)
 ```ini
 upload_protocol = esptool
 ```
+
 2. Menggunakan Wi-Fi (hopefully, lapangan)
 ```ini
 upload_protocol = espota
@@ -79,8 +90,9 @@ Template header `secrets.h`
 
 #### Debugging
 Debugging dilakukan untuk menganalisis perilaku sistem (mainly kalo banyak error)
+
 ##### Normal Task
-Pastikan mode task sudah menyala
+Aktifkan mode Tes
 ```cpp
 // cek notip (komentar untuk disable) [shortcut di VS Code: Ctrl + /]
 #define RUN_TEST // <- Buat run task biasa
@@ -97,16 +109,34 @@ Aktifkan Mode Diagnosis
 ```
 Sistem akan mengeksekusi baris program yang diawali oleh `#ifdef RUN_DIAGNOSTICS` dan diakhiri oleh `#endif`
 
-### GPS
+### u-Blox NEO M8N
+
+Komponen ini berkomunikasi dengan mikro menggunakan periferal **UART**
+
+Modul GPS menggunakan library TinyGPSPlus, seperti yang sudah didefinisikan pada bagian [mikrokontroler ESP32](#library). File yang relevan untuk modul GPS adalah:
+* `include/GpsHandler.h` (header file yang memanggil library, mendefinisikan kelas dan fungsi, serta klasifikasi private/publik)
+* `src/GpsHandler.cpp` (kumpulan logika modul)
+* `src/main.cpp` (alur logika modul yang berjalan di esp32)
 
 > [!IMPORTANT]
 > Modul GPS harus di bawa keluar, karena kalau diuji coba di lab, letak koordinatnya gak akan muncul.
 
+### INA219
+
+Komponen ini berkomunikasi dengan mikro menggunakan periferal **I2C**
+
+Modul INA219 menggunakan library INA219, seperti yang sudah didefinisikan pada bagian [mikrokontroler ESP32](#library). File yang relevan untuk INA219 adalah:
+* `include/PowerMonitor.h` (header file mendefinisikan kelas dan fungsi, serta klasifikasi private/publik. Header file ini yang akan memanggil library)
+* `src/PowerMonitor.cpp` (kumpulan logika modul)
+* `src/main.cpp` (alur logika modul yang berjalan di esp32)
+
+
 ### SIM7600G
 
-> [!IMPORTANT]
-> Pastikan sistem pindah ke mode `TEST_SIM_PASSTHROUGH` terlebih dahulu
+Komponen ini berkomunikasi dengan mikro menggunakan periferal **UART**
 
+> [!IMPORTANT]
+> Pastikan sistem pindah ke mode `TEST_SIM_PASSTHROUGH` terlebih dahulu, agar AT Command bisa diinput manual melalui terminal
 ```cpp
 // cek notip (komentar untuk disable) [shortcut di VS Code: Ctrl + /]
 // #define RUN_TEST // <- Buat run task biasa
@@ -119,16 +149,21 @@ Sistem akan mengeksekusi baris program yang diawali oleh `#ifdef RUN_DIAGNOSTICS
 diagnostics.run(TEST_SIM_PASSTHROUGH);
 #endif
 ```
+
 #### Konektivitas/Status Modul
+
 1. Cek modul
 ```bash
 AT
 ```
+
 2. Cek suplai power
 ```bash
 AT+CBC
 ```
 #### SIM Card
+
+Usahakan pakai sim card jangkauan sinyal nya luas (terutama di daerah sawah)
 
 ##### Status SIM
 
@@ -136,6 +171,7 @@ AT+CBC
 ```bash
 AT+CPIN?
 ```
+
 2. Cek Seri
 ```bash
 AT+CCID
@@ -145,8 +181,11 @@ AT+CCID
 Dokumentasi pada layer jaringan, basically AT Command dan API
 
 ### SIM7600G
+
+Modul Komunikasi SIM7600G menggunakan AT Command untuk berkomunikasi. Dokumentasi tentang AT Command bisa dilihat [di sini](https://simcom.ee/documents/SIM7600C/SIM7500_SIM7600%20Series_AT%20Command%20Manual_V1.01.pdf)
+
 > [!IMPORTANT]
-> Pastikan sistem pindah ke mode `TEST_SIM_PASSTHROUGH` terlebih dahulu
+> Pastikan sistem pindah ke mode `TEST_SIM_PASSTHROUGH` terlebih dahulu, agar AT Command bisa diinput manual melalui terminal
 #### Cek Kuota
 
 1. Aktifkan Mode GSM
@@ -169,10 +208,12 @@ AT+CNMP=38
 ```bash
 AT+CSQ
 ```
+
 2. Jaringan
 ```bash
 AT+CEREG?
 ```
+
 3. Detail Jaringan
 ```bash
 AT+CPSI?
@@ -187,25 +228,29 @@ atau
 ```
 AT+CNMP=38
 ```
+
 2. Verifikasi mode
 ```
 AT+CPSI?
 ```
+
 3. Set Profil
 ```
 AT+CGDCONT=1,"IP","internet"
 ```
 > [!NOTE]
 > argumen `internet` bisa berubah-ubah tergantung provider
+
 4. Aktifkan PDP Context untuk terhubung ke internet
 ```
 AT+CGACT=1,1
 ```
+
 5. Verifikasi IP Address
 ```
 AT+CGPADDR=1
 ```
-#### Koneksi Internet
+#### Koneksi Internet (HTTP/GET)
 1. Inisialisasi HTTP
 ```
 AT+HTTPINIT
@@ -231,13 +276,70 @@ Tunggu balasan setelah OK. Contoh balasan adalah `+HTTPACTION: 0,200,254`, diman
 AT+HTTPREAD=0,500
 ```
 Kalo ada ada text format `json` berarti udah aman
+
 5. Tutup Sesi HTTP
 ```
 AT+HTTPTERM
+```
+
+#### Koneksi Internet (MQTT/Publish)
+
+1. Mulai MQTT Service
+```
+AT+CMQTTSTART
+```
+Tunggu respon `CMQTTSTART: 0`
+
+2. Daftarkan Client ID ke sistem
+```
+AT+CMQTTACCQ=0,"<apa_lah_bebas>"
+```
+
+3. Hubungkan ke Broker HiveMQ
+```
+AT+CMQTTCONNECT=0,"tcp://broker.hivemq.com:1883",60,1
+```
+> [!IMPORTANT]
+> Jika broker HiveMQ Anda membutuhkan username dan password, gunakan format: `AT+CMQTTCONNECT=0,"tcp://broker.hivemq.com:1883",60,1,"username_anda","password_anda"`
+> Tunggu hingga modul merespons `+CMQTTCONNECT: 0,0` yang menandakan koneksi berhasil.
+
+4. Set Topik MQTT (Misalnya kita ingin mengirim ke topik `alsintan/test` [panjang karakter = 13])
+```
+AT+CMQTTTOPIC=0,13
+```
+Setelah command dikirim, terminal akan memunculkan simbol `>`. Lalu, ketikkan nama topiknya :
+```
+alsintan/test
+```
+
+5. Set Payload (Data JSON). Misalnya kita ingin mengirim data `{"power":120}` (panjang karakter = 13)
+```
+AT+CMQTTPAYLOAD=0,13
+```
+Setelah command dikirim, terminal akan memunculkan simbol `>`. Ketikkan payloadnya :
+```
+{"power":120}
+```
+
+6. Publish (Kirim data)
+
+Kirim data dengan QoS 1 dan timeout 60 detik.
+```
+AT+CMQTTPUB=0,1,60
+```
+Tunggu hingga merespons `+CMQTTPUB: 0,0` yang berarti data sukses terkirim ke broker.
+
+7. Putus koneksi dan tutup layanan
+
+Bersihkan session MQTT agar modul tidak menggantung.
+```
+AT+CMQTTDISC=0,60
+AT+CMQTTREL=0
+AT+CMQTTSTOP
 ```
 
 ## APPLICATION
 
 # FOR USERS
 
-_Coming soon.._
+_Coming soon..._

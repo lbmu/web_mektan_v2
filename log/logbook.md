@@ -16,6 +16,14 @@
 * solusi masalah 
     * pake algoritma sawah yang liat rute nya kaya di sawah atau nggak
 
+## 03/03/2026
+
+    1. Paper sampe CD-4
+    2. Dana
+    3. Level detail CD-4
+    4. Rombak CD-3 (Mindahin bagian CD-4 yang di CD-3, yang harusnya ada di CD-4)
+    5. Perubahan planning
+
 # LOGBOOK COE
 
 ## 12/02/2026
@@ -52,12 +60,3 @@
     28. menggunakan table ganchart
     29. daftar Pustaka harus banyak
     30. bisa ke koperasi untuk faktur pajak
-
-## 03/03/2026
-
-    1. Paper sampe CD-4
-    2. Dana
-    3. Level detail CD-4
-    4. Rombak CD-3 (Mindahin bagian CD-4 yang di CD-3, yang harusnya ada di CD-4)
-    5. Perubahan planning
-    6. 
