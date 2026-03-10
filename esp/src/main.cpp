@@ -78,9 +78,9 @@ void TaskTelemetry(void *pvParameters) {
         if (lteConnected && !mqttConnected) {
             Serial.println("📡 [TELEMETRY] Menghubungkan ke Broker HiveMQ...");
             // rad
-            String dynamicClientID = String(MQTT_CLIENT_ID) + "_" + String(random(1000, 9999));
+            // String dynamicClientID = String(MQTT_CLIENT_ID) + "_" + String(random(1000, 9999));
             // Menggunakan konstanta dari secrets.h
-            if (comm.connectMQTT(MQTT_BROKER, MQTT_PORT, dynamicClientID, MQTT_USER, MQTT_PASS)) {
+            if (comm.connectMQTT(MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS)) {
                 Serial.println("✅ [TELEMETRY] Terhubung ke Broker! Siap publish data.");
                 mqttConnected = true;
             } else {
