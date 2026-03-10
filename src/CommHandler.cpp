@@ -8,6 +8,10 @@ CommHandler::CommHandler(int rxPin, int txPin, long baudRate, int serialPort)
 // Inisialisasi modul
 bool CommHandler::begin() {
     _serialAT->begin(_baudRate, SERIAL_8N1, _rxPin, _txPin);
+    
+    // 0. Hitamkan lalu putihkan
+    sendATCommand("AT+CRESET", 2000, "");
+
     delay(15000); // Tunggu modul booting
 
     // 1. Cek Koneksi Dasar
@@ -58,9 +62,15 @@ bool CommHandler::configureNetwork() {
 
 // MQTT Connect
 bool CommHandler::connectMQTT(String broker, int port, String clientId, String user, String pass) {
+    // 0. Matikan, lalu putihkan
+    sendATCommand("AT+CMQTTSTOP", 2000, "");
+    
     // 1. Start MQTT Service
     // Mengabaikan error jika service sudah pernah start sebelumnya
     sendATCommand("AT+CMQTTSTART", 2000, ""); 
+
+    // 1,5. Refresh ClientID
+    sendATCommand("AT+CMQTTREL=0", 2000, ""); 
 
     // 2. Acquire Client
     String accqCmd = "AT+CMQTTACCQ=0,\"" + clientId + "\"";

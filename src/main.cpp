@@ -30,8 +30,8 @@
 #include "pinout.h"
 
 // cek notip (komentar untuk disable) [shortcut di VS Code: Ctrl + /]
-// #define RUN_TEST // <- Buat run task biasa
-#define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
+#define RUN_TEST // <- Buat run task biasa
+// #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
 
 // Instansiasi Objek Modul Baru
 ESP_OTA remoteUpdate;
@@ -77,12 +77,14 @@ void TaskTelemetry(void *pvParameters) {
         // 2. Cek Koneksi ke Broker MQTT
         if (lteConnected && !mqttConnected) {
             Serial.println("📡 [TELEMETRY] Menghubungkan ke Broker HiveMQ...");
+            // rad
+            String dynamicClientID = String(MQTT_CLIENT_ID) + "_" + String(random(1000, 9999));
             // Menggunakan konstanta dari secrets.h
-            if (comm.connectMQTT(MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS)) {
+            if (comm.connectMQTT(MQTT_BROKER, MQTT_PORT, dynamicClientID, MQTT_USER, MQTT_PASS)) {
                 Serial.println("✅ [TELEMETRY] Terhubung ke Broker! Siap publish data.");
                 mqttConnected = true;
             } else {
-                Serial.println("❌ [TELEMETRY] Gagal Login MQTT. Coba lagi 10 detik...");
+                Serial.println("    ");
                 vTaskDelay(10000 / portTICK_PERIOD_MS); 
                 continue; 
             }
@@ -108,7 +110,7 @@ void TaskTelemetry(void *pvParameters) {
             Serial.println("📡 Mempublikasikan Data via MQTT...");
             
             // Masukkan Topik MQTT yang diinginkan di sini
-            if (comm.publishMQTT("alsintan/traktor1/telemetri", jsonPayload)) {
+            if (comm.publishMQTT(MQTT_TOPIC, jsonPayload)) {
                 Serial.println("✅ Data Published Successfully!");
             } else {
                 Serial.println("❌ Publish Failed (Koneksi Terputus)");
@@ -227,7 +229,7 @@ void setup() {
 
     #ifdef RUN_DIAGNOSTICS
     // diagnostics.run(TEST_LAB_PASSTHROUGH);
-    diagnostics.run(TEST_SIM_PASSTHROUGH);
+    // diagnostics.run(TEST_SIM_PASSTHROUGH);
     #endif
 }
 
