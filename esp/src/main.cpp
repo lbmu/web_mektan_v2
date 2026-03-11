@@ -5,7 +5,7 @@
 #include <espOTA.h>
 
 /* @brief
- * semua data sensitif meliputi SSID, PASS, OTA PASS, SERVER URL
+ * semua data sensitif meliputi SSID, PASS, OTA PASS
  * didefinisikan di file 'secrets.h'
  * agar mudah diatur tanpa mengubah kode utama
  * dan menghindari upload data sensitif ke repo publik 
@@ -68,8 +68,8 @@ void TaskTelemetry(void *pvParameters) {
             if (comm.begin()) {
                 lteConnected = true;
             } else {
-                Serial.println("❌ [TELEMETRY] Gagal Connect 4G. Coba lagi 10 detik...");
-                vTaskDelay(10000 / portTICK_PERIOD_MS); 
+                Serial.println("❌ [TELEMETRY] Gagal Connect 4G. Coba lagi 3 detik...");
+                vTaskDelay(3000 / portTICK_PERIOD_MS); 
                 continue; 
             }
         }
@@ -223,13 +223,12 @@ void setup() {
     xTaskCreate(TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, NULL);
     xTaskCreate(TaskGPS, "GPS_Task", 4096, NULL, 1, NULL);
     xTaskCreate(TaskMonitor, "Monitor_Task", 4096, NULL, 1, NULL);
-
-    // Serial.println("✅ FreeRTOS Scheduler Started...");
     #endif
 
+    // Gunakan untuk diagnosis sistem
     #ifdef RUN_DIAGNOSTICS
-    // diagnostics.run(TEST_LAB_PASSTHROUGH);
-    // diagnostics.run(TEST_SIM_PASSTHROUGH);
+    // diagnostics.run(TEST_LAB_PASSTHROUGH); // Yang ini buat tes GPS dalem ruangan (Cek modul doang, belum bisa ngirim koordinat)
+    // diagnostics.run(TEST_SIM_PASSTHROUGH); // Yang ini buat ngirimin AT Command
     #endif
 }
 
