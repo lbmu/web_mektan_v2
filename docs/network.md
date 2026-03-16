@@ -169,4 +169,32 @@ AT+CMQTTSTOP
 
 # MQTT
 
-yolo
+## Sertifikat (opsional)
+
+1. Menggunakan terminal shell dan `openssl`
+```bash
+openssl s_client -connect xxxx.s1.eu.hivemq.cloud:8883 -showcerts # Pake URL yang tulisan TLS MQTT URL
+```
+
+2. Nanti keluar teks kaya gini
+```bash
+-----BEGIN CERTIFICATE-----
+MIIFBjCCAu6gAwIBAgIRAMISMktwqbSRcdxA9+KFJjwwDQYJKoZIhvcNAQELBQAw
+.
+.
+.
+0zrLnOrAj/dfrlEWRhCvAgbuwLZX1A2sjNjXoPOHbsPiy+lO1KF8/XY7
+-----END CERTIFICATE-----
+```
+
+3. COPY semua dalam format C, teliti
+```cpp
+const char HIVEMQ_CA[] =
+"-----BEGIN CERTIFICATE-----\n"
+"MIIFBjCCAu6gAwIBAgIRAMISMktwqbSRcdxA9+KFJjwwDQYJKoZIhvcNAQELBQAw\n"
+.
+.
+.
+"0zrLnOrAj/dfrlEWRhCvAgbuwLZX1A2sjNjXoPOHbsPiy+lO1KF8/XY7\n"
+"-----END CERTIFICATE-----\n";
+```

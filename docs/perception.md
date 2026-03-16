@@ -183,3 +183,14 @@ AT+CPIN?
 ```bash
 AT+CCID
 ```
+
+### Sertifikat
+1. Cek serti
+```bash
+AT+CCERTLIST
+```
+
+2. hapus serti
+```bash
+AT+CCERTDELE="nama_serti"
+```

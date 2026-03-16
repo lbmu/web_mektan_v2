@@ -1,15 +1,36 @@
 #include "PowerMonitor.h"
+#include "math.h"
 
 PowerMonitor::PowerMonitor() {
-    // Constructor kosong, inisialisasi di begin()
+    _isConnected = false;
 }
 
 bool PowerMonitor::begin() {
-    return _ina219.begin();
+    _isConnected =  _ina219.begin();
+    return _isConnected;
 }
 
 PowerData PowerMonitor::read() {
     PowerData data;
+
+    Wire.beginTransmission(0x40);
+    if (Wire.endTransmission() != 0 ) {
+        // kalo gagal
+        _isConnected = false;
+        data.shuntVoltage_mV = NAN;
+        data.busVoltage_V = NAN;
+        data.current_mA = NAN;
+        data.power_mW = NAN;
+        data.loadVoltage_V = NAN;
+
+        return data;
+    }
+
+    if (!_isConnected) {
+        _ina219.begin();
+        _isConnected = true;
+        Serial.println("🔌 [POWER] INA219 Reconnected & Re-initialized!");
+    }
     
     data.shuntVoltage_mV = _ina219.getShuntVoltage_mV();
     data.busVoltage_V = _ina219.getBusVoltage_V();

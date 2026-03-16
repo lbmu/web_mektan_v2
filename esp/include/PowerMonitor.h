@@ -21,4 +21,5 @@ public:
 
 private:
     Adafruit_INA219 _ina219;
+    bool _isConnected;
 };

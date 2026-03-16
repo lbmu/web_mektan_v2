@@ -30,6 +30,10 @@ bool GpsHandler::isValid() {
     return _gps.location.isValid();
 }
 
+uint32_t GpsHandler::getAge() {
+    return _gps.location.age();
+}
+
 double GpsHandler::getLat() {
     return _gps.location.lat();
 }

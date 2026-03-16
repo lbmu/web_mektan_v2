@@ -19,6 +19,3 @@
  * SDA: 21 
  * SCL: 22
  */
-
-// URL
-#define SERVER_URL "mqtt://broker.hivemq.com"

@@ -1,19 +1,25 @@
 #pragma once
 
+// Wajib didefinisikan SEBELUM include TinyGsmClient.h
+#define TINY_GSM_MODEM_SIM7600 
+
 #include <Arduino.h>
+#include <TinyGsmClient.h>
+#include <ESP_SSLClient.h>
+#include <PubSubClient.h>
 
 class CommHandler {
 public:
-    // Constructor menerima pin RX, TX dan Baudrate
     CommHandler(int rxPin, int txPin, long baudRate, int serialPort);
 
-    // Inisialisasi modul & koneksi ke jaringan
     bool begin();
-
     bool connectMQTT(String broker, int port, String clientId, String user = "", String pass = "");
     bool publishMQTT(String topic, String payload);
+    
+    // Wajib dipanggil berkala agar PubSubClient tidak terputus
+    void loop(); 
 
-    // Meneruskan data AT Command
+    // Meneruskan data untuk SystemDiagnostics
     void serialPassthrough();
 
 private:
@@ -22,7 +28,11 @@ private:
     long _baudRate;
     HardwareSerial* _serialAT;
 
-    // Fungsi helper internal untuk kirim perintah AT
-    String sendATCommand(String command, int timeout, String expectedResponse);
+    // Objek Jaringan (4 Lapis)
+    TinyGsm* _modem;
+    TinyGsmClient* _baseClient;
+    ESP_SSLClient* _secureClient;
+    PubSubClient* _mqtt;
+
     bool configureNetwork();
 };

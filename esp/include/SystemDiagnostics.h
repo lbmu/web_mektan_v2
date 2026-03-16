@@ -9,7 +9,8 @@ enum DiagnosticMode {
     TEST_CONNECTION_CHECK,    // Cek sekilas (True/False)
     TEST_DATA_MONITOR,        // Data matang (Latitude, Voltage)
     TEST_LAB_PASSTHROUGH,     // Raw NMEA & Sensor Check
-    TEST_SIM_PASSTHROUGH      // Cek Modul 4G
+    TEST_SIM_PASSTHROUGH,      // Cek Modul 4G
+    TEST_PERFORMANCE_MONITOR
 };
 
 class SystemDiagnostics {
@@ -24,4 +25,5 @@ private:
 
     void runLabTest();
     void runSimTest();
+    void runPerformanceMonitor();
 };

@@ -35,7 +35,11 @@ Skill umum yang harus dimiliki oleh pengembang proyek adalah:
     * Alt + Tab
     * Alt + Shift + Tab
     * Ctrl + Alt + T
+* Navigasi workspace
+    * Super + Arrow
+    * Super + Alt + Arrow
 * Ngetik 10 jari (opsional)
+
 
 Skill khusus yang harus dimiliki oleh pengembang esp adalah:
 * C++
@@ -78,6 +82,24 @@ chmod +x git_sync.sh
 sh git_sync.sh
 ```
 Jika skrip nya bermasalah, cari tahu sendiri biar sekalian belajar :stuck_out_tongue_closed_eyes:
+
+## Library
+
+Bisa gila kalo gak pake library
+
+### Perception Layer
+
+Library yang dipake di edge
+Sensor daya: [Adafruit INA219](https://github.com/adafruit/Adafruit_INA219)
+Sensor GPS: [TinyGPSPlus](https://github.com/mikalhart/TinyGPSPlus)
+
+### Network Layer
+
+Library buat MQTT dan protokol komunikasi
+Modul SIM: 
+* [ESP_SSLClient](https://github.com/mobizt/ESP_SSLClient)
+* [PubSubCLient](https://github.com/knolleary/pubsubclient)
+* [TinyGSM](https://github.com/vshymanskyy/TinyGSM)
 
 ## DOKUMENTASI DAN PANDUAN
 

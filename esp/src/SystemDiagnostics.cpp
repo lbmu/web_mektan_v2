@@ -1,4 +1,9 @@
 #include "SystemDiagnostics.h"
+#include "esp_system.h"
+
+extern TaskHandle_t telemetryTaskHandle;
+extern TaskHandle_t gpsTaskHandle;
+extern TaskHandle_t monitorHandle;
 
 SystemDiagnostics::SystemDiagnostics(PowerMonitor* pwr, GpsHandler* gps, CommHandler* cell) {
     _pwr = pwr;
@@ -15,7 +20,10 @@ void SystemDiagnostics::run(DiagnosticMode mode) {
     else if (mode == TEST_SIM_PASSTHROUGH) {
         runSimTest();
     }
+    else if (mode == TEST_PERFORMANCE_MONITOR) {
+        runPerformanceMonitor();
     // ... mode lain bisa ditambahkan nanti ...
+    }
 }
 
 void SystemDiagnostics::runLabTest() {
@@ -67,5 +75,59 @@ void SystemDiagnostics::runSimTest() {
         
         // Wajib ada delay untuk me-reset Watchdog Timer (TWDT)
         vTaskDelay(10 / portTICK_PERIOD_MS); 
+    }
+}
+
+void SystemDiagnostics::runPerformanceMonitor() {
+    Serial.println(">> PERFORMANCE & MEMORY MONITOR");
+    Serial.println(">> Memantau RAM (Heap) dan sisa memori Task (High Water Mark)...\n");
+
+    while (1) {
+        Serial.println("\n================[ SYSTEM PERFORMANCE ]================");
+
+        unsigned long uSec = millis() / 1000;
+        Serial.printf("Uptime          : %d Hari %02d:%02d:%02d\n", 
+                      uSec/86400, (uSec%86400)/3600, (uSec%3600)/60, uSec%60);
+        
+        // Memantau Memori RAM (Heap) Keseluruhan
+        Serial.printf("Free Heap       : %d bytes\n", ESP.getFreeHeap());
+        Serial.printf("Max Alloc Heap  : %d bytes (Blok memori terbesar yg bisa dialokasi)\n", ESP.getMaxAllocHeap());
+        Serial.printf("Min Free Heap   : %d bytes (Sisa RAM paling sedikit yg pernah terjadi)\n", ESP.getMinFreeHeap());
+        
+        Serial.println("\n--- Task Stack Monitor ---");
+
+        // rest reason
+        Serial.print("Reset Reason    : ");
+        esp_reset_reason_t reason = esp_reset_reason();
+        if(reason == ESP_RST_POWERON) Serial.println("Power On");
+        else if(reason == ESP_RST_BROWNOUT) Serial.println("Brownout (Tegangan Drop!)");
+        else if(reason == ESP_RST_PANIC) Serial.println("Crash / Panic!");
+        else Serial.println("Lainnya");
+
+        // Memantau Sisa Stack Task Saat Ini (Monitor_Task)
+        // High Water Mark (HWM) menunjukkan SISA memori terendah yang pernah dicapai task ini.
+        // Jika nilainya mendekati 0, artinya task hampir mengalami Stack Overflow!
+        UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
+        Serial.printf("Monitor Task HWM: %u bytes (Sisa ruang aman)\n\n", hwm);
+
+        if (telemetryTaskHandle != NULL) {
+        UBaseType_t hwmTele = uxTaskGetStackHighWaterMark(telemetryTaskHandle);
+        Serial.printf("Telemetry HWM   : %u bytes\n", hwmTele);
+        }
+
+        if (gpsTaskHandle != NULL) {
+        UBaseType_t hwmGps = uxTaskGetStackHighWaterMark(gpsTaskHandle);
+        Serial.printf("GPS HWM   : %u bytes\n", hwmGps);
+        }
+
+        if (monitorHandle != NULL) {
+        UBaseType_t hwmMonitor = uxTaskGetStackHighWaterMark(monitorHandle);
+        Serial.printf("Power HWM   : %u bytes\n", hwmMonitor);
+        }
+
+        Serial.println("======================================================");
+
+        // Delay 2 detik
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }

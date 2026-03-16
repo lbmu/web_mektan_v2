@@ -17,6 +17,7 @@ public:
     
     // Cek apakah lokasi valid
     bool isValid();
+    uint32_t getAge();
     
     // Getter data
     double getLat();
