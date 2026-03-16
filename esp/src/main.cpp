@@ -35,7 +35,7 @@
 // #define REPORT
 
 // Instansiasi Objek Modul Baru
-ESP_OTA remoteUpdate;
+ESP_OTA Ota;
 CommHandler comm(SIM_RX_PIN, SIM_TX_PIN, COMM_BAUDRATE, SIM_SERIAL_PORT);
 GpsHandler gpsHandler(GPS_RX_PIN, GPS_TX_PIN, GPS_SERIAL_PORT);
 PowerMonitor powerMonitor;
@@ -57,10 +57,41 @@ SharedData latestData;
 SemaphoreHandle_t dataMutex;
 
 // --- TASKS ---
-
+TaskHandle_t telnetTaskHandle = NULL;
 TaskHandle_t telemetryTaskHandle = NULL;
 TaskHandle_t gpsTaskHandle = NULL;
 TaskHandle_t monitorHandle = NULL;
+
+// Task 0: OTA Debug
+
+#ifdef USE_TELNET_DEBUG
+ESPTelnet telnet;
+
+void TaskTelnet(void *pvParameters) {
+    // [Opsional] Event Handler agar muncul notifikasi saat laptop terhubung/terputus
+    telnet.onConnect([](String ip) {
+        Serial.print("\n=== [TELNET] LAPTOP TERHUBUNG DARI IP: "); Serial.println(ip);
+        telnet.println("\n=== Hai, saya menggunakan Telnet ===");
+        // telnet.println("Ketik 'help' untuk melihat daftar perintah.");
+        // telnet.print("\n> ");
+    });
+    
+    telnet.onDisconnect([](String ip) {
+        Serial.print("\n=== [TELNET] LAPTOP TERPUTUS: "); Serial.println(ip);
+    });
+
+    telnet.onInputReceived([](String str) {
+        Ota.processTelnetCommand(str);
+        telnet.print("\n>");
+    });
+
+    while (1) {
+        DEBUG_HANDLE(); // Menjalankan telnet.loop()
+        vTaskDelay(20 / portTICK_PERIOD_MS); // Polling setiap 20ms
+    }
+}
+
+#endif
 
 // Task 1: Telemetry via 4G (MQTT HiveMQ)
 void TaskTelemetry(void *pvParameters) {
@@ -77,12 +108,12 @@ void TaskTelemetry(void *pvParameters) {
     while (1) {
         // 1. Cek Koneksi Jaringan 4G
         if (!lteConnected) {
-            Serial.println("\n📡 [TELEMETRY] Modem belum siap. Mencoba inisialisasi...");
+            DEBUG_PRINTLN("\n📡 [TELEMETRY] Modem belum siap. Mencoba inisialisasi...");
             if (comm.begin()) {
                 lteConnected = true;
                 mqttFailCount = 0;
             } else {
-                Serial.println("❌ [TELEMETRY] Gagal Connect 4G. Coba lagi 2 detik...");
+                DEBUG_PRINTLN("❌ [TELEMETRY] Gagal Connect 4G. Coba lagi 2 detik...");
                 vTaskDelay(2000 / portTICK_PERIOD_MS); 
                 continue; 
             }
@@ -90,17 +121,17 @@ void TaskTelemetry(void *pvParameters) {
 
         // 2. Cek Koneksi ke Broker MQTT
         if (lteConnected && !mqttConnected) {
-            Serial.println("📡 [TELEMETRY] Menghubungkan ke Broker HiveMQ...");
+            DEBUG_PRINTLN("📡 [TELEMETRY] Menghubungkan ke Broker HiveMQ...");
             
             if (comm.connectMQTT(MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS)) {
-                Serial.println("✅ [TELEMETRY] Terhubung ke Broker! Siap publish data.");
+                DEBUG_PRINTLN("✅ [TELEMETRY] Terhubung ke Broker! Siap publish data.");
                 mqttConnected = true;
                 mqttFailCount = 0;
             } else {
                 mqttFailCount++;
-                Serial.printf("⚠️ [TELEMETRY] Gagal Connect MQTT (Percobaan %d/3)\n", mqttFailCount);
+                DEBUG_PRINTF("⚠️ [TELEMETRY] Gagal Connect MQTT (Percobaan %d/3)\n", mqttFailCount);
                 if (mqttFailCount >= 3) {
-                    Serial.println("🔄 [TELEMETRY] Internet/Sinyal putus! Me-reset Modem 4G...");
+                    DEBUG_PRINTLN("🔄 [TELEMETRY] Internet/Sinyal putus! Me-reset Modem 4G...");
                     lteConnected = false;
                 }
                 vTaskDelay(3000 / portTICK_PERIOD_MS); 
@@ -146,15 +177,17 @@ void TaskTelemetry(void *pvParameters) {
             }
 
             if (readyToSend) {
-                Serial.println("\n---------------------------------------");
-                Serial.println("----📡 Mempublikasikan Data via MQTT---");
+                DEBUG_PRINTLN("\n---------------------------------------");
+                DEBUG_PRINTLN("----📡 Mempublikasikan Data via MQTT---");
                 if (comm.publishMQTT(MQTT_TOPIC, jsonPayload)) {
-                    Serial.println("----✅ Data Published Successfully!----");
+                    #ifdef REPORT
+                    DEBUG_PRINTLN("----✅ Data Published Successfully!----");
+                    #endif
                 } else {
-                    Serial.println("----❌ Publish Failed (Cek Koneksi?)---");
+                    DEBUG_PRINTLN("----❌ Publish Failed (Cek Koneksi?)---");
                     mqttConnected = false; // Reset agar mencoba re-connect
                 }
-                Serial.println("---------------------------------------");
+                DEBUG_PRINTLN("---------------------------------------");
             }
             
             lastPublishTime = millis(); // Reset timer publish
@@ -218,20 +251,20 @@ void TaskMonitor(void *pvParameters) {
 
         // --- PRINT DETAILED REPORT ---
         #ifdef REPORT
-        Serial.println("\n--- [TASK] Power & Location Report ---");
+        DEBUG_PRINTLN("\n--- [TASK] Power & Location Report ---");
 
-        Serial.print("Bus Voltage : "); Serial.print(pData.busVoltage_V); Serial.println(" V");
-        Serial.print("Shunt Volt  : "); Serial.print(pData.shuntVoltage_mV); Serial.println(" mV");
-        Serial.print("Load Voltage: "); Serial.print(pData.loadVoltage_V); Serial.println(" V");
-        Serial.print("Current     : "); Serial.print(pData.current_mA); Serial.println(" mA");
-        Serial.print("Power       : "); Serial.print(pData.power_mW); Serial.println(" mW");
+        DEBUG_PRINT("Bus Voltage : "); DEBUG_PRINT(pData.busVoltage_V); DEBUG_PRINTLN(" V");
+        DEBUG_PRINT("Shunt Volt  : "); DEBUG_PRINT(pData.shuntVoltage_mV); DEBUG_PRINTLN(" mV");
+        DEBUG_PRINT("Load Voltage: "); DEBUG_PRINT(pData.loadVoltage_V); DEBUG_PRINTLN(" V");
+        DEBUG_PRINT("Current     : "); DEBUG_PRINT(pData.current_mA); DEBUG_PRINTLN(" mA");
+        DEBUG_PRINT("Power       : "); DEBUG_PRINT(pData.power_mW); DEBUG_PRINTLN(" mW");
 
         if (validGPS) {
-            Serial.printf("GPS         : %.6f, %.6f\n", currentLat, currentLng);
+            DEBUG_PRINTF("GPS         : %.6f, %.6f\n", currentLat, currentLng);
         } else {
-            Serial.println("GPS         : Waiting for lock...");
+            DEBUG_PRINTLN("GPS         : Waiting for lock...");
         }
-        Serial.println("---------------------------------------------------");
+        DEBUG_PRINTLN("---------------------------------------------------");
         #endif
 
         vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -239,22 +272,28 @@ void TaskMonitor(void *pvParameters) {
 }
 
 void setup() {
+
     Serial.begin(115200);
+    Serial.println("--Booting System...--");
     
     // Setup OTA
-    remoteUpdate.begin(WIFI_SSID, WIFI_PASS, OTA_PASS);
+    Ota.begin(WIFI_SSID, WIFI_PASS, OTA_PASS);
+    delay(500);
 
-    Serial.println("\n\n===| FIRMWARE V2 |===");
+    // buka port 23
+    DEBUG_BEGIN();
+
+    DEBUG_PRINTLN("\n\n===| FIRMWARE V2 |===");
 
     // Setup Comm Module
-    Serial.println("Initializing SIM7600 (4G)...");
+    DEBUG_PRINTLN("Initializing SIM7600 (4G)...");
     // Coba sekali di awal (opsional, karena TaskTelemetry juga bakal coba)
     // Tapi bagus untuk UX agar user tahu status awal
     if (!comm.begin()) {
-        Serial.println("⚠️ Init Awal Gagal (Akan dicoba ulang di Telemetry Task)");
+        DEBUG_PRINTLN("⚠️ Init Awal Gagal (Akan dicoba ulang di Telemetry Task)");
         // Jangan stop program, biarkan lanjut ke scheduler
     } else {
-        Serial.println("✅ SIM7600 Ready");
+        DEBUG_PRINTLN("✅ SIM7600 Ready");
     }
     
     // Init GPS Module
@@ -262,14 +301,18 @@ void setup() {
 
     // Init Power Module
     if (!powerMonitor.begin()) {
-        Serial.println("❌ INA219 Not Found!");
+        DEBUG_PRINTLN("❌ INA219 Not Found!");
     } else {
-        Serial.println("✅ INA219 Connected");
+        DEBUG_PRINTLN("✅ INA219 Connected");
     }
 
     // Create Mutex
     dataMutex = xSemaphoreCreateMutex();
     
+    #ifdef USE_TELNET_DEBUG
+    xTaskCreate(TaskTelnet, "Telnet_Task", 4096, NULL, 1, &telnetTaskHandle);
+    #endif
+
     #ifdef RUN_TASK
     xTaskCreate(TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, &telemetryTaskHandle);
     xTaskCreate(TaskGPS, "GPS_Task", 4096, NULL, 1, &gpsTaskHandle);

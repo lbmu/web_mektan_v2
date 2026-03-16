@@ -1,6 +1,8 @@
 #include "SystemDiagnostics.h"
 #include "esp_system.h"
+#include "espOTA.h"
 
+extern TaskHandle_t telnetTaskHandle;
 extern TaskHandle_t telemetryTaskHandle;
 extern TaskHandle_t gpsTaskHandle;
 extern TaskHandle_t monitorHandle;
@@ -12,7 +14,7 @@ SystemDiagnostics::SystemDiagnostics(PowerMonitor* pwr, GpsHandler* gps, CommHan
 }
 
 void SystemDiagnostics::run(DiagnosticMode mode) {
-    Serial.println("\n=== SYSTEM DIAGNOSTICS ===");
+    DEBUG_PRINTLN("\n=== SYSTEM DIAGNOSTICS ===");
     
     if (mode == TEST_LAB_PASSTHROUGH) {
         runLabTest();
@@ -27,17 +29,17 @@ void SystemDiagnostics::run(DiagnosticMode mode) {
 }
 
 void SystemDiagnostics::runLabTest() {
-    Serial.println(">> MODE: LAB VALIDATION (Green Light Test)");
-    Serial.println(">> Meneruskan data RAW GPS & Cek Sensor berkala...\n");
+    DEBUG_PRINTLN(">> MODE: LAB VALIDATION (Green Light Test)");
+    DEBUG_PRINTLN(">> Meneruskan data RAW GPS & Cek Sensor berkala...\n");
 
     // 1. Cek Sensor Sekali di Awal
     if (_pwr->begin()) { // Asumsi begin() mengembalikan true jika koneksi OK
-         Serial.println("✅ INA219: CONNECTED");
+         DEBUG_PRINTLN("✅ INA219: CONNECTED");
     } else {
-         Serial.println("❌ INA219: NOT FOUND (Check Wiring)");
+         DEBUG_PRINTLN("❌ INA219: NOT FOUND (Check Wiring)");
     }
 
-    Serial.println("\n--- STARTING GPS STREAM (Press Reset to Exit) ---");
+    DEBUG_PRINTLN("\n--- STARTING GPS STREAM (Press Reset to Exit) ---");
     
     // Loop Selamanya (Meniru void loop di kode tes sederhana)
     unsigned long lastSensorCheck = 0;
@@ -52,9 +54,9 @@ void SystemDiagnostics::runLabTest() {
             PowerData pData = _pwr->read();
             
             // Tampilkan info singkat tanpa mengganggu stream GPS terlalu banyak
-            Serial.print("\n[SENSOR] ");
-            Serial.print(pData.busVoltage_V); Serial.print(" V | ");
-            Serial.print(pData.current_mA); Serial.println(" mA");
+            DEBUG_PRINT("\n[SENSOR] ");
+            DEBUG_PRINT(pData.busVoltage_V); DEBUG_PRINT(" V | ");
+            DEBUG_PRINT(pData.current_mA); DEBUG_PRINTLN(" mA");
         }
         
         // Wajib: Delay kecil untuk Watchdog (jaga-jaga)
@@ -63,9 +65,9 @@ void SystemDiagnostics::runLabTest() {
 }
 
 void SystemDiagnostics::runSimTest() {
-    Serial.println(">> MODE: SIM7600 AT COMMAND PASSTHROUGH");
-    Serial.println(">> Pastikan Serial Monitor tersetting 'Both NL & CR'");
-    Serial.println(">> Ketik perintah AT di kolom input di atas...\n");
+    DEBUG_PRINTLN(">> MODE: SIM7600 AT COMMAND PASSTHROUGH");
+    DEBUG_PRINTLN(">> Pastikan Serial Monitor tersetting 'Both NL & CR'");
+    DEBUG_PRINTLN(">> Ketik perintah AT di kolom input di atas...\n");
     
     _cell->begin();
     
@@ -79,55 +81,72 @@ void SystemDiagnostics::runSimTest() {
 }
 
 void SystemDiagnostics::runPerformanceMonitor() {
-    Serial.println(">> PERFORMANCE & MEMORY MONITOR");
-    Serial.println(">> Memantau RAM (Heap) dan sisa memori Task (High Water Mark)...\n");
+    DEBUG_PRINTLN(">> PERFORMANCE & MEMORY MONITOR");
+    DEBUG_PRINTLN(">> Memantau RAM (Heap) dan sisa memori Task (High Water Mark)...\n");
 
     while (1) {
-        Serial.println("\n================[ SYSTEM PERFORMANCE ]================");
+        DEBUG_PRINTLN("\n================[ SYSTEM PERFORMANCE ]================");
 
         unsigned long uSec = millis() / 1000;
-        Serial.printf("Uptime          : %d Hari %02d:%02d:%02d\n", 
+        DEBUG_PRINTF("Uptime          : %d Hari %02d:%02d:%02d\n", 
                       uSec/86400, (uSec%86400)/3600, (uSec%3600)/60, uSec%60);
         
         // Memantau Memori RAM (Heap) Keseluruhan
-        Serial.printf("Free Heap       : %d bytes\n", ESP.getFreeHeap());
-        Serial.printf("Max Alloc Heap  : %d bytes (Blok memori terbesar yg bisa dialokasi)\n", ESP.getMaxAllocHeap());
-        Serial.printf("Min Free Heap   : %d bytes (Sisa RAM paling sedikit yg pernah terjadi)\n", ESP.getMinFreeHeap());
+        DEBUG_PRINTF("Free Heap       : %d bytes\n", ESP.getFreeHeap());
+        DEBUG_PRINTF("Max Alloc Heap  : %d bytes (Blok memori terbesar yg bisa dialokasi)\n", ESP.getMaxAllocHeap());
+        DEBUG_PRINTF("Min Free Heap   : %d bytes (Sisa RAM paling sedikit yg pernah terjadi)\n", ESP.getMinFreeHeap());
         
-        Serial.println("\n--- Task Stack Monitor ---");
+        DEBUG_PRINTLN("\n--- Task Stack Monitor ---");
 
         // rest reason
-        Serial.print("Reset Reason    : ");
+        DEBUG_PRINT("Reset Reason    : ");
         esp_reset_reason_t reason = esp_reset_reason();
-        if(reason == ESP_RST_POWERON) Serial.println("Power On");
-        else if(reason == ESP_RST_BROWNOUT) Serial.println("Brownout (Tegangan Drop!)");
-        else if(reason == ESP_RST_PANIC) Serial.println("Crash / Panic!");
-        else Serial.println("Lainnya");
 
+        switch (reason)
+        {
+            case ESP_RST_POWERON: DEBUG_PRINTLN("Power On");
+            break;
+
+            case ESP_RST_BROWNOUT: DEBUG_PRINTLN("Brownout (Tegangan Drop!)");
+            break;
+
+            case ESP_RST_PANIC: DEBUG_PRINTLN("Crash / Panic!");
+            break;
+            
+            default: DEBUG_PRINTLN("0");
+            break;
+        }
+
+        
         // Memantau Sisa Stack Task Saat Ini (Monitor_Task)
         // High Water Mark (HWM) menunjukkan SISA memori terendah yang pernah dicapai task ini.
         // Jika nilainya mendekati 0, artinya task hampir mengalami Stack Overflow!
         UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
-        Serial.printf("Monitor Task HWM: %u bytes (Sisa ruang aman)\n\n", hwm);
+        DEBUG_PRINTF("Monitor Task HWM: %u bytes (Sisa ruang aman)\n\n", hwm);
+
+        if (telnetTaskHandle != NULL) {
+        UBaseType_t hwmTelnet = uxTaskGetStackHighWaterMark(telnetTaskHandle);
+        DEBUG_PRINTF("Telnet HWM   : %u bytes\n", hwmTelnet);
+        }
 
         if (telemetryTaskHandle != NULL) {
         UBaseType_t hwmTele = uxTaskGetStackHighWaterMark(telemetryTaskHandle);
-        Serial.printf("Telemetry HWM   : %u bytes\n", hwmTele);
+        DEBUG_PRINTF("Telemetry HWM   : %u bytes\n", hwmTele);
         }
 
         if (gpsTaskHandle != NULL) {
         UBaseType_t hwmGps = uxTaskGetStackHighWaterMark(gpsTaskHandle);
-        Serial.printf("GPS HWM   : %u bytes\n", hwmGps);
+        DEBUG_PRINTF("GPS HWM   : %u bytes\n", hwmGps);
         }
 
         if (monitorHandle != NULL) {
         UBaseType_t hwmMonitor = uxTaskGetStackHighWaterMark(monitorHandle);
-        Serial.printf("Power HWM   : %u bytes\n", hwmMonitor);
+        DEBUG_PRINTF("Power HWM   : %u bytes\n", hwmMonitor);
         }
 
-        Serial.println("======================================================");
+        DEBUG_PRINTLN("======================================================");
 
-        // Delay 2 detik
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        // Delay 1 detik
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }

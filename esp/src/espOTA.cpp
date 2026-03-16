@@ -46,3 +46,37 @@ void ESP_OTA::otaTask(void *pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
+
+void ESP_OTA::processTelnetCommand(String cmd) {
+    // refresh
+    cmd.trim();
+
+    DEBUG_PRINTLN("echo: ");
+    DEBUG_PRINTLN(cmd);
+
+    if (cmd.length() == 0) return;
+
+    if (cmd.equalsIgnoreCase("p")) return telnet.println("Hai, saya menggunakan Telnet");
+    
+    else if (cmd.equalsIgnoreCase("s")) {
+        telnet.println("\n--- STATUS SISTEM ---");
+        telnet.printf("Uptime    : %lu detik\n", millis() / 1000);
+        telnet.printf("Free Heap : %d bytes\n", ESP.getFreeHeap());
+    }
+    
+    else if (cmd.equalsIgnoreCase("reboot")) {
+        telnet.println("⚠️ Memulai ulang ESP32 dalam 3 detik...");
+        telnet.flush(); // Pastikan pesan terkirim sebelum mati
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
+        ESP.restart();
+    }
+    
+    else if (cmd.equalsIgnoreCase("h")) {
+    telnet.println("\n--- DAFTAR PERINTAH ---");
+    telnet.println("1. p : Cek responsivitas sistem");
+    telnet.println("2. s : Lihat memori dan status operasional");
+    telnet.println("3. r : Restart perangkat dari jarak jauh");
+    telnet.println("4. h : Menampilkan menu ini");
+    }
+    else telnet.println("nguwawor");
+}

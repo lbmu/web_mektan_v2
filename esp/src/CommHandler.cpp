@@ -1,4 +1,5 @@
 #include "CommHandler.h"
+#include "espOTA.h"
 
 CommHandler::CommHandler(int rxPin, int txPin, long baudRate, int serialPort) 
     : _rxPin(rxPin), _txPin(txPin), _baudRate(baudRate) {
@@ -25,32 +26,32 @@ bool CommHandler::begin() {
     pinMode(_rxPin, INPUT_PULLUP);
     delay(3000);
     
-    Serial.println("Modem: Restarting...");
+    DEBUG_PRINTLN("Modem: Restarting...");
     if (!_modem->restart()) { 
         return false;
     }
     
-    Serial.print("Modem Info: ");
-    Serial.println(_modem->getModemInfo());
+    DEBUG_PRINT("Modem Info: ");
+    DEBUG_PRINTLN(_modem->getModemInfo());
     
     return configureNetwork();
 }
 
 bool CommHandler::configureNetwork() {
-    Serial.print("Modem: Menunggu Sinyal 4G...");
+    DEBUG_PRINT("Modem: Menunggu Sinyal 4G...");
     if (!_modem->waitForNetwork(10000L)) {
-        Serial.println(" Gagal/Timeout!");
+        DEBUG_PRINTLN(" Gagal/Timeout!");
         return false;
     }
-    Serial.println(" SIAP!");
+    DEBUG_PRINTLN(" SIAP!");
 
     // Sesuaikan APN jika kartu operator Anda mewajibkan, default "internet" biasanya aman
-    Serial.print("Modem: Menghubungkan ke Internet...");
+    DEBUG_PRINT("Modem: Menghubungkan ke Internet...");
     if (!_modem->gprsConnect("internet", "", "")) {
-        Serial.println(" Gagal!");
+        DEBUG_PRINTLN(" Gagal!");
         return false;
     }
-    Serial.println(" OK!");
+    DEBUG_PRINTLN(" OK!");
     return true;
 }
 
@@ -58,9 +59,9 @@ bool CommHandler::connectMQTT(String broker, int port, String clientId, String u
     _mqtt->setServer(broker.c_str(), port);
     _mqtt->setSocketTimeout(10); 
 
-    Serial.print("MQTT: Jabat Tangan TLS ke "); 
-    Serial.print(broker); 
-    Serial.print("...");
+    DEBUG_PRINT("MQTT: Jabat Tangan TLS ke "); 
+    DEBUG_PRINT(broker); 
+    DEBUG_PRINT("...");
 
     bool status;
     if (user == "" && pass == "") {
@@ -72,8 +73,8 @@ bool CommHandler::connectMQTT(String broker, int port, String clientId, String u
     if (status) {
         return true;
     } else {
-        Serial.print(" [GAGAL] Kode Error (rc): ");
-        Serial.println(_mqtt->state());
+        DEBUG_PRINT(" [GAGAL] Kode Error (rc): ");
+        DEBUG_PRINTLN(_mqtt->state());
         return false;
     }
 }
