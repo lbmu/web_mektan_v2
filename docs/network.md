@@ -1,3 +1,4 @@
+```
 llooooodddlcll.  .:xxkkkOO00KNXxdxc,........................'''''.......;cc;c:..cccloxxkkO0kkkxllccxkkkxxxxocclxxxdoccloddooo
 llooooodddclll..;:cdxkkkOOkOOOOx,...........................'''''........,'.....;:clloodxkOxdddllcc,:loddxd:c::lloxxddddddddo
 loooooodddcloo.:dddxxxkkkcdkkkOd: ..........................''''............... ..,;;;cloxxoolccccc,,.'':::lccclxxxxxxddddddd
@@ -81,6 +82,7 @@ ldkKX0oolllool:'..........':c:...... ......................  ....... ...........
 ...........;:clllllollllllll:. ..    ..................... ......    .............',;'l;,,.''',;',';::.:l':;,:';;,,'..,';;;;c
 ........;c:;llllllllllllllllc. ..    .................... ......     .............''..,;:'..,;,..';,,,,,;:;c;',,''.';.,,c:;,c
 ........,ll::lllllllllllllll,.  ..   .c:...............   .....       ............,,........... ..,'''....... ..............,
+```
 
 > [!NOTE]
 > Dokumentasi pada layer jaringan, basically AT Command dan API

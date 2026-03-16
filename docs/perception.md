@@ -1,3 +1,4 @@
+```
 ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddolllddddddddddddddddddddddddddddddddddddddddddddddddd
@@ -61,7 +62,7 @@ ddddddddddddddddddddddddddddddddddd'kKOd;:ddddddddc x'.''c;x.c,  :'....k   d.:lk
 ddddddddddddddddddddddddddddddddddd'xXOd:;dddddddd',x. .'l;,'c   c.'.. d   :,lol;,:''.   ..K:.. ............. .:kKNd'lddddddd
 ddddddddddddddddddddddddddddddddddd,dXOdc;dddddddl dl..  ...l.  .c.'...l.  .:;'l'''.   ....lO.. ' .......  .;lk0XN0o .odddddd
 ddddddddddddddddddddddddddddddddddd;ckdc;,ddddddd: O;....  .c   :;.....l.  .c.l:'.    .....,X,...c     .'. .cOXO....':cdddddd
-
+```
 > [!NOTE]
 > Dokumentasi sensing/perception layer, basically mikro dan baca sensor
 > Di sini, arsitektur yang dipakai adalah FreeRTOS dengan bahasa C++ dengan framework Arduino. Lingkungan pengembangan menggunakan Ekstensi **PlatformIO** pada VS Code.
