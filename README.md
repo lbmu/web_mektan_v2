@@ -1,3 +1,9 @@
+<!-- Buat README 100 (96 kalo ngepas) column -->
+<!-- sisa nya 118 -->
+
+> [!CAUTION]
+> ~~**KARBIT**~~ ***SETIA*** :zany_face:
+
 ```
 OKKKKKKKKKK00KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKxl:;;;;,'............................    .xKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKO
 OKKKKK00O00OO0KKKKKKKKKKKKKKKKKKKKKKKKK0kdoc:;;;,'..................................    ,xKKKKKKKKKKKKKKKKKKKKKKKKKKKKKO
@@ -61,56 +67,57 @@ dxxxxxxxxxxk,   ;ddddddd:       ..  ....;;;,'....;;;,lkOOkkkkxl','''''.......',,
 # DESKRIPSI PROYEK
 
 Repositori ini merupakan sistem IoT buat monitoring lokasi dan tegangan aki alsintan. Secara garis besar, arsitektur sistem dibagi dalam bentuk folder `esp`, `frontend`, dan `backend`  yang disesuaikan dengan lapisan umum IoT.
+
 * `esp` untuk menampung sensing/perception dan network layer (basically hardware/network level), dengan file [prima donna](/esp/src/main.cpp) `main.cpp`
 * `backend` untuk menampung network/service layer (basically penghubung antara hardware dengan jaringan), dengan file MC (siapa?)
 * `frontend` untuk menampung application layer (basically lapisan yang user friendly untuk menampilkan data agar enak untuk dilihat)
 
 Repo ini juga didukung oleh dokumentasi dan catatan yang disimpan di dalam folder `docs` dan `logs` respectively. Format dokumentasi menggunakan MarkDown GitHub sama dengan [README](/README.md) ini.
+
 * `docs` adalah kumpulan dokumentasi proyek
 * `logs` adalah catatan selama proyek dikembangkan
 
+## Skill
+
 Skill umum yang harus dimiliki oleh pengembang proyek adalah:
+
 * niat lulus 
 * MarkDown writing
 * prompting *jarvis*
 * Navigasi teks
-    * Ctrl + Arrow
-    * Home
-    * End
-    * Ctrl + Home
-    * Ctrl + End
+  * Ctrl + Arrow
+  * Home
+  * End
+  * Ctrl + Home
+  * Ctrl + End
 * Blocking teks
-    * Shift + Arrow
-    * Ctrl + Shift + Arrow
-    * Shift + Home
-    * Shift + End
-    * Ctrl + L
-    * Ctrl + Shift + Home
-    * Ctrl + Shift + End
+  * Shift + Arrow
+  * Ctrl + Shift + Arrow
+  * Shift + Home
+  * Shift + End
+  * Ctrl + L
+  * Ctrl + Shift + Home
+  * Ctrl + Shift + End
 * Manipulasi teks
-    * Alt + Arrow
-    * Tab
-    * Shift + Tab
+  * Alt + Arrow
+  * Tab
+  * Shift + Tab
 * Gercep
-    * Super + D, Alt + F4, Enter
-    * Alt + Tab
-    * Alt + Shift + Tab
-    * Ctrl + Alt + T
+  * Super + D, Alt + F4, Enter
+  * Alt + Tab
+  * Alt + Shift + Tab
+  * Ctrl + Alt + T
 * Navigasi workspace
-    * Super + Arrow
-    * Super + Alt + Arrow
+  * Super + Arrow
+  * Super + Alt + Arrow
 * Ngetik 10 jari (opsional)
 
-
 Skill khusus yang harus dimiliki oleh pengembang esp adalah:
+
 * C++
 * FreeRTOS
-* 
+*
 
-Untuk menggunakan proyek ini, bisa di clone menggunakan command 
-```
-git clone https://github.com/lbmu/web_mektan_v2.git
-```
 # FOR DEVELOPERS
 
 ## The Lord of The Rings: The Two Towers
@@ -130,44 +137,90 @@ git clone https://github.com/lbmu/web_mektan_v2.git
 **Sam**
 > Biar cepet lulus dul
 
-## VERSION CONTROL
+## Lingkungan Pengembangan
+
+* [Visual Studio Code](https://code.visualstudio.com/download): IDE untuk mengembangkan proyek, dengan menggunakan ekstensi:
+  * [PlatformIO](https://platformio.org/install/ide?install=vscode): All about Sensing Layer
+
+## Version Control
+
+Kontrol versi menggunakan Git dan GitHub (siapa sangka)
+
+### Cloning
+
+Feel free untuk menggunakan proyek ini. Clone menggunakan command 
+
+```
+git clone https://github.com/lbmu/web_mektan_v2.git
+```
+
+### Pushing
 
 untuk sekarang, upload kode ke repo remote bisa menggunakan script yang sudah dibuat. Script yang digunakan adalah `git_sync.bat` untuk :window: atau `git_sync.sh` untuk :shell:.
 > [!NOTE]
 > Untuk **Windows**, jalankan `git_sync.bat` dengan privilege admin (mereun)
 > Untuk **Shell**, gunakan command di bawah ini dalam terminal ~~caheum~~.
+
 ```bash
 # Biar mode execution
 chmod +x git_sync.sh
 # eksekusi kode nya
 sh git_sync.sh
 ```
+
 Jika skrip nya bermasalah, cari tahu sendiri biar sekalian belajar :stuck_out_tongue_closed_eyes:
+
+### Versioning
+
+Kasih nomor versi sesuai dengan perkembangan proyek. Beri penomoran sesuai perubahan yang `MAJOR.MINOR.FIXES`.
+Gunakan [*Semantic Versioning*](http://semver.org/). Contoh:
+
+| Changes | Dari      | Ke        | Contoh Perubahan              | Deskripsi                                                                             |
+| ------- | --------- | --------- | ----------------------------- | ------------------------------------------------------------------------------------- |
+| MAJOR   | **0**.6.6 | **1**.0.0 | Arsitektur Superloop ke RTOS  | Perubahan yang besar sehingga kode tidak backwards compatible                         |
+| MINOR   | 1.**0**.0 | 1.**1**.0 | OTA Debugging                 | Perubahan kecil, biasanya penambahan fitur/sub-sistem yang backwards compatible       |
+| FIXES   | 1.1.**0** | 1.1.**2** | nambahin ASCII Hu Tao di docs | Perubahan yang sangat kecil, hanya developer yang commit yang mengetahui perbedaannya |
+
 
 ## Library
 
-Untuk File Library level *hardware* dapat ditemukan di dalam environment konfigurasi PlatformIO. Defaultnya adalah `.pio/libdeps/rymcu-esp32-devkitc` pada proyek PlatformIO. Konfigurasi library (quite straighforward) bisa dilakukan di dalam [file](/esp/platformio.ini) `platformio.ini` bagian `lib_deps`. Explore library yang didukung oleh PlatformIO di PIO Home (Yang logo  alien), dan detail library nya [di sini](https://registry.platformio.org/search?t=library).
+Library digunakan untuk mendukung perkembangan proyek.
 
 ### Perception Layer
 
-Library yang dipake di edge
+Konfigurasi library bisa dilakukan di dalam [file](/esp/platformio.ini) `platformio.ini` bagian `lib_deps`. Explore library yang didukung oleh PlatformIO di PIO Home (Yang logo  alien), dan detail library nya [di sini](https://registry.platformio.org/search?t=library).
+Untuk File Library level *hardware* dapat ditemukan di dalam environment konfigurasi PlatformIO. Defaultnya adalah `.pio/libdeps/nama_board` pada proyek PlatformIO. 
+
+Library yang dipake di edge:sob:
 * Sensor daya: [Adafruit INA219](https://github.com/adafruit/Adafruit_INA219)
 * Sensor GPS: [TinyGPSPlus](https://github.com/mikalhart/TinyGPSPlus)
 * OTA Monitoring: [ESPTelnet](https://github.com/LennartHennigs/ESPTelnet)
 
 ### Network Layer
 
-Library buat MQTT dan protokol komunikasi
-Modul SIM: 
-* [ESP_SSLClient](https://github.com/mobizt/ESP_SSLClient)
-* [PubSubCLient](https://github.com/knolleary/pubsubclient)
-* [TinyGSM](https://github.com/vshymanskyy/TinyGSM)
+Library buat MQTT dan protokol komunikasi:signal_strength:
+Modul SIM:
+
+* Basic Security: [ESP_SSLClient](https://github.com/mobizt/ESP_SSLClient)
+* AT/MQTT Handle: 
+  * [PubSubCLient](https://github.com/knolleary/pubsubclient)
+  * [TinyGSM](https://github.com/vshymanskyy/TinyGSM)
 
 
 ## DOKUMENTASI DAN PANDUAN
 
-Karena di [README](/README.md) ini udah pernah nyampe 500 baris dalam format `.md`, semua dokumentasi sistem dipindahkan ke folder [`docs`](/docs/). Dokumentasi dipisah sesuai masing-masing layer sistem.
+Untuk mendokumentasikan proyek, gunakan [website dokumentasi GitHub](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax) sebagai kitab.
+> [!TIP]
+> Kalo mau pake emoji, boleh klik si batu [:moyai:](https://github.com/ikatyang/emoji-cheat-sheet/blob/github-actions-auto-update/README.md)
+
+Karena di [README](/README.md) ini udah pernah nyampe 500 baris dalam format `.md`, semua dokumentasi/panduan sistem dipindahkan ke folder `docs`. Dokumentasi dipisah sesuai masing-masing layer sistem.
+
+* [Perception Layer](/docs/perception.md)
+* [Network Layer](/docs/network.md)
+* [Application Layer](/docs/application.md)
+
+Error atau problem berada di bagian [Issues](https://github.com/lbmu/web_mektan_v2/issues) (siapa sangka).
 
 # FOR USERS
 
-_Coming soon..._
+_Coming soon..._ (nunggu dokumentasi layer aplikasi)

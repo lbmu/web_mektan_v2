@@ -82,7 +82,7 @@ void SystemDiagnostics::runSimTest() {
 
 void SystemDiagnostics::runPerformanceMonitor() {
     DEBUG_PRINTLN(">> PERFORMANCE & MEMORY MONITOR");
-    DEBUG_PRINTLN(">> Memantau RAM (Heap) dan sisa memori Task (High Water Mark)...\n");
+    DEBUG_PRINTLN(">> Hai, saya menggunakan FreeRTOS...\n");
 
     while (1) {
         DEBUG_PRINTLN("\n================[ SYSTEM PERFORMANCE ]================");
@@ -146,7 +146,7 @@ void SystemDiagnostics::runPerformanceMonitor() {
 
         DEBUG_PRINTLN("======================================================");
 
-        // Delay 1 detik
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        // Delay 3 detik
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
     }
 }

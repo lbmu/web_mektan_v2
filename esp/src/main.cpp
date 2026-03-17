@@ -177,14 +177,14 @@ void TaskTelemetry(void *pvParameters) {
             }
 
             if (readyToSend) {
-                DEBUG_PRINTLN("\n---------------------------------------");
-                DEBUG_PRINTLN("----📡 Mempublikasikan Data via MQTT---");
+                // DEBUG_PRINTLN("\n---------------------------------------");
+                // DEBUG_PRINTLN("----📡 Mempublikasikan Data via MQTT---");
                 if (comm.publishMQTT(MQTT_TOPIC, jsonPayload)) {
                     #ifdef REPORT
-                    DEBUG_PRINTLN("----✅ Data Published Successfully!----");
+                    // DEBUG_PRINTLN("----✅ Data Published Successfully!----");
                     #endif
                 } else {
-                    DEBUG_PRINTLN("----❌ Publish Failed (Cek Koneksi?)---");
+                    // DEBUG_PRINTLN("----❌ Publish Failed (Cek Koneksi?)---");
                     mqttConnected = false; // Reset agar mencoba re-connect
                 }
                 DEBUG_PRINTLN("---------------------------------------");
@@ -310,13 +310,21 @@ void setup() {
     dataMutex = xSemaphoreCreateMutex();
     
     #ifdef USE_TELNET_DEBUG
-    xTaskCreate(TaskTelnet, "Telnet_Task", 4096, NULL, 1, &telnetTaskHandle);
+    xTaskCreatePinnedToCore(
+        TaskTelnet, "Telnet_Task", 4096, NULL, 1, &telnetTaskHandle, 1
+    );
     #endif
 
     #ifdef RUN_TASK
-    xTaskCreate(TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, &telemetryTaskHandle);
-    xTaskCreate(TaskGPS, "GPS_Task", 4096, NULL, 1, &gpsTaskHandle);
-    xTaskCreate(TaskMonitor, "Monitor_Task", 4096, NULL, 1, &monitorHandle);
+    xTaskCreatePinnedToCore(
+        TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, &telemetryTaskHandle, 0
+    );
+    xTaskCreatePinnedToCore(
+        TaskGPS, "GPS_Task", 4096, NULL, 1, &gpsTaskHandle, 1
+    );
+    xTaskCreatePinnedToCore(
+        TaskMonitor, "Monitor_Task", 4096, NULL, 1, &monitorHandle, 1
+    );
     #endif
     
     // Gunakan untuk diagnosis sistem

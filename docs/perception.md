@@ -1,4 +1,4 @@
-```
+```H
 ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddolllddddddddddddddddddddddddddddddddddddddddddddddddd
@@ -70,22 +70,35 @@ ddddddddddddddddddddddddddddddddddd;ckdc;,ddddddd: O;....  .c   :;.....l.  .c.l:
 
 # FreeRTOS
 
-Tools buat perbandingan masih dicari. Pokoknya dia bisa multitasking dan jauh lebih efisien dibanding kode superloop pada umumnya.
-```ino
-#define something
+FreeRTOS dirancang agar ringkas dan sederhana. Sistem ini sebagian besar ditulis dalam bahasa C agar mudah diporting dan di-maintain. FreeRTOS juga mencakup beberapa fungsi dalam bahasa assembly (jika diperlukan), terutama dalam architecture-specific context-switching routines yang digunakan oleh scheduler [^1].
+[^1]: [Wikipedia/FreeRTOS](https://en.wikipedia.org/wiki/FreeRTOS)
 
-void setup() {
-    something.init();
-}
+Sama-sama menggunakan bahasa C, sintaksis untuk Arsitektur FreeRTOS tidak begitu jauh dengan arsitektur superloop Framework Arduino. Berikut adalah tabel perbandingannya sebagai pengantar.
 
-void loop() {
-    delay(999); // baris blocking ganggu
-}
-```
+
+| Tujuan/Fungsi          | Arduino Superloop                                           | FreeRTOS                                              | Deskripsi                                                                                                                                                                                                              |
+|:---------------------- | :---------------------------------------------------------- | :---------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Jeda eksekusi          | `delay(1000);`                                              | `vTaskDelay(1000 / portTICK_PERIOD_MS);`              | `delay()` menahan CPU sehingga tidak bisa melakukan hal lain (blocking). `vTaskDelay` menidurkan Task tersebut, lalu "mempersilakan" Task lain untuk memakai CPU selama ia tidur.                                      |
+| Uptime                 | `millis();`                                                 | `xTaskGetTickCount() * portTICK_PERIOD_MS;`           | Meskipun `millis()` masih bisa dipakai di ESP32, `xTaskGetTickCount()` adalah pembacaan detak jantung asli kernel OS. Jauh lebih aman untuk menghitung interval penjadwalan Task.                                      |
+| Struktur infinite loop | `void loop() { ... }`                                       | `while(1) { ... vTaskDelay(...); }`                   | Setiap Task wajib memiliki perulangannya sendiri. Jika Task sampai keluar dari bracket `}` tanpa dihapus secara formal (`vTaskDelete`), ESP32 akan langsung **Crash / Panic**!                                         |
+| Variabel Global        | Memakai variabel flag `(bool isBusy)` atau `noInterrupts()` | Menggunakan Mutex: `xSemaphoreTake(mutex, max_wait);` | Jika dua Task mencoba menulis ke variabel yang sama persis di milidetik yang sama, data akan korup (**Race Condition**). Mutex bertindak sebagai "Kunci Gembok" yang hanya bisa dipegang satu Task pada satu waktu.    |
+| Pembagian resources    | `yield();`                                                  | `taskYIELD();`                                        | Digunakan jika sebuah Task sedang melakukan perhitungan berat (seperti mem-parsing JSON besar) tapi belum butuh jeda waktu. Ia akan "mengalah" dan memberikan sisa waktunya ke Task lain dengan prioritas sama.        |
+| Output Monitor         | `Serial.println("Halo");`                                   | `Serial.println("Halo");`                             | Karena Task berjalan paralel, jika Task A dan Task B mencetak tulisan ke Serial secara bersamaan, tulisannya di terminal bisa bertumpuk dan berantakan (contoh: `HaHalaolo`).                                          |
+| Menghentikan proses    | Menambahkan logika `if` untuk bypass eksekusi.              | `vTaskSuspend(Handle);`, lalu `vTaskResume(Handle);`  | FreeRTOS memungkinkan sistem untuk membekukan total suatu Task (sehingga tidak memakan RAM dan CPU sama sekali) dan membangunkannya kembali dari Task lain.                                                            |
+
 
 # Mikro ESP32
 
 esp32 DevKitC V4 adalah mikro yang kaya esp32 DevKitC V4 :electric_plug::computer:
+
+Agar developer bisa memaksimalkan penggunaan mikro ini, gunakan dokumen
+* [Datasheet ESP32-WROOM-32U](http://espressif.com/sites/default/files/documentation/esp32-wroom-32d_esp32-wroom-32u_datasheet_en.pdf)
+* [Technical Reference Manual ESP](https://www.espressif.com/sites/default/files/documentation/esp32_technical_reference_manual_en.pdf)
+
+> [!WARNING]
+> Technical Reference Manual di atas masih menggunakan framework bawaan ESP, yaitu ESP-IDF.
+
+Sebelum dimulai, sangat disarankan untuk melakukan [pemanasan](https://docs.platformio.org/en/stable/tutorials/espressif32/arduino_debugging_unit_testing.html) terlebih dahulu
 
 ## Pinout
 
@@ -137,10 +150,18 @@ Template header `secrets.h`
 #define MQTT_TOPIC "pastikan_unik_karena_bisa_diakses_orang_jika_pake_publik"
 #define MQTT_USER "NAMA_U$ER"
 #define MQTT_PASS "P4SSW0RD"
+
+const char HIVEMQ_CA[] =
+"-----BEGIN CERTIFICATE-----\n"
+"MIIFBjCCAu6gAwIBAgIRAMISMktwqbSRcdxA9+KFJjwwDQYJKoZIhvcNAQELBQAw\n"
+"----------------------------panjang-----------------------------\n"
+"iVDFanoCrMVIpQ59XWHkzdFmoHXHBV7oibVjGSO7ULSQ7MJ1Nz51phuDJSgAIU7A\n"
+"0zrLnOrAj/dfrlEWRhCvAgbuwLZX1A2sjNjXoPOHbsPiy+lO1KF8/XY7\n"
+"-----END CERTIFICATE-----\n";
 ```
 
 > [!CAUTION]
-> Defaultnya, upload OTA tidak akan menghasilkan output apa-apa pada terminal karena nature `Serial.print` itu sendiri yang menggunakan UART.
+> Defaultnya, upload OTA tidak akan menghasilkan output apa-apa ketika debugging pada terminal (kecuali ketika upload kode) karena nature `Serial.print` itu sendiri yang menggunakan UART.
 
 ## Debugging
 
@@ -154,30 +175,52 @@ Flash: [=====     ]  47.2% (used 927789 bytes from 1966080 bytes)
 ### USB
 
 Debugging default menggunakan USB dan protokol UART. Klik logo Alien di side bar, lalu klik **Monitor** pada menu PlatformIO
+
 ![Menu 1](/assets/debugUSB_menu_1.jpeg)
+
 Atau meng-klik logo kabel pada **Status Bar** di bawah menu VS Code
+
 ![Menu 2](/assets/debugUSB_menu_2.jpeg)
 
 ### OTA (Telnet)
 
+Debugging bisa dilakukan secara Nirkabel/OTA (Over the Air) menggunakan Telnet
+
 #### Shell
-Masukkan command berikut:
+
+1. Masukkan command berikut:
 ```shell
 telnet 192.168.x.x # Ikuti IP Address yang sudah didefinisikan sebelumnya
 ```
 
-#### Windows
-[Yang windows nyusul :stuck_out_tongue_closed_eyes:(paling pake PuTTY)]
+2. Lihat
 
+![Telnet Shell](/assets/telnetShell.png)
+
+#### Windows
+a. Nyalakan fitur Telnet. Search **Turn Windows features on or off** di Start Menu, lalu ceklis pada bagian **Telnet**
+
+b. Instal [PuTTY](https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html)
+
+c. Masukkan IP Address esp dan pastikan *Connection type* yang digunakan adalah **Telnet** (Port 23)
+
+![Konfigurasi PuTTY](/assets/PuTTYConfig.jpeg)
+
+d. Saksikan
+
+![Terminal PuTTY](/assets/PuTTYTerminal.jpeg)
 
 #### Android
-a. Instal aplikasi [Mobile Telnet](https://play.google.com/store/apps/details?id=mobiletelnet.feng.gao)
-![Telnet Play Store](/assets/telnetPlayStore.jpeg)
-b. Pada halaman utama, masuk ke *Telnet Settings* 
-![Halaman Utama](/assets/telnetMenu.jpeg)
-c. Setting IP nya, lalu tekan OK
+1. Instal aplikasi [Mobile Telnet](https://play.google.com/store/apps/details?id=mobiletelnet.feng.gao)
+
+2. Pada halaman utama, masuk ke *Telnet Settings* 
+
+3. Setting IP nya, serta pastikan menggunakan **port 23**, lalu tekan OK
+
 ![Telnet Settings](/assets/telnetSettings.jpeg)
-d. Dengarkan notip nya
+
+4. Dengarkan notip nya
+
 ![notip](/assets/telnetMonitor.jpeg)
 
 
@@ -186,7 +229,7 @@ d. Dengarkan notip nya
 Ada beberapa mode debugging yang bisa dilakukan.
 
 #### Normal Task
-Mode ini adalah mode normal di mana sistem akan bekerja seperti seharusnya
+Mode ini adalah mode normal di mana sistem akan berjalan seperti biasa
 
 Mengaktifkan mode normal
 ```cpp
@@ -211,7 +254,11 @@ Sistem akan mengeksekusi baris program yang diawali oleh `#ifdef RUN_DIAGNOSTICS
 
 # u-Blox NEO M8N
 
-Komponen ini berkomunikasi dengan mikro menggunakan periferal **UART**
+Komponen ini berkomunikasi dengan mikro menggunakan periferal **UART**.
+
+* [Website Produk](https://www.u-blox.com/en/product/neo-m8-series)
+* [Product Summary](https://www.u-blox.com/sites/default/files/products/documents/NEO-M8_ProductSummary_UBX-16000345.pdf)
+*  [Datasheet](https://content.u-blox.com/sites/default/files/NEO-M8-FW3_DataSheet_UBX-15031086.pdf)
 
 Modul GPS menggunakan library [TinyGPSPlus](https://github.com/mikalhart/TinyGPSPlus). File yang relevan untuk modul GPS adalah:
 * `esp/include/GpsHandler.h` (header file yang memanggil library, mendefinisikan kelas dan fungsi, serta klasifikasi private/publik)
@@ -241,6 +288,8 @@ diagnostics.run(TEST_LAB_PASSTHROUGH); // Yang ini buat tes GPS dalem ruangan (C
 
 Komponen ini berkomunikasi dengan mikro menggunakan periferal **I2C**
 
+* [Datasheet](https://cdn-shop.adafruit.com/datasheets/ina219.pdf)
+
 Modul INA219 menggunakan library [Adafruit INA219](https://github.com/adafruit/Adafruit_INA219) dan file macro `Wire.h`. File yang relevan untuk INA219 adalah:
 * `esp/include/PowerMonitor.h` (header file mendefinisikan kelas dan fungsi, serta klasifikasi private/publik. Header file ini yang akan memanggil library)
 * `esp/src/PowerMonitor.cpp` (kumpulan logika modul)
@@ -249,6 +298,8 @@ Modul INA219 menggunakan library [Adafruit INA219](https://github.com/adafruit/A
 # SIM7600G
 
 Komponen ini berkomunikasi dengan mikro menggunakan periferal **UART**
+
+* [SIM7600G Hardware Design](https://simcom.ee/documents/SIM7600E/sim7600g_sim7600g-h_hardware_design_v1.00.pdf)
 
 > [!IMPORTANT]
 > Pastikan sistem pindah ke mode diagnostics terlebih dahulu, agar AT Command bisa di-input manual melalui terminal. Cek [dokumentasi perception](/docs/perception.md) [bagian *debugging*](#debugging) untuk info lebih lanjut.
@@ -273,7 +324,7 @@ AT+CBC
 ```
 ## SIM Card
 
-Usahakan pakai sim card jangkauan sinyal nya luas (terutama di daerah sawah)
+Usahakan pakai sim card yang jangkauan sinyal nya luas (terutama di daerah sawah)
 
 ### Status SIM
 1. Cek Status

@@ -8,6 +8,7 @@ esp/.vscode/launch.json
 esp/.vscode/ipch
 esp/include/secrets.h
 esp/test/README
+
 # Ini muncul terus tiap config `platformio.ini`
 esp/.gitignore
 
