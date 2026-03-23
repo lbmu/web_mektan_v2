@@ -1,4 +1,9 @@
-```H
+> [!NOTE]
+> Dokumentasi sensing/perception layer, basically mikro dan baca sensor
+> Di sini, arsitektur yang dipakai adalah FreeRTOS dengan bahasa C++ dengan framework Arduino. Lingkungan pengembangan menggunakan Ekstensi **PlatformIO** pada VS Code.
+> Navigasi ke path [hardware](/esp/) untuk pengembangan.
+
+```
 ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddolllddddddddddddddddddddddddddddddddddddddddddddddddd
@@ -63,10 +68,6 @@ ddddddddddddddddddddddddddddddddddd'xXOd:;dddddddd',x. .'l;,'c   c.'.. d   :,lol
 ddddddddddddddddddddddddddddddddddd,dXOdc;dddddddl dl..  ...l.  .c.'...l.  .:;'l'''.   ....lO.. ' .......  .;lk0XN0o .odddddd
 ddddddddddddddddddddddddddddddddddd;ckdc;,ddddddd: O;....  .c   :;.....l.  .c.l:'.    .....,X,...c     .'. .cOXO....':cdddddd
 ```
-> [!NOTE]
-> Dokumentasi sensing/perception layer, basically mikro dan baca sensor
-> Di sini, arsitektur yang dipakai adalah FreeRTOS dengan bahasa C++ dengan framework Arduino. Lingkungan pengembangan menggunakan Ekstensi **PlatformIO** pada VS Code.
-> Navigasi ke path [hardware](/esp/) untuk pengembangan.
 
 # FreeRTOS
 
@@ -133,8 +134,7 @@ upload_flags =
     --port=3232             ; Port default OTA
 ```
 > [!IMPORTANT]
-> Jika ingin mengubah konfigurasi OTA, disarankan menggunakan micro-USB terlebih dahulu.
-Kredensial Wi-Fi pada `main.cpp` menggunakan header file `secrets.h`. Kode tidak ada di repo GitHub agar oknum tidak bisa upload kode sembarangan. Kode `secrets.h` dibuat di dalam folder `include` .
+> Kredensial Wi-Fi pada `main.cpp` menggunakan header file `secrets.h`. File tidak disertakan di repo GitHub agar oknum tidak bisa upload kode sembarangan. Kode `secrets.h` dibuat di dalam folder `include` .
 
 Template header `secrets.h`
 ```cpp
@@ -161,7 +161,7 @@ const char HIVEMQ_CA[] =
 ```
 
 > [!CAUTION]
-> Defaultnya, upload OTA tidak akan menghasilkan output apa-apa ketika debugging pada terminal (kecuali ketika upload kode) karena nature `Serial.print` itu sendiri yang menggunakan UART.
+> Defaultnya, upload OTA tidak akan menghasilkan output apa-apa ketika debugging pada terminal (kecuali ketika upload kode) karena _nature_ `Serial.print` itu sendiri yang menggunakan UART.
 
 ## Debugging
 

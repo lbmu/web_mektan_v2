@@ -197,6 +197,7 @@ void TaskTelemetry(void *pvParameters) {
         // namun cukup sering untuk memanggil comm.loop() dengan lancar
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
 }
 
 // Task 2: GPS Reading
@@ -287,14 +288,6 @@ void setup() {
 
     // Setup Comm Module
     DEBUG_PRINTLN("Initializing SIM7600 (4G)...");
-    // Coba sekali di awal (opsional, karena TaskTelemetry juga bakal coba)
-    // Tapi bagus untuk UX agar user tahu status awal
-    if (!comm.begin()) {
-        DEBUG_PRINTLN("⚠️ Init Awal Gagal (Akan dicoba ulang di Telemetry Task)");
-        // Jangan stop program, biarkan lanjut ke scheduler
-    } else {
-        DEBUG_PRINTLN("✅ SIM7600 Ready");
-    }
     
     // Init GPS Module
     gpsHandler.begin(9600);
@@ -325,6 +318,7 @@ void setup() {
     xTaskCreatePinnedToCore(
         TaskMonitor, "Monitor_Task", 4096, NULL, 1, &monitorHandle, 1
     );
+    diagnostics.run(TEST_PERFORMANCE_MONITOR);
     #endif
     
     // Gunakan untuk diagnosis sistem
@@ -332,7 +326,6 @@ void setup() {
     // diagnostics.run(TEST_LAB_PASSTHROUGH); // Yang ini buat tes GPS dalem ruangan (Cek modul doang, belum bisa ngirim koordinat)
     // diagnostics.run(TEST_SIM_PASSTHROUGH); // Yang ini buat ngirimin AT Command
     #endif
-    diagnostics.run(TEST_PERFORMANCE_MONITOR);
 }
 
 void loop() {

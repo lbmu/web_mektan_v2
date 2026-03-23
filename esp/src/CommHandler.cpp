@@ -92,11 +92,29 @@ void CommHandler::loop() {
     }
 }
 
+extern String telnetPendingCmd;
+
 void CommHandler::serialPassthrough() {
     while (Serial.available()) {
         _serialAT->write(Serial.read());
     }
-    while (_serialAT->available()) {
-        Serial.write(_serialAT->read());
+
+    #ifdef USE_TELNET_DEBUG
+    if (telnetPendingCmd.length() > 0) {
+        _serialAT->print(telnetPendingCmd);
     }
+    #endif
+
+    String modemResponse = "";
+    while (_serialAT->available()) {
+        char c = _serialAT->read();
+        Serial.write(c);
+        #ifdef USE_TELNET_DEBUG
+        modemResponse += c;
+        #endif
+    }
+    #ifdef USE_TELNET_DEBUG
+    if (modemResponse.length() > 0 && telnet.isConnected())
+        telnet.print(modemResponse);
+    #endif
 }

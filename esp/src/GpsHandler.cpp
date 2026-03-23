@@ -1,19 +1,11 @@
 #include "GpsHandler.h"
 
-
 GpsHandler::GpsHandler(int rxPin, int txPin, int serialPort): _rxPin(rxPin), _txPin(txPin) {
     _serial = new HardwareSerial(serialPort);
 }
 
 void GpsHandler::begin(unsigned long baud) {
     _serial->begin(baud, SERIAL_8N1, _rxPin, _txPin);
-}
-
-void GpsHandler::echoRawData() {
-    while (_serial->available()) {
-        char c = _serial->read();
-        Serial.write(c); // Kirim langsung ke monitor (Passthrough)
-    }
 }
 
 bool GpsHandler::update() {
@@ -23,6 +15,30 @@ bool GpsHandler::update() {
             newData = true;
         }
     }
+
+    if (newData && _gps.location.isValid() && _gps.location.isUpdated()) {
+        double currentLat = _gps.location.lat();
+        double currentLng = _gps.location.lng();
+
+        if (_filteredLat == 0.0 && _filteredLng == 0.0) {
+            _filteredLat = currentLat;
+            _filteredLng = currentLng;
+        }
+
+        else {
+            double distance = TinyGPSPlus::distanceBetween(
+                _filteredLat, _filteredLng,
+                currentLat, currentLng
+            );
+            
+            // Serial.write("Distance: %.2f", distance);
+            if (distance >= DISTANCE_THRESHOLD) {
+                _filteredLat = currentLat;
+                _filteredLng = currentLng;
+            }
+        }
+    }
+
     return newData;
 }
 
@@ -35,9 +51,16 @@ uint32_t GpsHandler::getAge() {
 }
 
 double GpsHandler::getLat() {
-    return _gps.location.lat();
+    return _filteredLat;
 }
 
 double GpsHandler::getLng() {
-    return _gps.location.lng();
+    return _filteredLng;
+}
+
+void GpsHandler::echoRawData() {
+    while (_serial->available()) {
+        char c = _serial->read();
+        Serial.write(c); // Kirim langsung ke monitor (Passthrough)
+    }
 }

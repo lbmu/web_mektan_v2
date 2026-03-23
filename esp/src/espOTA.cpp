@@ -47,6 +47,8 @@ void ESP_OTA::otaTask(void *pvParameters) {
     }
 }
 
+String telnetPendingCmd = "";
+
 void ESP_OTA::processTelnetCommand(String cmd) {
     // refresh
     cmd.trim();
@@ -77,6 +79,12 @@ void ESP_OTA::processTelnetCommand(String cmd) {
     telnet.println("2. s : Lihat memori dan status operasional");
     telnet.println("3. r : Restart perangkat dari jarak jauh");
     telnet.println("4. h : Menampilkan menu ini");
+    telnet.println("*. AT... : Mengirim perintah AT ke Modem 4G");
+    }
+
+    else if (cmd.startsWith("AT") || cmd.startsWith("at")) {
+        telnetPendingCmd = cmd + "\r\n";
+        telnet.println(">> " + cmd);
     }
     else telnet.println("nguwawor");
 }

@@ -5,63 +5,56 @@
 > ~~**KARBIT**~~ ***SETIA*** :zany_face:
 
 ```
-OKKKKKKKKKK00KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKxl:;;;;,'............................    .xKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKO
-OKKKKK00O00OO0KKKKKKKKKKKKKKKKKKKKKKKKK0kdoc:;;;,'..................................    ,xKKKKKKKKKKKKKKKKKKKKKKKKKKKKKO
-OKKKKK00O0K00KKKKKKKKKKKKKKKKKKKKK0kdlc;;;;;,'.......................................     .o0KKKKKKKk:0KKKKKKKKKKKKKKKKO
-OKKKKKKKKKK0K0KKKKKKKKKKKKKKKKKKo:,;;;;;,'............;c:.............................      .l0KKKKK;;0KKKKKK0000000000k
-OKKKKKKKKK0KKK0KKKKKKKKKKKKKKKK0',,,,,'............;cllllc'.............................      .l0KKco0KKO000OOOOOOOOOOOk
-OKKKKKKKKKK0K0KKKKKKKKKKKKKKKKK0',,,,'.........';clll;.'clc,.............................       .cO;O0OddOOOO00KKKKKKKKO
-OK00KKKKKKKKKKKKKKKKKKKKKKKKKKKK,,,,'.........'llllc';:';lll;..............................       .,:llxO00KKKKKKKKKKKKO
-k0OO000KKKKKKKKKKKKKKKKKKKKKKKKK;,,,'..........llll,';;:lllllc,..............................      .'c:dKKKKKKKKKKKKKKKO
-OK00KKKKKKKKKKKKKKKKKKKKKKKKKKK0:,,'...........llll';::'';::lll:'.............................    ';;;:'oKKKKKKKKKKKKKKO
-OK00KKK0KKKKKKKKKKKKKKKOkxdlc:,'.'''...........llll;,,cl,';clllc...............................   .,lco,;0KKKKKKKKKKKKKO
-OKKKKKKKKKKKKKKKKkdlc;,,,,,,,,,,'..............:l:.'c,:;''.,lll;...................................,c;c:..dKKKKKKKKKKKKO
-kO00KKKKKKKKKKKKd.'''',,,,,,''.................'llc,'l;...;llll. ..................................',,l;,. lKKKKKKKKKK0O
-O000KKKKKKKKKKKKKd,'''''''......................clll,.,lllllll; ...................'..',,,...... ........ .xKKKKK0KKKKKO
-k0OO00KKKK0KKKKKKK0d;...........................,clll,llllllll. ................;;;;;,,:;;;,.....,        :xxk000000000k
-OK0OKKKKKK0KKKKKKKKKKkc'..........................,cl:lllllll:  .............  .,;;lollolc;,....'.      .lxOOOOOOOOOO00k
-OK0000KK00000KKKKKKKKKKKkc,. .........................',;::cl,   ............   '''cc;,::ll;;'''.....   :xkOOOOOOOOOOOOk
-kKKKKK0000O0000KKKKKKKKKKKKO,    .............................         ......  .;;;ol;',,;oo,,,,,,.      .l000000000000k
-OKKKKKKK00000KKKK0O0KKKKKKKc.......   .......................................   ',,;;,;;ll:,;,,l:;..       .cO000000000k
-OKKKKKKKKK0KKKKK0OkO0KKKKKo........   ........................................   .....',;c;.,;;,:cc;'.       .:k0000000k
-OKKKKKKKKKKKKKKKKK00KKK0Kd;.......  ....,clooc...  .............................    ......'..',',cll;;.         ;k00000k
-OKKKKKKKKKKKKKKKKK0K00KKkc'..',,'......:oddxxl... ................................  .,     ......',;;,.           :0000k
-OKKKKKKKKKKKKK0K0000KKKKoo',:,,,,,....:ooolll: .............:oolc:...... ....       ';...  ',.   ..    ..    ..,:lk0000k
-kKKK0000K0KKKKKKKK0K0KKOc:.xc:::,,...,lc:clodd... .......'.'d:ccldo'.... .......   ..,'.   ,;.   ....   looxkO000000000k
-OKK00000000KKKKKK000000x:'l0;,,,,;..   ..   .'''........'c.,xxxdollc....  ......  ......'''',,'..,......OOOkkkkkkkkkkkkx
-OK00OO000000000KKK0K000d:'xOo:,,,,.  :.dx,'. . '.c;;;,'';d,'oooc;'...  ..  ..... ......... .,..........,00OOOOOOkOOOOOOx
-k0OOkOOO00000000KKK000Okc:00o.,,','. .oo0x..:xl,.:d,,,,,;xd:''. .      ...  ... .......... .'.......'',o00000OOOOOO0000k
-O00OkO00000000000KK00OO0o:O0:..,'','  ,k0Kk;;:cl,,dx:',..d0Odo:..;d:.cl::'.....',''''''',' .';'...',,;;k000000O00000000k
-k0OOO0000000000000K0O0000do0;.,.''','..dkk00xdddOl:x0d:'.;k000O,,cdo;:cxkd;;,..c;:;'',;;:'..;;,...,,,,:0OOOOOOOO0000000k
-k0OOO0000000000000000000000O:,,....',..:xxddxkkOOO0kkO0xl;lO00K0c;;;,;l0Kxkkxc.,,:,..,,,'..':;,..',,,,oOOOOOOOOOOOOOO00k
-k0OO000000000k00O00000000xl;,',.....'' 'kxxxxkkOOOOkkk0000OO000000OkOKK0OOOOdc,,,,'..,,'...,,''..,,,,'xOOOOOOOOOOOOOOOOk
-k0000000OOOOOcxOkOO0Oxoc,,,,'.,''.......kkkkkOOOO000000000000Okkxxkxkkxkkkkkd:,,,'. .,'...',,,,..,,,,;OOOOOOOOOOOOOOOOOk
-k00000OO00000d,:lc:;',,,,;'...,....'....oOOOOOO00000000000000OOkkkkxxxxxxxxd:,,'....''....',,,,,.';c::0OOOOOOOOOOOOOOOOk
-k0000OO000000xc,;''''''.,,....,..'';.....d00000000000000000000OOOOkkkxxxxxo;'.....'........',,,,'.cdl;OOOOOOOOOOOOOOOOOx
-k0000OO0000Oxoc;......cdc,,,,','...'..... :O00000000000000000000OOOOOOkxdc,. ....'.'.',.....,,,,,'',,'xkOOOOOOOOOOOOOkkx
-k0000kdc;,........,cdkOc:::ccc:,........    ;x000000OOO000000000000OOkxl,.  ....''',,,'...  .',,,,'',':xxxxkkkkkkxxxxxxd
-k000l........,:lxO0OOOd;clcllll:,.......      'oO0000000000000000Okdc;.... ....,,,,,,,. .     .',,,,',..:dkkkxxxxkkkkkkx
-k00l..';:ldk000000OOOk,cll:lllllc,......        .cO0000000000Oxdo:'.........',,,,,'..           ..',,,'...'lxkkkkkkkkkOk
-k0kdk000000000OOOOOOd..cccc;llccc:'......          :x00Okoll:;''...........,,,'..           .........',''....,cxkkkkOOOk
-k0000000000OOOOOOOkc...:::c;;c:::::;' .',...       ..''...'.............',,'..            ..''',;;,,''..'';;....':lkO0Ok
-k000000OOOOOOOOOOl,....:::::',::::::,...','......   .............. ..,,,,'......     ....'';;;:::::;,,'..',cl;'.....,:od
-kOOOOOOOOOOOOOOx:'... .:::::;'';:;::,....,,'........ ..'''''.... .',,,,'..........    ..,;;;::::::::;,,'..,oOkkdc,.'..''
-kO0OOOOOOkkkkkl,'..,. ,::::::;..',::,....,,,'...........'... ...',,,,,............... .,;;;::::::::::;,'. .'lkkOOOkoc;'.
-k0000OOkkOOOk:,'.:o. .::::::::''.,::,....,''..........  .......,,,,,.,...............,:::::::::::::::;;,.  .'lOOOOOOO0Oo
-kOOOOOkOOOOx;,';do.  '::::::::''.'::, ............... .......'',,,,. '.............,:::ccc:::::::::::,:' .. .,ckOOOOOOOx
-xOOOOkkOOOx,,;dko'.  ;:::::::;...,:cc;cldd',l......'..,,.....'.,,,................:::cccccldo::::::::';.......;:xOOOOOkx
-kOOOOOOOOO:,lkOd,.  .:::;:ldxxkkOOOkxol:,...oOolllc::;:,,......,,,..............;c::cc:;;ccol;:::::::'.........,;dOkkkkd
-kOOOOOOOOo,xOOx,.  ..:clO000Ooo:;,;;;'....'::oOOl,'.;',o:,'..  .''........... .;:::c:,',:::::::::::::............,lkxxxd
-kOOOOOOOk;dKKKkd, ...d0000OO0Oc..;:;,'';;,x00kcdOkl:,.,';c;,............... .':;;::,'':::::::::::::::........'..'.'lxxxd
-xOOOOOOOo.kKKOOd'..,d000O00xk00d,;::::::::xOOd:oldO0dl:;,'.......... ..... .;;;';;.',:::::::::::::::;. ......''.:'.,dxxd
-xkkkOOOOc.xOx;,....d0000kxO0Oxk0o;;::::::::::::l:,ckkOOxc::;'........... .,:,''',';:::::::::::::::::;.   .....,''k'.;xxd
-xkkkkkkOc.ok;,'...'000O000kxO0xdlkxc:::::::::;'oO000000Od::::,..........,;::,..';:::::::::::::::::::;..   ....,,.od..lxd
-xkkkkkkkd.'l',....d000OxxxOOldccodxc;:::::::;llddkkkOO000k::::;'... ..,::::;..;:::::::::::::::::::::'...    ..','ck:.:kd
-xkkkkkkkOc..,'',.'k000Odoo:,.. .;c;:::::::::;:lcO000000000k:::::;,,,;:::::,',:::::;:::::::::lll::::;.....    ..,':ko.,kd
-xkkkkkkkkko','...okkOkxdxx:     ..;:;::::::;,:::xkkkk000000k::::::::::::;';:::::,';:::::::::ccc:::;,......    .',:kd.,kd
-xkkkkkkkkkkc'...,xxkkkkxxx,     ...;:::::::,;:;;okO000000000k:::::::::;;'.,;;;,',;:::::::::;:::::;,,......    .,,lxo.cxd
-xkkkkkkkkkkk,.  :xxxkxxxxl      .....',:::;,:;,,;;:cxO0000000x;:;;;;,,,'...''..,;;;;;;::::;;;;;;,,,'......    .,,xx;'xxd
-dxxxxxxxxxxk,   ;ddddddd:       ..  ....;;;,'....;;;,lkOOkkkkxl','''''.......',,,,,,,,,,,,''',,,,,'.......    .'cdo.lddo
+KKKKKKKKKKKKKKKKKKKKK0dc;;;;;;,'..........,;...........................     'OKKKKKk'dKKKKKKKK000000
+KK0K00KKKKKKKKKKKKKKKl,,,,,,'..........';cll;...........................     .c0KK0cl0KKK00000OOOOOO
+KK0KK0KKKKKKKKKKKKKKKl,,,,,..........;cll:;ll:...........................      .l0dlK0OdOOOOO0000000
+KKKKKKKKKKKKKKKKKKKKKl',,'.........clllc,,',llc,...........................      .c:xookO00KKKKKKKKK
+KKKKKKKKKKKKKKKKKKKKKd',,'.........llll';:ccllll:...........................       .;cd0KKKKKKKKKKKK
+KKKKKKKKKKKKKKKKKKKK0d',''.........lll:';;,';::lll:...........................    ;;;:'lKKKKKKKKKKKK
+KKKKKKKKKKKK0kxdoc:;,'.''..........cll:;';l:,:clll:............................  ..:co;,OKKKKKKKKKKK
+KKKKKKK0dl:;,,,,,,,,,,.............;l;.;c::...;lll'............................. .'c;:c..o0KKKKKKKKK
+KKKKKKKd.''',,,,,''................'lll,,:.',:lllc.............................. ..,':;,  oKKKKKKKKK
+K0KKKKKKx;'''''.....................:lll''cllllll' ...............',,.';;;,......'  ...  '00OKK0K000
+KKKKKKKKK0x:........................,cll;cllllll:. ............ .;;;;:;:c:;;......      .oxxO0000000
+K00KKKKKKKKK0d;........................,;:clllll,  ...........   .',llccclc,...'.      .xOOOOOOOOOOO
+0O0000KKKKKKKKK0xc.  .........................''.        ......  ,,,l:,',:lo;,,,...    .ck000000000O
+00000KKK00KKKKKKKd.............................................  ';;cc;,:ccc,,,c;'.      .cO00000000
+K00KKK00OkO0KKKKd.......   ....................................   ....',;c:.,,,;::;'.       ;k000000
+KKKKKKKK0O0KKKKk;....... ....,clcc.... ..........................    .....''',,':ll:;'        ;k0000
+KKKKKKKKKKKK0K0l,..','......:odxxd... .............................  ..    ......,,;,.          :000
+KKKKK0KK00KKKKdl';:,,,,....coooolc.............:odol;..... .... .    ',..  .,.   .        ...,:ok000
+K00KKKKKK0K000l:,xc;:;,...':;,;:od,.. ......,.'dcccll:.... ......  ...,'.. ';. . ,...  lxxkOOO000000
+00K0KKKKK0000Oc,oO;,,,,.   ...   ..'.'......o.'xxxdolc;.... .....  ......'.''','''.....kOOOkkkkkkkkk
+000000KKK0000Oc,xOo;,','  :;dd'..,..'c;;;,;;xc'll:,..    ..  .... ..........,.........'00OOOOOOOOOOO
+00000000KK00OOlcO0:.,'',. .oxKo.;odc.:d,,,''dko''..... . .... ............ ..'....'',,o0000000000000
+00000000K00OO0kcx0,.''.',. 'xO0kc::co,dOl,,.c000Oc.'dx::xdo:'...,:;;,,,;;:..,;'...,,,;k000OOO0000000
+0000000000000000k0;,'...',..okdkOOO00Odk0Ol;'l0000d,:c:;;k0dodc.,,,,..,,,...:;,..',,,:0OOOOOOOO00000
+0000000O0000000Od:,,'....,. ;xxxxxkOOOOkkO00OkO000K0xddx0K0OOkd;,,;,..,,...',,'..,,,,lOOOOOOOOOOOOOO
+OOOOlx0k0000koc,,,''''......'kkkkkOOO0OOO0000000Okkkkkkkkkkkkxo,,,'. .,'...,,,,..,,,'dOOOOOOOOOOOOOO
+0000x;col:;,,,,;,...'...'....kOOOOO000000000000OOkkkkxxxxxxxxo;,,....''....,,,,'.,::,xOOOOOOOOOOOOOO
+0000kl,;'''''.,,....,..',....,O000000000000000000OOOOkkkxxxdl;'............',,,,',oo;dOOOOOOOOOOOOOO
+0Okdl:,.....:dl;;,,',...'.... .l0000000000000000000OOOOOOxd:'.......,'''....',,,,',,'lkkkOOOOOOOOkkk
+'.......,cdkOl::cllc;'.......   .cO00000OO000000000000Okd:'. ....',',,,...  ..,,,,',,,okxxxkkkxxxxxx
+...,:oxO0OOOO:clcllll:'......     .;x00000000000000Oxo:,........,,,,,,'       ..',,,''.'lxkkxxkkkkkk
+xO00000OOOOO;;ll:clllc:......        ,d0000000Okxdl;'.........,,,,'..        .....'',,....:oxkkkkkkO
+0000OOOOOOd' ;ccc;cccc:;'..''.         ,odol;;;,'...........',,'.          .....''''.'','....;okkOOO
+0OOOOOOOx:.. ;:::;,::::::,...,......   ..................',,'..        ....',,;;:;;,,'..':c'....,cox
+OOOOOOkl,... ;::::,';:;::;....,,....... ...'....... .',,,'........    ...,;;;::::::;,''..,odxl;..'..
+OOOOOx;'... .:::::;,.''::;....,,'..........'....  .',,,,'............. .,;;:::::::::;,'. .:xkkkkoc;'
+kOOOo,'.;c. '::::::;'.'::;....,'.......... .......,,,,''..............,:;:::::::::::;;,.  .:xOOOOOOk
+OOOl,',do. .;::::::;.'.::;...'..........  ......'',,,'..............':::cc::::::::::;;, .. .:xOOOOOO
+OOc,;okl.  .:::::::,..':cc:cloc.l,.....'.,,.......,,,..............;::cccccdd:::::::,,. ....':oOOOOO
+Oo,ckko'. .':::clxkkOOOkxdl:;...;Oxlllc::;:''.....','............,c::c:;,:cll:::::::,....... .;cOkkk
+k,o0Ox,. ..,coO000Oo:,';::'....cllk0d;'',.:l;,.. ...............;:::c;',:c::::::::::,..........':xxx
+lc0KKOx'...c0000kk0Oc.,:;,,;;;lO0OlokOdl',,';;,.............. .;;,:;'';:::::::::::::'......'..;.'cxx
+;cKKxdc...x000k00kkO0o;:::::::cdxo:dolk0koc;,,'....... ......,;:';,.,;::::::::::::::.  .....,..o.'lx
+':Od,'...;00000kkO0kkkcc::::::::::;cccxkOOOo;::,...........';:''.',;::::::::::::::::..  ....',.lc.,x
+;.x;,'...x000kkO0kxkoldOo;:::::::::xO00OOO0Od;::;'.......,;:::..,;:::::::::::::::::;...   ...,';k,.l
+o..',''.,O000kdlll;..;oc;:::::::;:olxkkO00000d;:::;''.';::::;',::::;::::::::ccc::::,....   ..',,xo.:
+ko',',..okOOOdod;     .,:;::::::;;;:xkkOO00000d::::::::::::,,;:::;,,::::::::ccc::;;.....    ..,,xd.:
+kko,...,xkkkkxxx,    ...;::::::;;:;:dO000000000x::::::::::,';;;;,';::::::::::::::;,......    .,;xd.l
+kkk:.  cxxkxxxxo.     ....';:::,:;;;;:coO0000000o;:;;;;;;,...,'.';;;:::::::;;;;;,,,......    .,lx:'x
+xxxc   cddddddl.      .. ...,;;;,....;;,:xOOOOkkx:','''''......,,,,,,,,,,,,'',,,,,'......    .,dd.ld
 ```
 
 # DESKRIPSI PROYEK
@@ -120,6 +113,9 @@ Skill khusus yang harus dimiliki oleh pengembang esp adalah:
 
 # FOR DEVELOPERS
 
+Sudah tanggung jawab Anda sebagai pengembang profesional untuk mendokumentasikan perangkat lunak untuk digunakan oleh orang lain dengan benar. Mengelola kompleksitas perangkat lunak adalah bagian yang sangat penting dalam menjaga proyek tetap efisien, dan itu sulit dilakukan jika tidak ada yang tahu cara menggunakan perangkat lunak Anda, atau metode apa yang aman untuk dilakukan [^1].
+[^1]: [Semantic Versioning 2.0.0](https://semver.org/lang/id/)
+
 ## The Lord of The Rings: The Two Towers
 
 **Mr. Frodo**
@@ -154,51 +150,56 @@ Feel free untuk menggunakan proyek ini. Clone menggunakan command
 git clone https://github.com/lbmu/web_mektan_v2.git
 ```
 
-### Pushing
+Di-fork juga boleh
 
-untuk sekarang, upload kode ke repo remote bisa menggunakan script yang sudah dibuat. Script yang digunakan adalah `git_sync.bat` untuk :window: atau `git_sync.sh` untuk :shell:.
-> [!NOTE]
-> Untuk **Windows**, jalankan `git_sync.bat` dengan privilege admin (mereun)
-> Untuk **Shell**, gunakan command di bawah ini dalam terminal ~~caheum~~.
-
-```bash
-# Biar mode execution
-chmod +x git_sync.sh
-# eksekusi kode nya
-sh git_sync.sh
 ```
-
-Jika skrip nya bermasalah, cari tahu sendiri biar sekalian belajar :stuck_out_tongue_closed_eyes:
+# command buat forking
+```
 
 ### Versioning
 
-Kasih nomor versi sesuai dengan perkembangan proyek. Beri penomoran sesuai perubahan yang `MAJOR.MINOR.FIXES`.
+Kasih nomor versi sesuai dengan perkembangan proyek. Beri penomoran sesuai perubahan yang `MAJOR.MINOR.PATCH`.
 Gunakan [*Semantic Versioning*](http://semver.org/). Contoh:
 
 | Changes | Dari      | Ke        | Contoh Perubahan              | Deskripsi                                                                             |
 | ------- | --------- | --------- | ----------------------------- | ------------------------------------------------------------------------------------- |
 | MAJOR   | **0**.6.6 | **1**.0.0 | Arsitektur Superloop ke RTOS  | Perubahan yang besar sehingga kode tidak backwards compatible                         |
 | MINOR   | 1.**0**.0 | 1.**1**.0 | OTA Debugging                 | Perubahan kecil, biasanya penambahan fitur/sub-sistem yang backwards compatible       |
-| FIXES   | 1.1.**0** | 1.1.**2** | nambahin ASCII Hu Tao di docs | Perubahan yang sangat kecil, hanya developer yang commit yang mengetahui perbedaannya |
+| PATCH   | 1.1.**0** | 1.1.**2** | nambahin ASCII Hu Tao di docs | Perubahan yang sangat kecil, hanya developer yang commit yang mengetahui perbedaannya |
 
+### Pushing
+
+untuk sekarang, upload kode ke repo remote bisa menggunakan script yang sudah dibuat. Script yang digunakan adalah `git_sync.bat` untuk :window: atau `git_sync.sh` untuk :shell:.
+> [!NOTE]
+> Untuk **Windows**, jalankan `git_sync.bat` dengan privilege admin (mereun)
+> 
+> Untuk **Shell**, gunakan command di bawah ini dalam terminal
+> ```bash
+> # Biar mode execution
+> chmod +x git_sync.sh
+> # eksekusi kode nya
+> sh git_sync.sh
+> ```
+
+Jika skrip nya bermasalah, cari tahu sendiri biar sekalian belajar :stuck_out_tongue_closed_eyes:
 
 ## Library
 
-Library digunakan untuk mendukung perkembangan proyek.
+Library digunakan untuk mendukung perkembangan proyek. 
 
 ### Perception Layer
 
 Konfigurasi library bisa dilakukan di dalam [file](/esp/platformio.ini) `platformio.ini` bagian `lib_deps`. Explore library yang didukung oleh PlatformIO di PIO Home (Yang logo  alien), dan detail library nya [di sini](https://registry.platformio.org/search?t=library).
 Untuk File Library level *hardware* dapat ditemukan di dalam environment konfigurasi PlatformIO. Defaultnya adalah `.pio/libdeps/nama_board` pada proyek PlatformIO. 
 
-Library yang dipake di edge:sob:
+Library yang dipake di edge :sob:
 * Sensor daya: [Adafruit INA219](https://github.com/adafruit/Adafruit_INA219)
 * Sensor GPS: [TinyGPSPlus](https://github.com/mikalhart/TinyGPSPlus)
 * OTA Monitoring: [ESPTelnet](https://github.com/LennartHennigs/ESPTelnet)
 
 ### Network Layer
 
-Library buat MQTT dan protokol komunikasi:signal_strength:
+Library buat MQTT dan protokol komunikasi :signal_strength:
 Modul SIM:
 
 * Basic Security: [ESP_SSLClient](https://github.com/mobizt/ESP_SSLClient)
@@ -209,7 +210,7 @@ Modul SIM:
 
 ## DOKUMENTASI DAN PANDUAN
 
-Untuk mendokumentasikan proyek, gunakan [website dokumentasi GitHub](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax) sebagai kitab.
+Untuk mendokumentasikan proyek, gunakan [website dokumentasi GitHub](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax) sebagai kitab _formatting_.
 > [!TIP]
 > Kalo mau pake emoji, boleh klik si batu [:moyai:](https://github.com/ikatyang/emoji-cheat-sheet/blob/github-actions-auto-update/README.md)
 

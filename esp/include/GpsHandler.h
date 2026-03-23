@@ -29,4 +29,9 @@ private:
     int _txPin;
     HardwareSerial* _serial;
     TinyGPSPlus _gps;
+
+    double _filteredLat = 0.0;
+    double _filteredLng = 0.0;
+
+    const double DISTANCE_THRESHOLD = 2.5;
 };
