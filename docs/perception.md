@@ -69,6 +69,24 @@ ddddddddddddddddddddddddddddddddddd,dXOdc;dddddddl dl..  ...l.  .c.'...l.  .:;'l
 ddddddddddddddddddddddddddddddddddd;ckdc;,ddddddd: O;....  .c   :;.....l.  .c.l:'.    .....,X,...c     .'. .cOXO....':cdddddd
 ```
 
+# Directory Structure
+
+Di dalam folder esp, pastikan struktur foldernya sebagai berikut
+
+```
+.
+├── include
+├── lib
+├── logs
+├── platformio.ini
+├── src
+└── test
+```
+
+Untuk memulai proyek menggunakan PlatformIO
+1. Klik Logo Alien
+2. 
+
 # FreeRTOS
 
 FreeRTOS dirancang agar ringkas dan sederhana. Sistem ini sebagian besar ditulis dalam bahasa C agar mudah diporting dan di-maintain. FreeRTOS juga mencakup beberapa fungsi dalam bahasa assembly (jika diperlukan), terutama dalam architecture-specific context-switching routines yang digunakan oleh scheduler [^1].
@@ -86,7 +104,6 @@ Sama-sama menggunakan bahasa C, sintaksis untuk Arsitektur FreeRTOS tidak begitu
 | Pembagian resources    | `yield();`                                                  | `taskYIELD();`                                        | Digunakan jika sebuah Task sedang melakukan perhitungan berat (seperti mem-parsing JSON besar) tapi belum butuh jeda waktu. Ia akan "mengalah" dan memberikan sisa waktunya ke Task lain dengan prioritas sama.        |
 | Output Monitor         | `Serial.println("Halo");`                                   | `Serial.println("Halo");`                             | Karena Task berjalan paralel, jika Task A dan Task B mencetak tulisan ke Serial secara bersamaan, tulisannya di terminal bisa bertumpuk dan berantakan (contoh: `HaHalaolo`).                                          |
 | Menghentikan proses    | Menambahkan logika `if` untuk bypass eksekusi.              | `vTaskSuspend(Handle);`, lalu `vTaskResume(Handle);`  | FreeRTOS memungkinkan sistem untuk membekukan total suatu Task (sehingga tidak memakan RAM dan CPU sama sekali) dan membangunkannya kembali dari Task lain.                                                            |
-
 
 # Mikro ESP32
 

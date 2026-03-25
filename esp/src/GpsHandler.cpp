@@ -4,8 +4,16 @@ GpsHandler::GpsHandler(int rxPin, int txPin, int serialPort): _rxPin(rxPin), _tx
     _serial = new HardwareSerial(serialPort);
 }
 
-void GpsHandler::begin(unsigned long baud) {
+bool GpsHandler::begin(unsigned long baud) {
     _serial->begin(baud, SERIAL_8N1, _rxPin, _txPin);
+
+    unsigned long startWait = millis();
+    while (millis() - startWait < 1500)
+    {
+        if (_serial->available() > 0) return true;
+        delay(10);
+    }
+    return false;
 }
 
 bool GpsHandler::update() {

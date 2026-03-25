@@ -4,6 +4,7 @@
 #include "PowerMonitor.h"
 #include "GpsHandler.h"
 #include "CommHandler.h"
+#include "espOTA.h"
 
 enum DiagnosticMode {
     TEST_CONNECTION_CHECK,    // Cek sekilas (True/False)

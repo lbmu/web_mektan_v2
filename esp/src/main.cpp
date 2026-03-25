@@ -101,6 +101,13 @@ void TaskTelemetry(void *pvParameters) {
     // Penghitung kegagalan
     static int mqttFailCount = 0;
 
+    // if (esp_reset_reason() == ESP_RST_POWERON) {
+    //     DEBUG_PRINTLN("\n⏳ [TELEMETRY] Cold Boot Terdeteksi. Menunggu SIM7600 pemanasan (60 detik)...");
+    //     // vTaskDelay akan menghentikan task ini sementara tanpa memicu Watchdog
+    //     // dan membiarkan Task GPS & Task Monitor tetap berjalan dengan normal
+    //     vTaskDelay(60000 / portTICK_PERIOD_MS); 
+    // }
+
     // Variabel untuk jeda publish tanpa blocking
     unsigned long lastPublishTime = 0;
     const unsigned long PUBLISH_INTERVAL = 5000; // 5 detik
@@ -123,7 +130,11 @@ void TaskTelemetry(void *pvParameters) {
         if (lteConnected && !mqttConnected) {
             DEBUG_PRINTLN("📡 [TELEMETRY] Menghubungkan ke Broker HiveMQ...");
             
-            if (comm.connectMQTT(MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS)) {
+            disableCore0WDT();
+            bool isConnected = comm.connectMQTT(MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS);
+            enableCore0WDT();
+            
+            if (isConnected) {
                 DEBUG_PRINTLN("✅ [TELEMETRY] Terhubung ke Broker! Siap publish data.");
                 mqttConnected = true;
                 mqttFailCount = 0;
@@ -134,7 +145,7 @@ void TaskTelemetry(void *pvParameters) {
                     DEBUG_PRINTLN("🔄 [TELEMETRY] Internet/Sinyal putus! Me-reset Modem 4G...");
                     lteConnected = false;
                 }
-                vTaskDelay(3000 / portTICK_PERIOD_MS); 
+                vTaskDelay(2000 / portTICK_PERIOD_MS); 
                 continue; 
             }
         }
@@ -197,7 +208,7 @@ void TaskTelemetry(void *pvParameters) {
         // namun cukup sering untuk memanggil comm.loop() dengan lancar
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
 }
 
 // Task 2: GPS Reading
@@ -275,29 +286,41 @@ void TaskMonitor(void *pvParameters) {
 void setup() {
 
     Serial.begin(115200);
-    Serial.println("--Booting System...--");
-    
+    Serial.println("==================================================");
+    Serial.println("================[ BOOTING SYSTEM ]================");
+    Serial.println("==================================================");
+    Serial.println("");
+
     // Setup OTA
+    Serial.println("===============[ Initializing OTA ]===============");
     Ota.begin(WIFI_SSID, WIFI_PASS, OTA_PASS);
     delay(500);
 
     // buka port 23
+
     DEBUG_BEGIN();
-
-    DEBUG_PRINTLN("\n\n===| FIRMWARE V2 |===");
-
-    // Setup Comm Module
-    DEBUG_PRINTLN("Initializing SIM7600 (4G)...");
+    DEBUG_PRINTLN("==================================================");
+    DEBUG_PRINTLN("");
     
     // Init GPS Module
-    gpsHandler.begin(9600);
-
+    DEBUG_PRINTLN("===============[ Initializing GPS ]===============");
+    if (!gpsHandler.begin(9600)) {
+        DEBUG_PRINTLN("❌ GPS Not Found!");
+    } else {
+        DEBUG_PRINTLN("✅ GPS Connected");
+    }
+    DEBUG_PRINTLN("==================================================");
+    DEBUG_PRINTLN("");
+    
     // Init Power Module
+    DEBUG_PRINTLN("===============[ Initializing INA ]===============");
     if (!powerMonitor.begin()) {
         DEBUG_PRINTLN("❌ INA219 Not Found!");
     } else {
         DEBUG_PRINTLN("✅ INA219 Connected");
     }
+    DEBUG_PRINTLN("==================================================");
+    DEBUG_PRINTLN("");
 
     // Create Mutex
     dataMutex = xSemaphoreCreateMutex();
@@ -308,6 +331,8 @@ void setup() {
     );
     #endif
 
+
+    DEBUG_PRINTLN("===============[ Initializing SIM ]===============");
     #ifdef RUN_TASK
     xTaskCreatePinnedToCore(
         TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, &telemetryTaskHandle, 0

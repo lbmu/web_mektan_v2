@@ -3,6 +3,8 @@
 #include <ESPmDNS.h>
 #include <ArduinoOTA.h>
 
+TaskHandle_t otaTaskHandle = NULL;
+
 ESP_OTA::ESP_OTA() {}
 
 // Update: Implementasi menerima 3 parameter
@@ -36,7 +38,7 @@ void ESP_OTA::begin(const char* ssid, const char* password, const char* otaPassw
 
     // 3. Create Task
     xTaskCreatePinnedToCore(
-        ESP_OTA::otaTask, "OTA_Task", 4096, NULL, 1, NULL, 0
+        ESP_OTA::otaTask, "OTA_Task", 4096, NULL, 1, &otaTaskHandle, 1
     );
 }
 

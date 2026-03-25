@@ -9,7 +9,7 @@ public:
     GpsHandler(int rxPin, int txPin, int serialPort);
     
     // Inisialisasi serial GPS
-    void begin(unsigned long baud);
+    bool begin(unsigned long baud);
     
     // Fungsi untuk memproses data serial (dipanggil di loop/task)
     // Mengembalikan true jika ada data baru yang berhasil di-encode

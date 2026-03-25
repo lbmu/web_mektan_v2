@@ -6,6 +6,7 @@ extern TaskHandle_t telnetTaskHandle;
 extern TaskHandle_t telemetryTaskHandle;
 extern TaskHandle_t gpsTaskHandle;
 extern TaskHandle_t monitorHandle;
+extern TaskHandle_t otaTaskHandle;
 
 SystemDiagnostics::SystemDiagnostics(PowerMonitor* pwr, GpsHandler* gps, CommHandler* cell) {
     _pwr = pwr;
@@ -90,39 +91,50 @@ void SystemDiagnostics::runPerformanceMonitor() {
         unsigned long uSec = millis() / 1000;
         DEBUG_PRINTF("Uptime          : %d Hari %02d:%02d:%02d\n", 
                       uSec/86400, (uSec%86400)/3600, (uSec%3600)/60, uSec%60);
+                      
+        // rest reason
+        esp_reset_reason_t reason = esp_reset_reason();
+        DEBUG_PRINT("Reset Reason    : ");
         
+        if (reason == ESP_RST_POWERON) {
+            DEBUG_PRINTLN("due to power-on event");}
+        else if (reason == ESP_RST_SW) {
+            DEBUG_PRINTLN("Software reset via esp_restart");}
+        else if (reason == ESP_RST_PANIC) {
+            DEBUG_PRINTLN("Software reset due to exception/panic");}
+        else if (reason == ESP_RST_INT_WDT) {
+            DEBUG_PRINTLN("due to interrupt watchdog");}
+        else if (reason == ESP_RST_TASK_WDT) {
+            DEBUG_PRINTLN("due to task watchdog");}
+        else if (reason == ESP_RST_WDT) {
+            DEBUG_PRINTLN ("due to other watchdogs");}
+        else if (reason == ESP_RST_DEEPSLEEP) {
+            DEBUG_PRINTLN ("reset after exiting deep sleep mode");}
+        else if (reason == ESP_RST_BROWNOUT) {
+            DEBUG_PRINTLN ("Brownout reset (software or hardware)");}
+        else if (reason == ESP_RST_SDIO) {
+            DEBUG_PRINTLN ("Reset over SDIO");}
+        else if (reason == ESP_RST_UNKNOWN) {
+            DEBUG_PRINTLN("reason can not be determined");}
+        else {DEBUG_PRINTLN("nguwawor");}
         // Memantau Memori RAM (Heap) Keseluruhan
         DEBUG_PRINTF("Free Heap       : %d bytes\n", ESP.getFreeHeap());
         DEBUG_PRINTF("Max Alloc Heap  : %d bytes (Blok memori terbesar yg bisa dialokasi)\n", ESP.getMaxAllocHeap());
         DEBUG_PRINTF("Min Free Heap   : %d bytes (Sisa RAM paling sedikit yg pernah terjadi)\n", ESP.getMinFreeHeap());
         
-        DEBUG_PRINTLN("\n--- Task Stack Monitor ---");
-
-        // rest reason
-        DEBUG_PRINT("Reset Reason    : ");
-        esp_reset_reason_t reason = esp_reset_reason();
-
-        switch (reason)
-        {
-            case ESP_RST_POWERON: DEBUG_PRINTLN("Power On");
-            break;
-
-            case ESP_RST_BROWNOUT: DEBUG_PRINTLN("Brownout (Tegangan Drop!)");
-            break;
-
-            case ESP_RST_PANIC: DEBUG_PRINTLN("Crash / Panic!");
-            break;
-            
-            default: DEBUG_PRINTLN("0");
-            break;
-        }
-
         
+        
+        DEBUG_PRINTLN("\n--- Task Stack Monitor ---");
         // Memantau Sisa Stack Task Saat Ini (Monitor_Task)
         // High Water Mark (HWM) menunjukkan SISA memori terendah yang pernah dicapai task ini.
         // Jika nilainya mendekati 0, artinya task hampir mengalami Stack Overflow!
         UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
         DEBUG_PRINTF("Monitor Task HWM: %u bytes (Sisa ruang aman)\n\n", hwm);
+
+        if (otaTaskHandle != NULL) {
+        UBaseType_t hwmOta = uxTaskGetStackHighWaterMark(otaTaskHandle);
+        DEBUG_PRINTF("OTA HWM   : %u bytes\n", hwmOta);
+        }
 
         if (telnetTaskHandle != NULL) {
         UBaseType_t hwmTelnet = uxTaskGetStackHighWaterMark(telnetTaskHandle);
