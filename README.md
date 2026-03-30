@@ -225,3 +225,42 @@ Error atau problem berada di bagian [Issues](https://github.com/lbmu/web_mektan_
 # FOR USERS
 
 _Coming soon..._ (nunggu dokumentasi layer aplikasi)
+
+# ONE MORE FINAL
+
+```
+    cOl:dOOo:oO,.lOOk'  'kOOl..:OOO::cxO:     .:OOk::cxO: .xOO:    .ol..cOOk:cdo,          ,dd::cxl.   ,OOOc:coOo                                          
+    l.  dMMl  ;: ;MM0    0MM;  .WMN    co      .MMX    cl  ,WMMk.   l:  .MM0   kMX,      .0MO    ,MWl   XMM.   .d                                          
+        dMMl     ;MM0    0MM;  .WMN  :  .      .MMX  l  .  'x:NMK'  l:  .MM0   .MMW.     KMM:     0MMc  XMM.  ; .                                          
+        dMMl     ;MMX::::XMM;  .WMN:dK         .MMN:dN     'x .0MWl l:  .MM0    NMMl    'MMM,     kMMk  XMMcc0o                                            
+        dMMl     ;MM0....KMM;  .WMN.;O         .MMX.;K.    'x   oWM0k:  .MM0    NMMl    'MMM,     kMMk  XMM,,xo                                            
+        dMMl     ;MM0    0MM;  .WMN  '   '     .MMX  ,  .' 'x    ,XMM:  .MM0   .MMN.     0MMc     XMM;  XMM.  ,                                            
+        dMMl     ;MM0    0MM;  .WMN    '0,     .MMX    '0' 'x     .kM:  .MM0   kM0.      .kM0    :MN:   XMM.                                               
+      .oxxl.   .cxxd'  'dxxc..;xxxc;:lxd     .;xxxc;:lxd .:o.      :, .:xxx:;lc.          .lo:;co:.   ,xxx;.                                              
+    .,ccc:cc;.   .;ccc::ccc.      ''     .:ccc:c;.    .:ccc      ;ccc..,ccc::ccc,                                                                          
+      NMW. ,XM0.  'MMK  .,Ol      00      :MMx .:WXl   lXMMo    ;XMMk   NMW.  'xx                                                                          
+      XMW.  xMMc  .MMK  ' .,     lMMl     ;MMx   lMMk  cc0MW'  .dcMMx   NMW. '  ;                                                                          
+      XMW. .XMX.  .MMK ,k       .kKMW.    ;MMx   .MMM' c:'WMX. o.:MMx   NMW.'O                                                                             
+      XMWcKWW:    .MMNck0       x.;MMk    ;MMx   .WMM; c: oMMo,l :MMx   NMWlxX                                                                             
+      XMW.:WM0.   .MMK  c   .  cd''KMM;   ;MMx   'MMN. c:  0MWO  :MMx   NMW. c   .                                                                         
+      XMW. ;WM0   .MMK     d; .k...;WMX.  ;MMx   xMN;  c:  'WW.  :MMx   NMW.    cc                                                                         
+    .;NWW:. :WWk..lWWNl:cdKX..Ol   .0WWx..dWWK::dOc.  .xx.  ll  .xWW0..;NWWo:co0W.                                                                         
+                                                                                                                                                          
+                                                                                                                                                          
+                                                                                                                                                          
+                                                                                                                                                          
+                                                                                                                                                          
+                                                                                                                                                          
+    cllll.,llll..lllc' .l .l:   ;l.  'l'    .l. .l.  ,l.  .:ll:. :, ,c   ;;                                                                                
+    .'Wo. xX'.. :M,.xN.;M.'MXO.dXM; .XxX.   .Mll0,  'Nk0  dN:'c; Kk dN...O0                                                                                
+    .Wl  xNddl :MkxNo ;M.'M;lXo;M; 00,KO   .MkNo   00;Nd  ;okKo Kk dWxddX0                                                                                
+    .Wl  xNooo.:M. ,W,;M.'M;   ,M;oN:;:Nl  .Mc.x0'xK;;lW;l0ol0k Kx dN   O0                                                                                
+      .    ....  .   .  .  .     . .     .   .   ...    .   ..   .   .                                                                                     
+                                                                                                                                                          
+                                                              :,k:,'     l:                                  o;c                           .k..o;;        
+                                                                .Mc  ,'c, ko.' ,,:.  .;:,.,'l.'lc,.;;'   c'c.,M:  .o.' ';;,.o.;c.ocl','..;;'.W,cN.         
+                                                                .Mc  lcx0 kOk .W;l;  Kc.'.o,W;;N..Kd;l  oX Ox.M'   Od,.W;;W;W'o0.Wc.:0o.0x;o.W,;N          
+                                                                'Nl  0do0 kdkx.Ox,.  o0:.;K,Xc;K  oO;.  ,0'k:.N,   .X. xlck.KldO.N: ,,dcl0;..N,;K.         
+                                                                                                                  'c,                                      
+                                                                                                                  .                                       
+```

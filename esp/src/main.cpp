@@ -32,7 +32,7 @@
 // cek notip (komentar untuk disable) [shortcut di VS Code: Ctrl + /]
 #define RUN_TASK // <- Buat run task biasa
 // #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
-// #define REPORT
+#define REPORT
 
 // Instansiasi Objek Modul Baru
 ESP_OTA Ota;
