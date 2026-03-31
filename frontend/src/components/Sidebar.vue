@@ -16,6 +16,8 @@ const activeMenu = ref(null);
 const userName = ref('Admin');
 const userPhoto = ref(null);
 
+const userRole = ref('');
+
 // Fungsi Toggle (Tidak berubah)
 const toggleSubMenu = (menuName) => {
     if (props.isClosed) {
@@ -31,6 +33,8 @@ onMounted(() => {
         try {
             const userData = JSON.parse(session);
             userName.value = userData.nama || 'Admin';
+
+            userRole.value = userData.role || 'admin';
 
             // Cek 'foto' (sesuai screenshot localStorage Anda) ATAU 'foto_profil' (untuk jaga-jaga)
             const fotoFilename = userData.foto || userData.foto_profil;
@@ -122,6 +126,14 @@ watch(() => props.isClosed, (newVal) => {
                     <span v-if="!isClosed" class="ms-3 fade-in text-nowrap">
                     Estimasi Lahan
                     </span>
+                </RouterLink>
+            </li>
+
+            <li v-if="userRole === 'super_admin'" class="mt-4 pt-2 border-top border-secondary">
+                <small v-if="!isClosed" class="text-white-50 ms-3 fw-bold tracking-wide" style="font-size: 0.7rem;">RUANG HARDWARE</small>
+                <RouterLink to="/developer" class="nav-link d-flex align-items-center mt-1 text-warning" :class="{ 'justify-content-center': isClosed }" active-class="active">
+                    <i class="bi bi-terminal-dash fs-5 flex-shrink-0"></i>
+                    <span v-if="!isClosed" class="ms-3 fade-in text-nowrap fw-bold">Developer Area</span>
                 </RouterLink>
             </li>
         </ul>

@@ -189,11 +189,13 @@ exports.getRiwayat = (req, res) => {
     const tanggal = req.query.tanggal;
 
     if (tanggal) {
+        // FILTER FAIL-SAFE: Mengambil data dari jam 00:00 hari ini, sampai 00:00 besok
         const queryHistory = `
             SELECT latitude, longitude, waktu_rekam 
             FROM riwayat_perjalanan 
             WHERE alsintan_id = $1 
-            AND DATE(waktu_rekam AT TIME ZONE 'Asia/Jakarta') = $2 
+            AND waktu_rekam >= $2::date
+            AND waktu_rekam < ($2::date + interval '1 day')
             ORDER BY waktu_rekam ASC
         `;
         db.query(queryHistory, [id, tanggal], (errHist, results) => {
@@ -203,6 +205,7 @@ exports.getRiwayat = (req, res) => {
         return; 
     }
 
+    // LOGIKA RESET ARGO (LIVE MODE) - TETAP AMAN TIDAK DIUBAH
     const queryCheck = `SELECT waktu_reset FROM alsintan WHERE alsintan_id = $1`;
     db.query(queryCheck, [id], (err, rowsResult) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -237,4 +240,41 @@ exports.resetArgo = (req, res) => {
             res.json({ message: 'Argo dan Sesi berhasil di-reset.' });
         });
     });
+};
+
+exports.registerIoT = async (req, res) => {
+    const db = require('../config/database'); 
+    const { id_alat } = req.body;
+
+    if (!id_alat) {
+        return res.status(400).json({ status: false, message: 'ID Alat wajib diisi!' });
+    }
+
+    try {
+        // 1. Masukkan alat baru ke tabel alsintan
+        const queryInsertAlat = `
+            INSERT INTO alsintan (alsintan_id, latitude, longitude) 
+            VALUES ($1, 0, 0) RETURNING alsintan_id
+        `;
+        await db.query(queryInsertAlat, [id_alat]);
+        
+        // 2. Inisialisasi status awalnya
+        const queryInitStatus = `
+            INSERT INTO monitoring_status (alsintan_id, status_mesin, total_jarak_kerja)
+            VALUES ($1, 'OFF', 0)
+        `;
+        await db.query(queryInitStatus, [id_alat]);
+
+        res.json({ 
+            status: true, 
+            message: `Perangkat IoT dengan ID ${id_alat} berhasil diregistrasi dan siap digunakan!` 
+        });
+
+    } catch (error) {
+        console.error("Gagal registrasi alat:", error);
+        if (error.code === '23505') {
+            return res.status(400).json({ status: false, message: 'ID Alat ini sudah terdaftar di database!' });
+        }
+        res.status(500).json({ status: false, message: 'Terjadi kesalahan pada server database.' });
+    }
 };

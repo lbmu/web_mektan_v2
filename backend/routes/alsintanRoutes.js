@@ -28,4 +28,6 @@ router.delete('/:id', (req, res) => {
     });
 });
 
+router.post('/register', alsintanController.registerIoT);
+
 module.exports = router;

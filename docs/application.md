@@ -69,4 +69,106 @@ ll, .  .'. .......''''.'..';;;'.      ..    .ll,  ;x;       .....      .odxxxxxx
    .....'........'..',,,,,,,,,,'.....                     .;,....',,.,dxxxkkXWWX;':;.     .;,''... lXOkO00c,,xNWWWNXK0ko
 ```
 
-# apa lah isi
+# 🚜 Si-Alsintan (Sistem Monitoring Alat dan Mesin Pertanian)
+
+![Status](https://img.shields.io/badge/Status-Development-orange)
+![Node.js](https://img.shields.io/badge/Node.js-v22.17.0-green)
+![Vue.js](https://img.shields.io/badge/Vue.js-3.x-4FC08D?logo=vue.js)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Ready-336791?logo=postgresql)
+
+**Si-Alsintan** adalah sebuah platform berbasis *Internet of Things* (IoT) dan Web yang dikembangkan untuk **UPTD Balai Pengembangan Mekanisasi Pertanian Provinsi Jawa Barat**. Sistem ini dirancang untuk memantau pergerakan, status mesin, dan estimasi luas lahan yang dikerjakan oleh armada traktor secara *real-time*.
+
+## ✨ Fitur Utama
+* **Real-time Live Tracking:** Memantau pergerakan armada secara langsung via MQTT Broker (HiveMQ) dengan filter keamanan GPS.
+* **Manajemen Aset (Hardware Provisioning):** Registrasi ID perangkat IoT ke traktor fisik secara dinamis.
+* **Estimasi Lahan:** Kalkulasi otomatis performa traktor berdasarkan jarak tempuh dan koordinat.
+* **Role-Based Access Control (RBAC):** Pemisahan hak akses antara `Admin` (Pihak BP Mektan) dan `Super Admin` (Developer Area) untuk keamanan operasional.
+
+## 🏗️ Struktur Repositori (Monorepo)
+Proyek ini mengadopsi struktur monorepo yang memisahkan ranah aplikasi:
+* `/frontend` : Direktori antarmuka web menggunakan Vue.js 3 & Vite.
+* `/backend`  : Direktori API dan Service IoT menggunakan Node.js & Express.
+* `/esp`      : Direktori *firmware* perangkat keras (ESP32/Arduino C++).
+* `/docs`     : Dokumentasi tambahan dan *database dump*.
+
+---
+
+## 🛠️ Persyaratan Sistem (Prerequisites)
+Sebelum menjalankan proyek ini di mesin lokal, pastikan Anda telah menginstal:
+1. **Node.js** (Wajib versi **v22.17.0** atau lebih baru)
+2. **PostgreSQL** (Service database berjalan di port 5432)
+3. **Git**
+
+---
+
+## 🚀 Panduan Instalasi & Menjalankan Sistem
+
+### 1. Persiapan Database (PostgreSQL)
+1. Buat *database* baru di PostgreSQL (misal: `db_alsintan`).
+2. Import struktur tabel dengan mengeksekusi file SQL dump yang telah disediakan:
+   ```bash
+   # Contoh jika menggunakan psql command line
+   psql -U postgres -d db_alsintan -f docs/db_alsintan.sql
+
+## Konfigurasi Backend (Node.js)
+
+1. Aktifkan Mode GSM
+```
+cd backend
+npm install
+```
+
+2. Buat file .env di dalam folder backend dan sesuaikan nilainya:
+```
+PORT=3000
+TZ=Asia/Jakarta
+
+# Konfigurasi Database
+DB_HOST=localhost
+DB_USER=postgres
+DB_PASSWORD=password_db_anda
+DB_NAME=db_alsintan
+DB_PORT=5432
+
+# Keamanan
+JWT_SECRET=bp_mektan_2026
+
+# IoT MQTT
+MQTT_BROKER=mqtt://broker.hivemq.com
+MQTT_USERNAME=simon_alsintan
+MQTT_PASSWORD=BPMektanJabar12
+MQTT_TOPIC=project-mektan/v1/data
+```
+
+3. Run Server Backend
+```
+node index.js
+```
+
+## Konfigurasi Backend (Node.js)
+
+1. Aktifkan Mode GSM
+```
+cd frontend
+npm install
+```
+
+2. Buat file .env di dalam folder frontend dan sesuaikan nilainya:
+```
+# URL Utama Backend
+VITE_API_BASE_URL=http://localhost:3000/api
+
+# URL Folder Upload Gambar
+VITE_IMAGE_BASE_URL=http://localhost:3000/uploads
+
+# Konfigurasi IoT MQTT
+VITE_MQTT_BROKER=ws://[broker.hivemq.com:8000/mqtt](https://broker.hivemq.com:8000/mqtt)
+VITE_MQTT_USERNAME=simon_alsintan
+VITE_MQTT_PASSWORD=BPMektanJabar12
+VITE_MQTT_TOPIC=project-mektan/v1/data
+```
+
+3. Run Server Frontend
+```
+node index.js
+```

@@ -17,6 +17,8 @@ let chartInstance = null;
 
 const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
 const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
+// const MQTT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
+// const MQTT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
 
 // --- 1. FETCH DATA UTAMA ---
 const fetchData = async () => {
@@ -61,7 +63,8 @@ const warningList = computed(() => {
 // --- 3. KONEKSI MQTT (REAL-TIME UPDATE) ---
 const connectMqtt = () => {
   if (!window.mqtt) return;
-  mqttClient = window.mqtt.connect(MQTT_BROKER);
+  
+    mqttClient = window.mqtt.connect(MQTT_BROKER);
 
   mqttClient.on('connect', () => {
     mqttClient.subscribe(MQTT_TOPIC);
@@ -184,8 +187,12 @@ const initChart = () => {
     const newData = [beroperasi, parkir, maintenance, rusak];
 
     if (chartInstance) {
-        chartInstance.data.datasets[0].data = newData;
-        chartInstance.update(); 
+        // HANYA UPDATE CHART JIKA DATA BENAR-BENAR BERUBAH (Menghilangkan Delay/Lag)
+        const oldData = chartInstance.data.datasets[0].data;
+        if (JSON.stringify(oldData) !== JSON.stringify(newData)) {
+            chartInstance.data.datasets[0].data = newData;
+            chartInstance.update(); 
+        }
     } else {
         chartInstance = new Chart(ctx, {
             type: 'doughnut',
@@ -201,9 +208,10 @@ const initChart = () => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: { duration: 800 },
+                // Matikan animasi saat data realtime update agar tidak lag
+                animation: false, 
                 plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } },
-                cutout: '70%'
+                cutout: '78%' // Cincin tipis yang sudah kita buat sebelumnya
             }
         });
     }

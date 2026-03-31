@@ -8,14 +8,25 @@ import Swal from 'sweetalert2';
 
 const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
 const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
+// const MQTT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
+// const MQTT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
 
 const route = useRoute();
 const router = useRouter();
 const id = route.params.id;
 
 // --- STATE ---
-const activeTab = ref('LIVE'); // LIVE atau HISTORY
+const activeTab = ref('LIVE'); 
 const infoAlat = ref({});
+
+const getTodayDate = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const statusMesin = ref('OFF');
 const teganganAki = ref(0);
 const totalHM = ref(0); 
@@ -25,7 +36,7 @@ const totalJarakLive = ref(0);
 const historyCoordsLive = ref([]); 
 
 // State History Mode
-const historyDate = ref(new Date().toISOString().substr(0, 10)); // Default hari ini
+const historyDate = ref(getTodayDate()); // Default hari ini
 const historyCoordsPast = ref([]);
 const totalJarakPast = ref(0);
 const tarifPerHa = ref(1500000); // Rp 1.500.000 per Hektar
@@ -119,32 +130,54 @@ const fetchHistoryByDate = async () => {
 // --- MQTT (Hanya Berpengaruh di Tab Live) ---
 const connectMqtt = () => {
     if (!window.mqtt) return;
-    mqttClient = mqtt.connect(MQTT_BROKER);
-    mqttClient.on('connect', () => mqttClient.subscribe(MQTT_TOPIC));
+    mqttClient = window.mqtt.connect(MQTT_BROKER);
+    
+    mqttClient.on('connect', () => {
+        console.log("📡 Connected to MQTT (Detail View)");
+        mqttClient.subscribe(MQTT_TOPIC);
+    });
 
     mqttClient.on('message', (topic, message) => {
         try {
             const data = JSON.parse(message.toString());
+            
+            // PASTIKAN ID ALAT COCOK SEBELUM MEMPROSES DATA
             if (data.id_alat == id) {
+                // 1. UPDATE STATUS MESIN (Ini yang membuat status ON/OFF berubah)
                 statusMesin.value = data.status_mesin;
+
+                // 2. TANGKAP KOORDINAT BARU
                 const newPoint = [parseFloat(data.lat), parseFloat(data.long)];
 
+                // 3. GESER MARKER TRAKTOR
                 if (marker && activeTab.value === 'LIVE') {
                     marker.setLatLng(newPoint);
                     map.panTo(newPoint);
                 }
 
+                // 4. GAMBAR GARIS & HITUNG JARAK (HANYA JIKA MESIN ON)
                 if (statusMesin.value === 'ON') {
-                    if (activeTab.value === 'LIVE' && polyline) polyline.addLatLng(newPoint);
+                    // Tambahkan titik baru ke garis lintasan
+                    if (activeTab.value === 'LIVE' && polyline) {
+                        polyline.addLatLng(newPoint);
+                    }
+                    
+                    // Hitung jarak dari titik sebelumnya
                     const lastPoint = historyCoordsLive.value[historyCoordsLive.value.length - 1];
                     if (lastPoint) {
                         const dist = map.distance(lastPoint, newPoint);
-                        if (dist > 0.5) totalJarakLive.value += dist;
+                        // Hanya hitung jika jarak lebih dari 0.5 meter untuk mencegah GPS noise
+                        if (dist > 0.5) {
+                            totalJarakLive.value += dist;
+                        }
                     }
+                    // Simpan koordinat baru ke dalam array history
                     historyCoordsLive.value.push(newPoint);
                 }
             }
-        } catch (err) {}
+        } catch (err) {
+            console.error("MQTT parsing error:", err);
+        }
     });
 };
 

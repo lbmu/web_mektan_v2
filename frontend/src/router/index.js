@@ -68,6 +68,33 @@ const router = createRouter({
       name: 'aset-edit',
       component: () => import('../views/aset/AsetEditView.vue'),
       meta: { requiresAuth: true, allowedRoles: ['super_admin'] }
+    },
+    {
+      path: '/developer',
+      name: 'developer',
+      component: () => import('../views/DeveloperDashboard.vue'),
+      
+      // KUNCI RBAC TAHAP 2: Penjaga Pintu Khusus Rute Ini
+      beforeEnter: (to, from, next) => {
+        const session = localStorage.getItem('user');
+        
+        if (session) {
+            try {
+                const userData = JSON.parse(session);
+                // Cek apakah rolenya adalah super_admin
+                if (userData.role === 'super_admin') {
+                    next(); // ✅ Gembok terbuka, silakan masuk
+                } else {
+                    console.warn("Akses Ditolak: Anda bukan Super Admin!");
+                    next('/'); // ❌ Tendang kembali ke halaman Home/Dashboard
+                }
+            } catch (e) {
+                next('/login'); // Jika data rusak, suruh login ulang
+            }
+        } else {
+            next('/login'); // Jika belum login, tendang ke halaman login
+        }
+      }
     }
   ]
 })

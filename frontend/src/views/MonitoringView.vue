@@ -21,6 +21,8 @@ let markers = {};
 let mqttClient = null;
 const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
 const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
+const MQTT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
+const MQTT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
 
 // --- COMPUTED PROPERTIES ---
 const filteredAlsintan = computed(() => {
@@ -112,7 +114,10 @@ const goToDetail = (id) => {
 // --- 4. MQTT REAL-TIME ---
 const connectMqtt = () => {
     if (!window.mqtt) return;
-    mqttClient = window.mqtt.connect(MQTT_BROKER);
+    mqttClient = window.mqtt.connect(MQTT_BROKER, {
+        username: MQTT_USERNAME,
+        password: MQTT_PASSWORD
+    });
 
     mqttClient.on('connect', () => {
         mqttClient.subscribe(MQTT_TOPIC);

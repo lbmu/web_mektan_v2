@@ -1,17 +1,25 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
+// TANGKAP KREDENSIAL BRANKAS
 const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL;
+const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
+const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
+const MQTT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
+const MQTT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
 
 const router = useRouter();
 const items = ref([]);
 const loading = ref(true);
-const userRole = ref(''); // State untuk menyimpan role pengguna
+const userRole = ref('');
 
-// --- AMBIL DATA ---
+// State MQTT Client
+let mqttClient = null;
+
+// --- AMBIL DATA DARI DATABASE ---
 const fetchData = async () => {
   try {
     const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan`);
@@ -21,6 +29,35 @@ const fetchData = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+// --- LOGIKA MQTT REAL-TIME ---
+const connectMqtt = () => {
+    if (!window.mqtt) return;
+    
+    mqttClient = window.mqtt.connect(MQTT_BROKER);
+
+    mqttClient.on('connect', () => {
+        console.log("📡 Connected to MQTT (Aset List)");
+        mqttClient.subscribe(MQTT_TOPIC);
+    });
+
+    mqttClient.on('message', (topic, message) => {
+        try {
+            const data = JSON.parse(message.toString());
+            
+            // Cari posisi traktor di dalam list berdasarkan ID-nya
+            const index = items.value.findIndex(i => i.alsintan_id == data.id_alat);
+            
+            if (index !== -1) {
+                // Update tampilan tabel secara langsung (Reaktif)
+                items.value[index].status_mesin = data.status_mesin;
+                items.value[index].tegangan_aki = data.tegangan || data.volt; // Sesuaikan dengan payload simulator
+            }
+        } catch (err) {
+            console.error("MQTT parsing error:", err);
+        }
+    });
 };
 
 // --- HAPUS ---
@@ -52,6 +89,11 @@ onMounted(() => {
         userRole.value = session.role;
     }
     fetchData();
+    connectMqtt(); // JALANKAN MQTT SAAT HALAMAN DIBUKA
+});
+
+onUnmounted(() => {
+    if (mqttClient) mqttClient.end(); // Matikan koneksi saat pindah halaman agar tidak bocor memori
 });
 </script>
 
