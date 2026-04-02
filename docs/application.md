@@ -103,15 +103,17 @@ Sebelum menjalankan proyek ini di mesin lokal, pastikan Anda telah menginstal:
 
 ## 🚀 Panduan Instalasi & Menjalankan Sistem
 
-### 1. Persiapan Database (PostgreSQL)
+### Persiapan Database (PostgreSQL)
 1. Buat *database* baru di PostgreSQL (misal: `db_alsintan`).
 2. Import struktur tabel dengan mengeksekusi file SQL dump yang telah disediakan:
-   ```bash
-   # Contoh jika menggunakan psql command line
-   psql -U postgres -d db_alsintan -f docs/db_alsintan.sql
+
+```
+psql -U postgres -d db_alsintan -f docs/db_alsintan.sql # Contoh jika menggunakan psql command line
+```
 
 ## Konfigurasi Backend (Node.js)
 
+Cek  `package-lock.json` dulu
 1. Aktifkan Mode GSM
 ```
 cd backend
@@ -146,6 +148,8 @@ node index.js
 ```
 
 ## Konfigurasi Backend (Node.js)
+
+Cek `package-lock.json` dulu
 
 1. Aktifkan Mode GSM
 ```

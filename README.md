@@ -56,7 +56,6 @@ kko,...,xkkkkxxx,    ...;::::::;;:;:dO000000000x::::::::::,';;;;,';:::::::::::::
 kkk:.  cxxkxxxxo.     ....';:::,:;;;;:coO0000000o;:;;;;;;,...,'.';;;:::::::;;;;;,,,......    .,lx:'x
 xxxc   cddddddl.      .. ...,;;;,....;;,:xOOOOkkx:','''''......,,,,,,,,,,,,'',,,,,'......    .,dd.ld
 ```
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 
 # DESKRIPSI PROYEK
 
@@ -136,8 +135,11 @@ Sudah tanggung jawab Anda sebagai pengembang profesional untuk mendokumentasikan
 
 ## Lingkungan Pengembangan
 
+### Tools dan Aplikasi
+
 * [Visual Studio Code](https://code.visualstudio.com/download): IDE untuk mengembangkan proyek, dengan menggunakan ekstensi:
   * [PlatformIO](https://platformio.org/install/ide?install=vscode): All about Sensing Layer
+* Laptop/Komputer (Opsional)
 
 ## Version Control
 
@@ -201,6 +203,7 @@ Library yang dipake di edge :sob:
 ### Network Layer
 
 Library buat MQTT dan protokol komunikasi :signal_strength:
+
 Modul SIM:
 
 * Basic Security: [ESP_SSLClient](https://github.com/mobizt/ESP_SSLClient)
