@@ -41,7 +41,6 @@ GpsHandler gpsHandler(GPS_RX_PIN, GPS_TX_PIN, GPS_SERIAL_PORT);
 PowerMonitor powerMonitor;
 SystemDiagnostics diagnostics(&powerMonitor, &gpsHandler, &comm);
 
-
 // --- SHARED DATA & MUTEX ---
 // Struktur data bersama antar task
 struct SharedData {
