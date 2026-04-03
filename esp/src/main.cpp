@@ -187,14 +187,14 @@ void TaskTelemetry(void *pvParameters) {
             }
 
             if (readyToSend) {
-                // DEBUG_PRINTLN("\n---------------------------------------");
-                // DEBUG_PRINTLN("----📡 Mempublikasikan Data via MQTT---");
+                DEBUG_PRINTLN("\n---------------------------------------");
+                DEBUG_PRINTLN("----📡 Mempublikasikan Data via MQTT---");
                 if (comm.publishMQTT(MQTT_TOPIC, jsonPayload)) {
                     #ifdef REPORT
-                    // DEBUG_PRINTLN("----✅ Data Published Successfully!----");
+                    DEBUG_PRINTLN("----✅ Data Published Successfully!----");
                     #endif
                 } else {
-                    // DEBUG_PRINTLN("----❌ Publish Failed (Cek Koneksi?)---");
+                    DEBUG_PRINTLN("----❌ Publish Failed (Cek Koneksi?)---");
                     mqttConnected = false; // Reset agar mencoba re-connect
                 }
                 DEBUG_PRINTLN("---------------------------------------");
@@ -271,10 +271,10 @@ void TaskMonitor(void *pvParameters) {
         DEBUG_PRINT("Power       : "); DEBUG_PRINT(pData.power_mW); DEBUG_PRINTLN(" mW");
 
         if (validGPS) {
-            DEBUG_PRINTF("GPS         : %.6f, %.6f\n", currentLat, currentLng);
         } else {
             DEBUG_PRINTLN("GPS         : Waiting for lock...");
         }
+        DEBUG_PRINTF("GPS         : %.6f, %.6f\n", currentLat, currentLng);
         DEBUG_PRINTLN("---------------------------------------------------");
         #endif
 
@@ -303,7 +303,7 @@ void setup() {
     
     // Init GPS Module
     DEBUG_PRINTLN("===============[ Initializing GPS ]===============");
-    if (!gpsHandler.begin(9600)) {
+        if (!gpsHandler.begin(9600)) {
         DEBUG_PRINTLN("❌ GPS Not Found!");
     } else {
         DEBUG_PRINTLN("✅ GPS Connected");
@@ -347,8 +347,8 @@ void setup() {
     
     // Gunakan untuk diagnosis sistem
     #ifdef RUN_DIAGNOSTICS
-    // diagnostics.run(TEST_LAB_PASSTHROUGH); // Yang ini buat tes GPS dalem ruangan (Cek modul doang, belum bisa ngirim koordinat)
-    // diagnostics.run(TEST_SIM_PASSTHROUGH); // Yang ini buat ngirimin AT Command
+    diagnostics.run(TEST_LAB_PASSTHROUGH); // Yang ini buat tes GPS dalem ruangan (Cek modul doang, belum bisa ngirim koordinat)
+    diagnostics.run(TEST_SIM_PASSTHROUGH); // Yang ini buat ngirimin AT Command
     #endif
 }
 

@@ -27,6 +27,7 @@
     #define DEBUG_PRINT(x)      telnet.print(x); Serial.print(x)
     #define DEBUG_PRINTLN(x)    telnet.println(x); Serial.println(x)
     #define DEBUG_PRINTF(...)   telnet.printf(__VA_ARGS__); Serial.printf(__VA_ARGS__)
+    #define DEBUG_WRITE(x)      telnet.write(x); Serial.write(x)
 
 #else
     #define DEBUG_BEGIN()       
@@ -34,6 +35,7 @@
     #define DEBUG_PRINT(x)      Serial.print(x)
     #define DEBUG_PRINTLN(x)    Serial.println(x)
     #define DEBUG_PRINTF(...)   Serial.printf(__VA_ARGS__)
+    #define DEBUG_WRITE(x)      Serial.write(x)
 #endif
 
 class ESP_OTA {

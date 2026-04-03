@@ -74,12 +74,12 @@ ddddddddddddddddddddddddddddddddddd;ckdc;,ddddddd: O;....  .c   :;.....l.  .c.l:
 Di dalam folder esp, pastikan struktur foldernya sebagai berikut
 ```
 .
-├── include # header dan macrofile
-├── lib     # custom library (tidak/belum digunakan)
-├── logs    # logs terminal untuk debugging
+├── include         # header dan macrofile
+├── lib             # custom library (tidak/belum digunakan)
+├── logs            # logs terminal untuk debugging
 ├── platformio.ini  # Konfigurasi PlatformIO
-├── src     # Logika utama modul
-└── test    # test environment (tidak/belum digunakan)
+├── src             # Logika utama modul
+└── test            # test environment (tidak/belum digunakan)
 ```
 
 ## Inisialisasi Proyek
@@ -254,7 +254,9 @@ d. Saksikan
 Ada beberapa mode debugging yang bisa dilakukan.
 
 #### Normal Task
-Mode ini adalah mode normal di mana sistem akan berjalan seperti biasa
+Mode ini adalah mode normal di mana sistem akan berjalan seperti biasa.
+
+Defaultnya, mode ini juga akan memperlihatkan *Performance Monitor RTOS* (saudara jauh task manager) pada terminal, yang dijalankan oleh baris kode `diagnostics.run(TEST_PERFORMANCE_MONITOR);` yang terletak di [program utama](/esp/src/main.cpp).
 
 Mengaktifkan mode normal
 ```cpp
@@ -263,9 +265,6 @@ Mengaktifkan mode normal
 // #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
 ```
 Sistem akan mengeksekusi baris program yang diawali oleh `#ifdef RUN_TEST` dan diakhiri oleh `#endif`
-
-Mode ini juga akan memperlihatkan *Performance Monitor RTOS*, yang dijalankan oleh baris kode `diagnostics.run(TEST_PERFORMANCE_MONITOR);` yang terletak di paling bawah [program utama](/esp/src/main.cpp) sebelum fungsi `void loop()`.
-
 
 #### Diagnostics
 Aktifkan Mode Diagnosis
