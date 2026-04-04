@@ -26,9 +26,11 @@ bool CommHandler::begin() {
     pinMode(_rxPin, INPUT_PULLUP);
     delay(3000);
     
-    DEBUG_PRINTLN("Modem: Restarting...");
-    if (!_modem->restart()) { 
-        return false;
+    DEBUG_PRINTLN("[MODEM] Cek Status(Init)...");
+    if (!_modem->init()) { 
+        DEBUG_PRINTLN("[MODEM] No respsonses. Restarting...");
+        if (!_modem->restart())
+            return false;
     }
     
     DEBUG_PRINT("Modem Info: ");
@@ -39,7 +41,7 @@ bool CommHandler::begin() {
 
 bool CommHandler::configureNetwork() {
     DEBUG_PRINT("Modem: Menunggu Sinyal 4G...");
-    if (!_modem->waitForNetwork(10000L)) {
+    if (!_modem->waitForNetwork(60000L)) {
         DEBUG_PRINTLN(" Gagal/Timeout!");
         return false;
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 // Wajib didefinisikan SEBELUM include TinyGsmClient.h
+#define TINY_GSM_YIELD() { vTaskDelay(1/portTICK_PERIOD_MS); }
 #define TINY_GSM_MODEM_SIM7600 
 
 #include <Arduino.h>
