@@ -23,6 +23,19 @@ public:
     // Meneruskan data untuk SystemDiagnostics
     void serialPassthrough();
 
+    // GPS
+    bool enableGNSS();
+    bool disableGNSS();
+    bool getGNSSData(
+        float *lat,
+        float *lng,
+        float *speed = 0,
+        float *alt = 0,
+        int *vsat = 0,
+        int *usat = 0,
+        float *accuracy = 0
+    );
+
 private:
     int _rxPin;
     int _txPin;

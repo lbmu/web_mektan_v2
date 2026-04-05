@@ -120,3 +120,23 @@ void CommHandler::serialPassthrough() {
         telnet.print(modemResponse);
     #endif
 }
+
+/*  @brief
+ *  GPS Handler
+ *  blok nya rusak jir
+ */
+
+bool CommHandler::enableGNSS() {
+    DEBUG_PRINT("+");
+    return _modem->enableGPS();
+}
+
+bool CommHandler::disableGNSS() {
+    DEBUG_PRINTLN("Term GNSS Internal SIM7600");
+    return _modem->disableGPS();
+}
+
+bool CommHandler::getGNSSData(float *lat, float *lng, float *speed, float *alt, int *vsat, int *usat, float *accuracy) {
+    return _modem->getGPS(lat, lng, speed, alt, vsat, usat, accuracy);
+}
+    

@@ -50,6 +50,7 @@ struct SharedData {
     float voltage_V;
     float current_mA;
     bool gpsUpdated;
+    bool isM8NActive;
 };
 
 SharedData latestData;
@@ -167,7 +168,7 @@ void TaskTelemetry(void *pvParameters) {
             comm.loop();
         }
 
-        // 3.5 Logika interval kirim data
+        // 3. Logika interval kirim data
         float currentVolt = 0.0;
         if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
             currentVolt = latestData.voltage_V;
@@ -178,15 +179,50 @@ void TaskTelemetry(void *pvParameters) {
         if (currentVolt >= ENGINE_ON_V && isEngineOn) {
             isEngineOn = true;
             currentPublishInterval = ACTIVE_INTERVAL;
-            DEBUG_PRINTLN("Mode aktif [5s]");
+            DEBUG_PRINT(">");
         }
         else if (currentVolt <= ENGINE_OFF_V && !isEngineOn) {
             isEngineOn = false;
             currentPublishInterval = HEARTBEAT_INTERVAL;
-            DEBUG_PRINTLN("Mode TIDUR [60s]");
+            DEBUG_PRINT("<");
         }
         
+        /* @brief GPS SIM7600G
+         * aktif jika M8N rusak (for now)
+         */
 
+        bool m8nStatus = true;
+        if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+            m8nStatus = latestData.isM8NActive;
+            xSemaphoreGive(dataMutex);
+        }
+
+        if (!m8nStatus) {
+            float simLat = 0, simLng = 0;
+
+            comm.enableGNSS();
+
+            if (comm.getGNSSData(&simLat, &simLng)) {
+                if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+                    latestData.lat = simLat;
+                    latestData.lng = simLng;
+                    latestData.gpsUpdated = true;
+                    xSemaphoreGive(dataMutex);
+                }
+                DEBUG_PRINT("🛰️!");
+            }
+            else {
+                if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+                    latestData.lat = NAN;
+                    latestData.lng = NAN;
+                    latestData.gpsUpdated = false;
+                    xSemaphoreGive(dataMutex);
+                }
+            }
+        }
+        else 
+            comm.disableGNSS();
+        
         // 4. Rakit JSON & Publish HANYA setiap 5 detik
         if (mqttConnected && (millis() - lastPublishTime >= currentPublishInterval)) {
             String jsonPayload = "";
@@ -258,9 +294,11 @@ void TaskGPS(void *pvParameters) {
                     latestData.gpsUpdated = true;
                 }
                 else {
-                    latestData.lat = NAN;
-                    latestData.lng = NAN;
-                    latestData.gpsUpdated = false;
+                    latestData.isM8NActive = false;
+
+                    // latestData.lat = NAN;
+                    // latestData.lng = NAN;
+                    // latestData.gpsUpdated = false;
                 }
 
                 xSemaphoreGive(dataMutex);

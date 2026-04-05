@@ -75,8 +75,9 @@ Repo ini juga didukung oleh dokumentasi dan catatan yang disimpan di dalam folde
 Skill umum yang harus dimiliki oleh pengembang proyek adalah:
 
 * niat lulus (tepat waktu)
-* MarkDown writing
 * prompting *jarvis*
+* Dokumentasi
+* Kekuatan anime
 * Navigasi teks
   * Ctrl + Arrow
   * Home
@@ -107,9 +108,10 @@ Skill umum yang harus dimiliki oleh pengembang proyek adalah:
 
 Skill khusus yang harus dimiliki oleh pengembang esp adalah:
 
-* C++
+* C++ (OOP dan macro header)
 * FreeRTOS
-*
+* Shell scripting
+* loncat-loncat library
 
 # FOR DEVELOPERS
 
