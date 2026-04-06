@@ -56,7 +56,6 @@ kko,...,xkkkkxxx,    ...;::::::;;:;:dO000000000x::::::::::,';;;;,';:::::::::::::
 kkk:.  cxxkxxxxo.     ....';:::,:;;;;:coO0000000o;:;;;;;;,...,'.';;;:::::::;;;;;,,,......    .,lx:'x
 xxxc   cddddddl.      .. ...,;;;,....;;,:xOOOOkkx:','''''......,,,,,,,,,,,,'',,,,,'......    .,dd.ld
 ```
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 
 # DESKRIPSI PROYEK
 
@@ -75,9 +74,10 @@ Repo ini juga didukung oleh dokumentasi dan catatan yang disimpan di dalam folde
 
 Skill umum yang harus dimiliki oleh pengembang proyek adalah:
 
-* niat lulus 
-* MarkDown writing
+* niat lulus (tepat waktu)
 * prompting *jarvis*
+* Dokumentasi
+* Kekuatan anime
 * Navigasi teks
   * Ctrl + Arrow
   * Home
@@ -108,9 +108,10 @@ Skill umum yang harus dimiliki oleh pengembang proyek adalah:
 
 Skill khusus yang harus dimiliki oleh pengembang esp adalah:
 
-* C++
+* C++ (OOP dan macro header)
 * FreeRTOS
-*
+* Shell scripting
+* loncat-loncat library
 
 # FOR DEVELOPERS
 
@@ -136,8 +137,14 @@ Sudah tanggung jawab Anda sebagai pengembang profesional untuk mendokumentasikan
 
 ## Lingkungan Pengembangan
 
+### Tools dan Aplikasi
+
 * [Visual Studio Code](https://code.visualstudio.com/download): IDE untuk mengembangkan proyek, dengan menggunakan ekstensi:
   * [PlatformIO](https://platformio.org/install/ide?install=vscode): All about Sensing Layer
+* [EasyEDA](): Desain PCB/Skematik
+* [Fusion](): Desain casing
+* [GenAI (Gemini Pro/Claude)](): Apa boleh buat :stuck_out_tongue:
+* Laptop/Komputer (Opsional)
 
 ## Version Control
 
@@ -154,7 +161,7 @@ git clone https://github.com/lbmu/web_mektan_v2.git
 Di-fork juga boleh
 
 ```
-# command buat forking
+# command buat forking (git fork gitu)
 ```
 
 ### Versioning
@@ -165,7 +172,7 @@ Gunakan [*Semantic Versioning*](http://semver.org/). Contoh:
 | Changes | Dari      | Ke        | Contoh Perubahan              | Deskripsi                                                                             |
 | ------- | --------- | --------- | ----------------------------- | ------------------------------------------------------------------------------------- |
 | MAJOR   | **0**.6.6 | **1**.0.0 | Arsitektur Superloop ke RTOS  | Perubahan yang besar sehingga kode tidak backwards compatible                         |
-| MINOR   | 1.**0**.0 | 1.**1**.0 | OTA Debugging                 | Perubahan kecil, biasanya penambahan fitur/sub-sistem yang backwards compatible       |
+| MINOR   | 1.**0**.0 | 1.**1**.0 | OTA Debugging                 | Penambahan fitur/sub-sistem yang backwards compatible                                 |
 | PATCH   | 1.1.**0** | 1.1.**2** | nambahin ASCII Hu Tao di docs | Perubahan yang sangat kecil, hanya developer yang commit yang mengetahui perbedaannya |
 
 ### Pushing
@@ -201,12 +208,16 @@ Library yang dipake di edge :sob:
 ### Network Layer
 
 Library buat MQTT dan protokol komunikasi :signal_strength:
+
 Modul SIM:
 
 * Basic Security: [ESP_SSLClient](https://github.com/mobizt/ESP_SSLClient)
 * AT/MQTT Handle: 
   * [PubSubCLient](https://github.com/knolleary/pubsubclient)
   * [TinyGSM](https://github.com/vshymanskyy/TinyGSM)
+
+Backend:
+* Apa aja dul
 
 
 ## DOKUMENTASI DAN PANDUAN
@@ -215,7 +226,7 @@ Untuk mendokumentasikan proyek, gunakan [website dokumentasi GitHub](https://doc
 > [!TIP]
 > Kalo mau pake emoji, boleh klik si batu [:moyai:](https://github.com/ikatyang/emoji-cheat-sheet/blob/github-actions-auto-update/README.md)
 
-Karena di [README](/README.md) ini udah pernah nyampe 500 baris dalam format `.md`, semua dokumentasi/panduan sistem dipindahkan ke folder `docs`. Dokumentasi dipisah sesuai masing-masing layer sistem.
+Semua dokumentasi/panduan sistem tersedia di folder `docs`. Dokumentasi dipisah sesuai masing-masing layer sistem.
 
 * [Perception Layer](/docs/perception.md)
 * [Network Layer](/docs/network.md)
@@ -229,39 +240,47 @@ _Coming soon..._ (nunggu dokumentasi layer aplikasi)
 
 # ONE MORE FINAL
 
-```
-    cOl:dOOo:oO,.lOOk'  'kOOl..:OOO::cxO:     .:OOk::cxO: .xOO:    .ol..cOOk:cdo,          ,dd::cxl.   ,OOOc:coOo                                          
-    l.  dMMl  ;: ;MM0    0MM;  .WMN    co      .MMX    cl  ,WMMk.   l:  .MM0   kMX,      .0MO    ,MWl   XMM.   .d                                          
-        dMMl     ;MM0    0MM;  .WMN  :  .      .MMX  l  .  'x:NMK'  l:  .MM0   .MMW.     KMM:     0MMc  XMM.  ; .                                          
-        dMMl     ;MMX::::XMM;  .WMN:dK         .MMN:dN     'x .0MWl l:  .MM0    NMMl    'MMM,     kMMk  XMMcc0o                                            
-        dMMl     ;MM0....KMM;  .WMN.;O         .MMX.;K.    'x   oWM0k:  .MM0    NMMl    'MMM,     kMMk  XMM,,xo                                            
-        dMMl     ;MM0    0MM;  .WMN  '   '     .MMX  ,  .' 'x    ,XMM:  .MM0   .MMN.     0MMc     XMM;  XMM.  ,                                            
-        dMMl     ;MM0    0MM;  .WMN    '0,     .MMX    '0' 'x     .kM:  .MM0   kM0.      .kM0    :MN:   XMM.                                               
-      .oxxl.   .cxxd'  'dxxc..;xxxc;:lxd     .;xxxc;:lxd .:o.      :, .:xxx:;lc.          .lo:;co:.   ,xxx;.                                              
-    .,ccc:cc;.   .;ccc::ccc.      ''     .:ccc:c;.    .:ccc      ;ccc..,ccc::ccc,                                                                          
-      NMW. ,XM0.  'MMK  .,Ol      00      :MMx .:WXl   lXMMo    ;XMMk   NMW.  'xx                                                                          
-      XMW.  xMMc  .MMK  ' .,     lMMl     ;MMx   lMMk  cc0MW'  .dcMMx   NMW. '  ;                                                                          
-      XMW. .XMX.  .MMK ,k       .kKMW.    ;MMx   .MMM' c:'WMX. o.:MMx   NMW.'O                                                                             
-      XMWcKWW:    .MMNck0       x.;MMk    ;MMx   .WMM; c: oMMo,l :MMx   NMWlxX                                                                             
-      XMW.:WM0.   .MMK  c   .  cd''KMM;   ;MMx   'MMN. c:  0MWO  :MMx   NMW. c   .                                                                         
-      XMW. ;WM0   .MMK     d; .k...;WMX.  ;MMx   xMN;  c:  'WW.  :MMx   NMW.    cc                                                                         
-    .;NWW:. :WWk..lWWNl:cdKX..Ol   .0WWx..dWWK::dOc.  .xx.  ll  .xWW0..;NWWo:co0W.                                                                         
-                                                                                                                                                          
-                                                                                                                                                          
-                                                                                                                                                          
-                                                                                                                                                          
-                                                                                                                                                          
-                                                                                                                                                          
-    cllll.,llll..lllc' .l .l:   ;l.  'l'    .l. .l.  ,l.  .:ll:. :, ,c   ;;                                                                                
-    .'Wo. xX'.. :M,.xN.;M.'MXO.dXM; .XxX.   .Mll0,  'Nk0  dN:'c; Kk dN...O0                                                                                
-    .Wl  xNddl :MkxNo ;M.'M;lXo;M; 00,KO   .MkNo   00;Nd  ;okKo Kk dWxddX0                                                                                
-    .Wl  xNooo.:M. ,W,;M.'M;   ,M;oN:;:Nl  .Mc.x0'xK;;lW;l0ol0k Kx dN   O0                                                                                
-      .    ....  .   .  .  .     . .     .   .   ...    .   ..   .   .                                                                                     
-                                                                                                                                                          
-                                                              :,k:,'     l:                                  o;c                           .k..o;;        
-                                                                .Mc  ,'c, ko.' ,,:.  .;:,.,'l.'lc,.;;'   c'c.,M:  .o.' ';;,.o.;c.ocl','..;;'.W,cN.         
-                                                                .Mc  lcx0 kOk .W;l;  Kc.'.o,W;;N..Kd;l  oX Ox.M'   Od,.W;;W;W'o0.Wc.:0o.0x;o.W,;N          
-                                                                'Nl  0do0 kdkx.Ox,.  o0:.;K,Xc;K  oO;.  ,0'k:.N,   .X. xlck.KldO.N: ,,dcl0;..N,;K.         
-                                                                                                                  'c,                                      
-                                                                                                                  .                                       
+```                                                                                                                                                                                         
+            ;;;;;;;;;;;;;' ';;;;;.  .;;;;;,..,;;;;;;;;;;;       .,;;;;;;;;;;;  .;;;;      .,;;. ';;;;;;;,.               .,cc:cc,      ';;;;;;;;;;;                                                     
+            Wd,..MMM0.'cXO  xMMMc    'MMMN    KMMM...,cKM         XMMM...,lKM   cMMMX.      W.   0MMM:.,lWNx.          'kWX'   ,XWx.    xMMM;..';xM.                                                    
+            x    MMMO   .k  lMMM,    .MMMK    0MMM   .  K         0MMW   .  O    WXMMWc     N.   xMMM,   ;MMWl        :WMW.     'MMW;   oMMM'     o.                                                    
+                 MMMO       lMMM,    .MMMK    0MMM   d  .         0MMW   d  .    W.dMMMk.   N.   xMMM,    XMMM,      .MMMO       NMMW.  oMMM'   l                                                       
+                 MMMO       lMMMc....,MMMK    0MMM.'x0            0MMM.'xO       W. 'XMMN,  N.   xMMM,    xMMMk      oMMMx       0MMM:  oMMM,.,0o                                                       
+                 MMMO       lMMMxccccoMMMK    0MMMoxN0            0MMMlxNO       W.  .kMMMo N.   xMMM,    dMMMO      dMMMx       0MMMl  oMMMxd0Mo                                                       
+                 MMMO       lMMM,    .MMMK    0MMM  .k            0MMW  .x       W.    cWMMKW.   xMMM,    kMMMo      cMMMk       XMMM,  oMMM'  :o                                                       
+                 MMMO       lMMM,    .MMMK    0MMM   '   l.       0MMW   '   c.  W.     .KMMM.   xMMM,    NMMN.       XMMX       MMM0   oMMM'   ,                                                       
+                 MMMO       lMMM,    .MMMK    0MMM     .oK        0MMM      oW   W.       dMM.   xMMM,   oMMk.        .OMM:     oMMk.   oMMM'                                                           
+               'lNNNX,.    'ONNNx'  .lNNNX;..;XNNNkllokXNo      .;XNNNxllokXNd .;No'       'X. .,KNNNkllxkl.            ,xKx::cxKd'    ,0NNNd'                                                          
+                                                  .                                                                         ...                                                                         
+            .cXXX0cok0kc.   'cXXXOcllxKXx        oK       'dXXXxloxko'    .cXXXX,      .XXXXd..,0XXXocloOXX.                                                                                            
+              MMM0   dMMW;    MMMO    .xO       .MM:       ,MMMl   cMMK'    NXMMX      O0MMM,   kMMM.    ;W.                                                                                            
+              MMM0   ,MMMK    MMMO   ,  l       0MMN       ,MMMl    OMMW.   X.WMMd    llxMMM,   xMMM.  ;  :.                                                                                            
+              MMM0   lMMMl    MMMO  ll         c0MMMx      ,MMMl    ;MMM0   X oMMM,  '0 xMMM,   xMMM. .0                                                                                                
+              MMMX:lkMXx'     MMMXoXMl        .X kMMM,     ,MMMl    .MMMM   X  KMMX  0. xMMM,   xMMMdkMN                                                                                                
+              MMM0.XMMX.      MMMO .kl        O' .NMMK     ,MMMl    'MMMN   X  .WMMxdc  xMMM,   xMMM. ;K                                                                                                
+              MMM0 .NMMK      MMMO   c   ;   ;X:::kMMMc    ,MMMl    cMMMl   X   oMMM0   xMMM,   xMMM.  l   ..                                                                                           
+              MMM0  .XMMK.    MMMO      cK  .X.....OMMW.   ,MMMl    XMMx    X    XMN.   xMMM,   xMMM.     .K.                                                                                           
+             'MMMX   .NMMX.  'MMMX'.',c0Ml  kd     ;MMMO   lMMMk.':0Nk,    .W.   .W,    OMMMc   0MMMo..':dW0                                                                                            
+            .;;;;;,.  .;;;;.';;;;;;;;;;;;. ,;;.   .,;;;;, ';;;;;;;,.      .;;;.   .   .,;;;;;..,;;;;;;;;;;;.                                                                                            
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+            ;ooooo, coool:. 'o' .:odo:.   ;oddl'   loool;.  .oooool         ,cl;                                                                                                                        
+            xMl,,,. KM,':WX cMl OMo.,kx .XN:''oMx  WW,,:0W: ,MO,,,'  ,.    dW,,NO                                                                                                                       
+            xM0kkk  KMc:oW0 cMl 'kXKko, xMl    KM. WW    WW ,MXkkk; '0l    ,NOkWc                                                                                                                       
+            xM;...  KMc:;'  cMl :: .'KM'cMk   .WN  WW   ;MO ,Mk...   .     NX..0W.                                                                                                                      
+            dN0OOO: 0N      :Nc :K0kOKd  ;OKOOKx.  XNOO00l  'NXOOOk ,Wo    lKkkXd                                                                                                                       
+                                                                                                                                                                                                        
+                                                                                                                                                                                                        
+                                                                                          .;''.                                          ',',.             .;                   .,      .,,,.           
+                                                                                        .00. .x                  .l                      dM;.oX;           ,o                  'X0      dddo            
+                                                                                        OM,     o'cO. xk,Ol.x''c.WK, lo,k. 0d,0l :l;d    dM;  WW ,o'x.cc.l lO..x:lk,'0o:K,    :'M0     :NKk:            
+                                                                                        KM,     oclMl KN xM:XKo' WO ;M; W0 Mx KX.Md'k'   dM;  WM.Mk.k;dXx: dM.dM'cW.,Mo.Mx   kc:MX'ooo, ..cNc           
+                                                                                        'NO   '.NocMl KN kN''.xX WO..Wc Mx Mx KX.W0...   dM; :Nc XX...:.:W.dM..O;;. ,Mo.Mx   :::MX.....,;  o'           
+                                                                                          ;:''  c:.c; KN'c..,',. 'c. .;',  :, ;: .:c'    ,:,',    :c, ,,'' ,:.,XOkOd.:'.:,      :,     .c:'.            
+                                                                                                      dx                                                      ;c..',                                    
 ```

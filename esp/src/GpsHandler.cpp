@@ -1,4 +1,5 @@
 #include "GpsHandler.h"
+#include "espOTA.h"
 
 GpsHandler::GpsHandler(int rxPin, int txPin, int serialPort): _rxPin(rxPin), _txPin(txPin) {
     _serial = new HardwareSerial(serialPort);
@@ -7,7 +8,7 @@ GpsHandler::GpsHandler(int rxPin, int txPin, int serialPort): _rxPin(rxPin), _tx
 bool GpsHandler::begin(unsigned long baud) {
     _serial->begin(baud, SERIAL_8N1, _rxPin, _txPin);
 
-    unsigned long startWait = millis();
+        unsigned long startWait = millis();
     while (millis() - startWait < 1500)
     {
         if (_serial->available() > 0) return true;
@@ -69,6 +70,6 @@ double GpsHandler::getLng() {
 void GpsHandler::echoRawData() {
     while (_serial->available()) {
         char c = _serial->read();
-        Serial.write(c); // Kirim langsung ke monitor (Passthrough)
+        DEBUG_WRITE(c); // Kirim langsung ke monitor (Passthrough)
     }
 }

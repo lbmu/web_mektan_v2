@@ -32,7 +32,7 @@
 // cek notip (komentar untuk disable) [shortcut di VS Code: Ctrl + /]
 #define RUN_TASK // <- Buat run task biasa
 // #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
-#define REPORT
+// #define REPORT
 
 // Instansiasi Objek Modul Baru
 ESP_OTA Ota;
@@ -40,7 +40,6 @@ CommHandler comm(SIM_RX_PIN, SIM_TX_PIN, COMM_BAUDRATE, SIM_SERIAL_PORT);
 GpsHandler gpsHandler(GPS_RX_PIN, GPS_TX_PIN, GPS_SERIAL_PORT);
 PowerMonitor powerMonitor;
 SystemDiagnostics diagnostics(&powerMonitor, &gpsHandler, &comm);
-
 
 // --- SHARED DATA & MUTEX ---
 // Struktur data bersama antar task
@@ -51,6 +50,7 @@ struct SharedData {
     float voltage_V;
     float current_mA;
     bool gpsUpdated;
+    bool isM8NActive;
 };
 
 SharedData latestData;
@@ -110,13 +110,26 @@ void TaskTelemetry(void *pvParameters) {
 
     // Variabel untuk jeda publish tanpa blocking
     unsigned long lastPublishTime = 0;
-    const unsigned long PUBLISH_INTERVAL = 5000; // 5 detik
+    
+    // Manajemen Daya
+    const float ENGINE_ON_V = 4.0;
+    const float ENGINE_OFF_V = 3.5;
+
+    // yang ini interval ngirim data tergantung nyala mesin (5/60 detik)
+    const unsigned long ACTIVE_INTERVAL = 5000;
+    const unsigned long HEARTBEAT_INTERVAL = 60000;
+
+    unsigned long currentPublishInterval = ACTIVE_INTERVAL;
+    bool isEngineOn = true;
 
     while (1) {
         // 1. Cek Koneksi Jaringan 4G
         if (!lteConnected) {
             DEBUG_PRINTLN("\n📡 [TELEMETRY] Modem belum siap. Mencoba inisialisasi...");
-            if (comm.begin()) {
+            // disableCore0WDT;
+            bool isModemReady = comm.begin();
+            // enableCore0WDT;
+            if (isModemReady) {
                 lteConnected = true;
                 mqttFailCount = 0;
             } else {
@@ -130,9 +143,9 @@ void TaskTelemetry(void *pvParameters) {
         if (lteConnected && !mqttConnected) {
             DEBUG_PRINTLN("📡 [TELEMETRY] Menghubungkan ke Broker HiveMQ...");
             
-            disableCore0WDT();
+            // disableCore0WDT();
             bool isConnected = comm.connectMQTT(MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS);
-            enableCore0WDT();
+            // enableCore0WDT();
             
             if (isConnected) {
                 DEBUG_PRINTLN("✅ [TELEMETRY] Terhubung ke Broker! Siap publish data.");
@@ -140,8 +153,8 @@ void TaskTelemetry(void *pvParameters) {
                 mqttFailCount = 0;
             } else {
                 mqttFailCount++;
-                DEBUG_PRINTF("⚠️ [TELEMETRY] Gagal Connect MQTT (Percobaan %d/3)\n", mqttFailCount);
-                if (mqttFailCount >= 3) {
+                DEBUG_PRINTF("⚠️ [TELEMETRY] Gagal Connect MQTT (Percobaan %d/15)\n", mqttFailCount);
+                if (mqttFailCount >= 15) {
                     DEBUG_PRINTLN("🔄 [TELEMETRY] Internet/Sinyal putus! Me-reset Modem 4G...");
                     lteConnected = false;
                 }
@@ -155,8 +168,63 @@ void TaskTelemetry(void *pvParameters) {
             comm.loop();
         }
 
+        // 3. Logika interval kirim data
+        float currentVolt = 0.0;
+        if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+            currentVolt = latestData.voltage_V;
+            xSemaphoreGive(dataMutex);
+        }
+        
+        // Hysteresis?
+        if (currentVolt >= ENGINE_ON_V && isEngineOn) {
+            isEngineOn = true;
+            currentPublishInterval = ACTIVE_INTERVAL;
+            DEBUG_PRINT(">");
+        }
+        else if (currentVolt <= ENGINE_OFF_V && !isEngineOn) {
+            isEngineOn = false;
+            currentPublishInterval = HEARTBEAT_INTERVAL;
+            DEBUG_PRINT("<");
+        }
+        
+        /* @brief GPS SIM7600G
+         * aktif jika M8N rusak (for now)
+         */
+
+        bool m8nStatus = true;
+        if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+            m8nStatus = latestData.isM8NActive;
+            xSemaphoreGive(dataMutex);
+        }
+
+        if (!m8nStatus) {
+            float simLat = 0, simLng = 0;
+
+            comm.enableGNSS();
+
+            if (comm.getGNSSData(&simLat, &simLng)) {
+                if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+                    latestData.lat = simLat;
+                    latestData.lng = simLng;
+                    latestData.gpsUpdated = true;
+                    xSemaphoreGive(dataMutex);
+                }
+                DEBUG_PRINT("🛰️!");
+            }
+            else {
+                if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+                    latestData.lat = NAN;
+                    latestData.lng = NAN;
+                    latestData.gpsUpdated = false;
+                    xSemaphoreGive(dataMutex);
+                }
+            }
+        }
+        else 
+            comm.disableGNSS();
+        
         // 4. Rakit JSON & Publish HANYA setiap 5 detik
-        if (mqttConnected && (millis() - lastPublishTime >= PUBLISH_INTERVAL)) {
+        if (mqttConnected && (millis() - lastPublishTime >= currentPublishInterval)) {
             String jsonPayload = "";
             bool readyToSend = false;
 
@@ -188,14 +256,14 @@ void TaskTelemetry(void *pvParameters) {
             }
 
             if (readyToSend) {
-                // DEBUG_PRINTLN("\n---------------------------------------");
-                // DEBUG_PRINTLN("----📡 Mempublikasikan Data via MQTT---");
+                DEBUG_PRINTLN("\n---------------------------------------");
+                DEBUG_PRINTLN("----📡 Mempublikasikan Data via MQTT---");
                 if (comm.publishMQTT(MQTT_TOPIC, jsonPayload)) {
                     #ifdef REPORT
-                    // DEBUG_PRINTLN("----✅ Data Published Successfully!----");
+                    DEBUG_PRINTLN("----✅ Data Published Successfully!----");
                     #endif
                 } else {
-                    // DEBUG_PRINTLN("----❌ Publish Failed (Cek Koneksi?)---");
+                    DEBUG_PRINTLN("----❌ Publish Failed (Cek Koneksi?)---");
                     mqttConnected = false; // Reset agar mencoba re-connect
                 }
                 DEBUG_PRINTLN("---------------------------------------");
@@ -226,9 +294,11 @@ void TaskGPS(void *pvParameters) {
                     latestData.gpsUpdated = true;
                 }
                 else {
-                    latestData.lat = NAN;
-                    latestData.lng = NAN;
-                    latestData.gpsUpdated = false;
+                    latestData.isM8NActive = false;
+
+                    // latestData.lat = NAN;
+                    // latestData.lng = NAN;
+                    // latestData.gpsUpdated = false;
                 }
 
                 xSemaphoreGive(dataMutex);
@@ -270,12 +340,7 @@ void TaskMonitor(void *pvParameters) {
         DEBUG_PRINT("Load Voltage: "); DEBUG_PRINT(pData.loadVoltage_V); DEBUG_PRINTLN(" V");
         DEBUG_PRINT("Current     : "); DEBUG_PRINT(pData.current_mA); DEBUG_PRINTLN(" mA");
         DEBUG_PRINT("Power       : "); DEBUG_PRINT(pData.power_mW); DEBUG_PRINTLN(" mW");
-
-        if (validGPS) {
-            DEBUG_PRINTF("GPS         : %.6f, %.6f\n", currentLat, currentLng);
-        } else {
-            DEBUG_PRINTLN("GPS         : Waiting for lock...");
-        }
+        DEBUG_PRINTF("GPS         : %.6f, %.6f\n", currentLat, currentLng);
         DEBUG_PRINTLN("---------------------------------------------------");
         #endif
 
@@ -304,7 +369,7 @@ void setup() {
     
     // Init GPS Module
     DEBUG_PRINTLN("===============[ Initializing GPS ]===============");
-    if (!gpsHandler.begin(9600)) {
+        if (!gpsHandler.begin(9600)) {
         DEBUG_PRINTLN("❌ GPS Not Found!");
     } else {
         DEBUG_PRINTLN("✅ GPS Connected");

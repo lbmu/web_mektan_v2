@@ -1,7 +1,5 @@
-> [!NOTE]
-> Dokumentasi sensing/perception layer, basically mikro dan baca sensor
-> Di sini, arsitektur yang dipakai adalah FreeRTOS dengan bahasa C++ dengan framework Arduino. Lingkungan pengembangan menggunakan Ekstensi **PlatformIO** pada VS Code.
-> Navigasi ke path [hardware](/esp/) untuk pengembangan.
+> [!WARNING]
+> Hu Tao megang kabel type-c
 
 ```
 ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
@@ -69,23 +67,33 @@ ddddddddddddddddddddddddddddddddddd,dXOdc;dddddddl dl..  ...l.  .c.'...l.  .:;'l
 ddddddddddddddddddddddddddddddddddd;ckdc;,ddddddd: O;....  .c   :;.....l.  .c.l:'.    .....,X,...c     .'. .cOXO....':cdddddd
 ```
 
-# Directory Structure
+# Arsitektur Kode
+
+## Struktur Folder
 
 Di dalam folder esp, pastikan struktur foldernya sebagai berikut
-
 ```
 .
-├── include
-├── lib
-├── logs
-├── platformio.ini
-├── src
-└── test
+├── include         # header dan macrofile
+├── lib             # custom library (tidak/belum digunakan)
+├── logs            # logs terminal untuk debugging
+├── platformio.ini  # Konfigurasi PlatformIO
+├── src             # Logika utama modul
+└── test            # test environment (tidak/belum digunakan)
 ```
+
+## Inisialisasi Proyek
 
 Untuk memulai proyek menggunakan PlatformIO
 1. Klik Logo Alien
-2. 
+2. QUICK ACCESS > PIO Home > Open Projects
+3. Pilih folder `esp` di Repository (Pastikan terdapat file `platformio.ini`)
+4. Build (Opsional)
+
+## Struktur Kode
+
+Proyek ini menggunakan framework arduino yang dibungkus oleh OOP C++. Setiap sub-sistem diberikan kelasnya masing-masing.
+
 
 # FreeRTOS
 
@@ -207,7 +215,7 @@ Debugging bisa dilakukan secara Nirkabel/OTA (Over the Air) menggunakan Telnet
 
 1. Masukkan command berikut:
 ```shell
-telnet 192.168.x.x # Ikuti IP Address yang sudah didefinisikan sebelumnya
+telnet 192.168.4.1 # Ikuti IP Address yang sudah didefinisikan sebelumnya
 ```
 
 2. Lihat
@@ -246,7 +254,9 @@ d. Saksikan
 Ada beberapa mode debugging yang bisa dilakukan.
 
 #### Normal Task
-Mode ini adalah mode normal di mana sistem akan berjalan seperti biasa
+Mode ini adalah mode normal di mana sistem akan berjalan seperti biasa.
+
+Defaultnya, mode ini juga akan memperlihatkan *Performance Monitor RTOS* (saudara jauh task manager) pada terminal, yang dijalankan oleh baris kode `diagnostics.run(TEST_PERFORMANCE_MONITOR);` yang terletak di [program utama](/esp/src/main.cpp).
 
 Mengaktifkan mode normal
 ```cpp
@@ -255,9 +265,6 @@ Mengaktifkan mode normal
 // #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
 ```
 Sistem akan mengeksekusi baris program yang diawali oleh `#ifdef RUN_TEST` dan diakhiri oleh `#endif`
-
-Mode ini juga akan memperlihatkan *Performance Monitor RTOS*, yang dijalankan oleh baris kode `diagnostics.run(TEST_PERFORMANCE_MONITOR);` yang terletak di paling bawah [program utama](/esp/src/main.cpp) sebelum fungsi `void loop()`.
-
 
 #### Diagnostics
 Aktifkan Mode Diagnosis
@@ -275,7 +282,7 @@ Komponen ini berkomunikasi dengan mikro menggunakan periferal **UART**.
 
 * [Website Produk](https://www.u-blox.com/en/product/neo-m8-series)
 * [Product Summary](https://www.u-blox.com/sites/default/files/products/documents/NEO-M8_ProductSummary_UBX-16000345.pdf)
-*  [Datasheet](https://content.u-blox.com/sites/default/files/NEO-M8-FW3_DataSheet_UBX-15031086.pdf)
+* [Datasheet](https://content.u-blox.com/sites/default/files/NEO-M8-FW3_DataSheet_UBX-15031086.pdf)
 
 Modul GPS menggunakan library [TinyGPSPlus](https://github.com/mikalhart/TinyGPSPlus). File yang relevan untuk modul GPS adalah:
 * `esp/include/GpsHandler.h` (header file yang memanggil library, mendefinisikan kelas dan fungsi, serta klasifikasi private/publik)

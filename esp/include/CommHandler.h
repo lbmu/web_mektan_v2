@@ -1,6 +1,7 @@
 #pragma once
 
 // Wajib didefinisikan SEBELUM include TinyGsmClient.h
+#define TINY_GSM_YIELD() { vTaskDelay(1/portTICK_PERIOD_MS); }
 #define TINY_GSM_MODEM_SIM7600 
 
 #include <Arduino.h>
@@ -21,6 +22,19 @@ public:
 
     // Meneruskan data untuk SystemDiagnostics
     void serialPassthrough();
+
+    // GPS
+    bool enableGNSS();
+    bool disableGNSS();
+    bool getGNSSData(
+        float *lat,
+        float *lng,
+        float *speed = 0,
+        float *alt = 0,
+        int *vsat = 0,
+        int *usat = 0,
+        float *accuracy = 0
+    );
 
 private:
     int _rxPin;
