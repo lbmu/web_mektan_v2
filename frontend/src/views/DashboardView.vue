@@ -15,10 +15,11 @@ let markers = {};
 let mqttClient = null;
 let chartInstance = null;
 
-const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
+const MQTT_HOST = import.meta.env.VITE_MQTT_HOST;
+const MQTT_PORT = Number(import.meta.env.VITE_MQTT_PORT);
 const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
-// const MQTT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
-// const MQTT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
+const MQTT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
+const MQTT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
 
 // --- 1. FETCH DATA UTAMA ---
 const fetchData = async () => {
@@ -62,9 +63,16 @@ const warningList = computed(() => {
 
 // --- 3. KONEKSI MQTT (REAL-TIME UPDATE) ---
 const connectMqtt = () => {
-  if (!window.mqtt) return;
-  
-    mqttClient = window.mqtt.connect(MQTT_BROKER);
+const options = {
+        host: MQTT_HOST,
+        port: MQTT_PORT,
+        protocol: 'wss', // Jalur aman
+        path: '/mqtt',
+        username: MQTT_USERNAME,
+        password: MQTT_PASSWORD
+    };
+
+    mqttClient = mqtt.connect(options);
 
   mqttClient.on('connect', () => {
     mqttClient.subscribe(MQTT_TOPIC);

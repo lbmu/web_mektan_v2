@@ -5,11 +5,13 @@ import axios from 'axios';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Swal from 'sweetalert2';
+import mqtt from 'mqtt';
 
-const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
+const MQTT_HOST = import.meta.env.VITE_MQTT_HOST;
+const MQTT_PORT = Number(import.meta.env.VITE_MQTT_PORT);
 const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
-// const MQTT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
-// const MQTT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
+const MQTT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
+const MQTT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
 
 const route = useRoute();
 const router = useRouter();
@@ -129,8 +131,16 @@ const fetchHistoryByDate = async () => {
 
 // --- MQTT (Hanya Berpengaruh di Tab Live) ---
 const connectMqtt = () => {
-    if (!window.mqtt) return;
-    mqttClient = window.mqtt.connect(MQTT_BROKER);
+    const options = {
+        host: MQTT_HOST,
+        port: MQTT_PORT,
+        protocol: 'wss', // Jalur aman
+        path: '/mqtt',
+        username: MQTT_USERNAME,
+        password: MQTT_PASSWORD
+    };
+
+    mqttClient = mqtt.connect(options);
     
     mqttClient.on('connect', () => {
         console.log("📡 Connected to MQTT (Detail View)");
@@ -141,9 +151,11 @@ const connectMqtt = () => {
         try {
             const data = JSON.parse(message.toString());
             
-            // PASTIKAN ID ALAT COCOK SEBELUM MEMPROSES DATA
-            if (data.id_alat == id) {
-                // 1. UPDATE STATUS MESIN (Ini yang membuat status ON/OFF berubah)
+            // --- PERBAIKAN BUG KRITIS ---
+            // Kita cocokkan 'kode_perangkat' dari MQTT dengan 'kode_perangkat' traktor yang sedang dibuka
+            if (infoAlat.value && data.kode_perangkat === infoAlat.value.kode_perangkat) {
+                
+                // 1. UPDATE STATUS MESIN
                 statusMesin.value = data.status_mesin;
 
                 // 2. TANGKAP KOORDINAT BARU
@@ -157,21 +169,18 @@ const connectMqtt = () => {
 
                 // 4. GAMBAR GARIS & HITUNG JARAK (HANYA JIKA MESIN ON)
                 if (statusMesin.value === 'ON') {
-                    // Tambahkan titik baru ke garis lintasan
                     if (activeTab.value === 'LIVE' && polyline) {
                         polyline.addLatLng(newPoint);
                     }
                     
-                    // Hitung jarak dari titik sebelumnya
                     const lastPoint = historyCoordsLive.value[historyCoordsLive.value.length - 1];
                     if (lastPoint) {
                         const dist = map.distance(lastPoint, newPoint);
-                        // Hanya hitung jika jarak lebih dari 0.5 meter untuk mencegah GPS noise
+                        // Filter GPS Noise
                         if (dist > 0.5) {
                             totalJarakLive.value += dist;
                         }
                     }
-                    // Simpan koordinat baru ke dalam array history
                     historyCoordsLive.value.push(newPoint);
                 }
             }

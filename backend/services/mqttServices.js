@@ -1,7 +1,7 @@
 const mqtt = require('mqtt');
 const db = require('../config/database');
 
-// FUNGSI HITUNG JARAK (Haversine Formula) - Tidak perlu diubah
+// FUNGSI HITUNG JARAK (Haversine Formula) 
 function calculateDistance(lat1, lon1, lat2, lon2) {
     if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
     const R = 6371e3; // Radius bumi dalam meter
@@ -17,14 +17,21 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c; 
 }
 
-const BROKER_URL = process.env.MQTT_BROKER;
+const options = {
+    host: process.env.MQTT_HOST,
+    port: process.env.MQTT_PORT,
+    protocol: 'mqtts', // 's' berarti secure (aman)
+    username: process.env.MQTT_USERNAME,
+    password: process.env.MQTT_PASSWORD,
+    rejectUnauthorized: true // Memastikan sertifikat server valid
+};
 const TOPIC = process.env.MQTT_TOPIC;
 
 
-const client = mqtt.connect(BROKER_URL);
+const client = mqtt.connect(options);
 
 client.on('connect', () => {
-    console.log(`✅ Backend IoT Service Terhubung: ${BROKER_URL}`);
+    console.log(`✅ Backend IoT Service Terhubung ke HiveMQ Private Cluster!`);
     client.subscribe(TOPIC);
 });
 

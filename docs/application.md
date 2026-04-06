@@ -170,5 +170,5 @@ VITE_MQTT_TOPIC=project-mektan/v1/data
 
 3. Run Server Frontend
 ```
-node index.js
+npm run dev
 ```

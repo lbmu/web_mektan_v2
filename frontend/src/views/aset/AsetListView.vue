@@ -6,7 +6,8 @@ import Swal from 'sweetalert2';
 
 // TANGKAP KREDENSIAL BRANKAS
 const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL;
-const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
+const MQTT_HOST = import.meta.env.VITE_MQTT_HOST;
+const MQTT_PORT = Number(import.meta.env.VITE_MQTT_PORT);
 const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
 const MQTT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
 const MQTT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
@@ -33,9 +34,16 @@ const fetchData = async () => {
 
 // --- LOGIKA MQTT REAL-TIME ---
 const connectMqtt = () => {
-    if (!window.mqtt) return;
-    
-    mqttClient = window.mqtt.connect(MQTT_BROKER);
+    const options = {
+        host: MQTT_HOST,
+        port: MQTT_PORT,
+        protocol: 'wss', // Jalur aman
+        path: '/mqtt',
+        username: MQTT_USERNAME,
+        password: MQTT_PASSWORD
+    };
+
+    mqttClient = mqtt.connect(options);
 
     mqttClient.on('connect', () => {
         console.log("📡 Connected to MQTT (Aset List)");

@@ -4,6 +4,7 @@ import axios from 'axios';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useRouter } from 'vue-router';
+import mqtt from 'mqtt';
 
 const router = useRouter();
 
@@ -19,7 +20,8 @@ const filterStatus = ref('ALL');
 let map = null;
 let markers = {};
 let mqttClient = null;
-const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
+const MQTT_HOST = import.meta.env.VITE_MQTT_HOST;
+const MQTT_PORT = Number(import.meta.env.VITE_MQTT_PORT);
 const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
 const MQTT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
 const MQTT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
@@ -113,20 +115,34 @@ const goToDetail = (id) => {
 
 // --- 4. MQTT REAL-TIME ---
 const connectMqtt = () => {
-    if (!window.mqtt) return;
-    mqttClient = window.mqtt.connect(MQTT_BROKER, {
+    // Buat konfigurasi opsi untuk koneksi Private Cluster
+    const options = {
+        host: MQTT_HOST,
+        port: MQTT_PORT,
+        protocol: 'wss', // Kunci keamanan: WebSockets Secure
+        path: '/mqtt',   // Path wajib untuk HiveMQ Cloud di browser
         username: MQTT_USERNAME,
         password: MQTT_PASSWORD
-    });
+    };
+
+    // Gunakan fungsi mqtt yang di-import, bukan window.mqtt
+    mqttClient = mqtt.connect(options);
 
     mqttClient.on('connect', () => {
+        console.log('✅ Peta Live terhubung ke HiveMQ Private Cluster!');
         mqttClient.subscribe(MQTT_TOPIC);
+    });
+
+    mqttClient.on('error', (err) => {
+        console.error('❌ Gagal terhubung ke MQTT:', err);
     });
 
     mqttClient.on('message', (topic, message) => {
         try {
             const data = JSON.parse(message.toString());
-            const index = alsintanList.value.findIndex(i => i.alsintan_id == data.id_alat);
+            // Perhatikan: Karena backend sudah dirubah, pastikan payload dari ESP32
+            // yang dikirim sesuai dengan kode perangkat aslinya.
+            const index = alsintanList.value.findIndex(i => i.kode_perangkat === data.kode_perangkat);
             
             if (index !== -1) {
                 // Update State Lokal
@@ -134,14 +150,17 @@ const connectMqtt = () => {
                 alsintanList.value[index].latitude = data.lat;
                 alsintanList.value[index].longitude = data.long;
 
-                // Update Marker di Peta
-                const marker = markers[data.id_alat];
+                // Update Marker di Peta berdasarkan alsintan_id dari state lokal
+                const currentId = alsintanList.value[index].alsintan_id;
+                const marker = markers[currentId];
                 if (marker) {
                     marker.setLatLng([data.lat, data.long]);
                     marker.setIcon(createIcon(data.status_mesin));
                 }
             }
-        } catch (err) {}
+        } catch (err) {
+            console.error('Format JSON dari MQTT salah:', err);
+        }
     });
 };
 
