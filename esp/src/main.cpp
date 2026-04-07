@@ -53,8 +53,25 @@ struct SharedData {
     bool isM8NActive;
 };
 
+// Struktur data buat ngirim paket data
+struct bufferedData {
+    double lat;
+    double lng;
+    float power_mW;
+    float voltage_V;
+    unsigned long timestamp;
+};
+
+// --- VARIABEL dan PENDUKUNG ---
 SharedData latestData;
 SemaphoreHandle_t dataMutex;
+QueueHandle_t dataQueue;
+const int MAX_QUEUE_SIZE = 200;
+
+// --- FUNCTION ---
+unsigned long getCurrentTimestamp() {
+    return time(NULL);
+}
 
 // --- TASKS ---
 TaskHandle_t telnetTaskHandle = NULL;
@@ -168,7 +185,7 @@ void TaskTelemetry(void *pvParameters) {
             comm.loop();
         }
 
-        // 3. Logika interval kirim data
+        // 4. Logika interval kirim data
         float currentVolt = 0.0;
         if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
             currentVolt = latestData.voltage_V;
@@ -196,12 +213,14 @@ void TaskTelemetry(void *pvParameters) {
             m8nStatus = latestData.isM8NActive;
             xSemaphoreGive(dataMutex);
         }
-
+        
+        // cek status modul GPS
         if (!m8nStatus) {
             float simLat = 0, simLng = 0;
 
             comm.enableGNSS();
 
+            // Ambil koordinat lewat modul SIM
             if (comm.getGNSSData(&simLat, &simLng)) {
                 if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
                     latestData.lat = simLat;
@@ -211,6 +230,8 @@ void TaskTelemetry(void *pvParameters) {
                 }
                 DEBUG_PRINT("🛰️!");
             }
+
+            // Kalau gak bisa nangkep koordinat, return NaN
             else {
                 if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
                     latestData.lat = NAN;
@@ -220,58 +241,92 @@ void TaskTelemetry(void *pvParameters) {
                 }
             }
         }
+
+        // Kalau Neo nya udah nyala
         else 
             comm.disableGNSS();
         
-        // 4. Rakit JSON & Publish HANYA setiap 5 detik
-        if (mqttConnected && (millis() - lastPublishTime >= currentPublishInterval)) {
-            String jsonPayload = "";
-            bool readyToSend = false;
-
-            if (xSemaphoreTake(dataMutex, (TickType_t) 100) == pdTRUE) {
-                jsonPayload = "{";
-
-                // cek NaN GPS
-                if (isnan(latestData.lat) || isnan(latestData.lng)) {
-                    jsonPayload += "\"lat\":null,";
-                    jsonPayload += "\"lng\":null,";
-                }
-                else {
-                    jsonPayload += "\"lat\":" + String(latestData.lat, 6) + ",";
-                    jsonPayload += "\"lng\":" + String(latestData.lng, 6) + ",";
-                }
-                // cek NaN INA219
-                if (isnan(latestData.voltage_V) || isnan(latestData.power_mW)) {
-                    jsonPayload += "\"voltage\":null,";
-                    jsonPayload += "\"power\":null";
-                }
-                else {
-                    jsonPayload += "\"voltage\":" + String(latestData.voltage_V, 2) + ",";
-                    jsonPayload += "\"power\":" + String(latestData.power_mW, 2);
-                }
-                jsonPayload += "}";
-                
-                readyToSend = true;
-                xSemaphoreGive(dataMutex);
-            }
-
-            if (readyToSend) {
-                DEBUG_PRINTLN("\n---------------------------------------");
-                DEBUG_PRINTLN("----📡 Mempublikasikan Data via MQTT---");
-                if (comm.publishMQTT(MQTT_TOPIC, jsonPayload)) {
-                    #ifdef REPORT
-                    DEBUG_PRINTLN("----✅ Data Published Successfully!----");
-                    #endif
-                } else {
-                    DEBUG_PRINTLN("----❌ Publish Failed (Cek Koneksi?)---");
-                    mqttConnected = false; // Reset agar mencoba re-connect
-                }
-                DEBUG_PRINTLN("---------------------------------------");
-            }
-            
-            lastPublishTime = millis(); // Reset timer publish
+        // 4. Protokol Publish Data
+        bufferedData currentData;
+        // Sinkronisasi Mutex
+        if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+            currentData.lat = latestData.lat;
+            currentData.lng = latestData.lng;
+            currentData.voltage_V = latestData.voltage_V;
+            currentData.power_mW = latestData.power_mW;
+            xSemaphoreGive(dataMutex);
         }
 
+        // Ambil timestamp
+        currentData.timestamp = getCurrentTimestamp();
+
+        // Cek Koneksi MQTT
+        if (mqttConnected && (millis() - lastPublishTime >= currentPublishInterval)) {
+            bufferedData oldData;
+
+            // Cek data buffer
+            while (uxQueueMessagesWaiting(dataQueue) > 0) {
+                xQueuePeek(dataQueue, &oldData, 0);
+
+                // Perakitan JSON data antrean
+                String oldJson = "{";
+                oldJson += "\"lat\":" + (isnan(oldData.lat) ? "null" : String(oldData.lat, 6)) + ",";
+                oldJson += "\"lng\":" + (isnan(oldData.lng) ? "null" : String(oldData.lng, 6)) + ",";
+                oldJson += "\"voltage\":" + (isnan(oldData.voltage_V) ? "null" : String(oldData.voltage_V, 2)) + ",";
+                oldJson += "\"power\":" + (isnan(oldData.power_mW) ? "null" : String(oldData.power_mW, 2)) + ",";
+                oldJson += "\"engine\":" + String((oldData.voltage_V > 4.0) ? 1 : 0) + ",";
+                oldJson += "\"timestamp\":" + String(oldData.timestamp);
+                oldJson += "}";
+
+                // Kirim data buffer
+                if (comm.publishMQTT(MQTT_TOPIC, oldJson)) {
+                    DEBUG_PRINTLN("📦 [BUFFER] Data history terkirim!");
+                    xQueueReceive(dataQueue, &oldData, 0);
+
+                    // BARIS INI JANGAN DIHAPUS
+                    // NANTI DIKIRA DDOS SAMA SI BROKER NYA
+                    vTaskDelay(200 / portTICK_PERIOD_MS);
+                    ///////////////////////////////////////
+                    //////////////// JOMOK ////////////////
+                }   ///////////////////////////////////////
+                else {
+                    DEBUG_PRINTLN("⚠️ [BUFFER] Gagal kirim history. Stop flushing.");
+                    break;
+                }
+            }
+
+            // Kalau gak ada buffer
+            String currentJson = "{";
+            currentJson += "\"lat\":" + (isnan(currentData.lat) ? "null" : String(currentData.lat, 6)) + ",";
+            currentJson += "\"lng\":" + (isnan(currentData.lng) ? "null" : String(currentData.lng, 6)) + ",";
+            currentJson += "\"voltage\":" + (isnan(currentData.voltage_V) ? "null" : String(currentData.voltage_V, 2)) + ",";
+            currentJson += "\"power\":" + (isnan(currentData.power_mW) ? "null" : String(currentData.power_mW, 2)) + ",";
+            currentJson += "\"engine\":" + String(isEngineOn ? 1 : 0) + ",";
+            currentJson += "\"timestamp\":" + String(currentData.timestamp);
+            currentJson += "}";
+
+            // Kirim data (real-time)
+            if (comm.publishMQTT(MQTT_TOPIC, currentJson)) {
+                lastPublishTime = millis();
+            }
+        }        
+        
+        // Kalau belum ada sinyal
+        else if (!mqttConnected && (millis() - lastPublishTime >= currentPublishInterval)) {
+            // Buang dulu kalau buffer penuh
+            if (uxQueueSpacesAvailable(dataQueue) == 0) {
+                DEBUG_PRINTLN("⚠️ [BUFFER] Penuh! Membuang data terlama...");
+                bufferedData dummy;
+                xQueueReceive(dataQueue, &dummy, 0);
+            }
+
+            // Kalau buffer gk penuh, simpen ke buffer
+            xQueueSend(dataQueue, &currentData, 0);
+            DEBUG_PRINT("💾 [BUFFER] Data disimpan. Total antrean: ");
+            DEBUG_PRINTLN(uxQueueMessagesWaiting(dataQueue));
+
+            lastPublishTime = millis();
+        }
         // Delay sangat pendek (50ms) agar task FreeRTOS tidak monopoli CPU,
         // namun cukup sering untuk memanggil comm.loop() dengan lancar
         vTaskDelay(50 / portTICK_PERIOD_MS);
@@ -389,7 +444,18 @@ void setup() {
 
     // Create Mutex
     dataMutex = xSemaphoreCreateMutex();
-    
+
+    // Store and Forward
+    dataQueue = xQueueCreate(MAX_QUEUE_SIZE, sizeof(bufferedData));
+    if (dataQueue == NULL)
+        {
+            DEBUG_PRINTLN("No Queue!");
+        }
+    else {
+        DEBUG_PRINTLN("Queue Ready! [200 data max]");
+        }
+
+    // Init Sistem
     #ifdef USE_TELNET_DEBUG
     xTaskCreatePinnedToCore(
         TaskTelnet, "Telnet_Task", 4096, NULL, 1, &telnetTaskHandle, 1
@@ -421,3 +487,5 @@ void setup() {
 void loop() {
     vTaskDelete(NULL);
 }
+
+// Ini kalau udah nyampe 500 baris, mikro nya LANGSUNG FREEZE FEATURE. padahal kode udah modular jir, tapi kayanya ga ngaruh :v [masih spaghetti code juga]
