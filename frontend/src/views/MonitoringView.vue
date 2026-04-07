@@ -140,22 +140,30 @@ const connectMqtt = () => {
     mqttClient.on('message', (topic, message) => {
         try {
             const data = JSON.parse(message.toString());
-            // Perhatikan: Karena backend sudah dirubah, pastikan payload dari ESP32
-            // yang dikirim sesuai dengan kode perangkat aslinya.
-            const index = alsintanList.value.findIndex(i => i.kode_perangkat === data.kode_perangkat);
+            
+            // KUNCI UTAMA: Samakan pencariannya dengan Dashboard (menggunakan id_alat)
+            const index = alsintanList.value.findIndex(i => i.alsintan_id == data.id_alat);
             
             if (index !== -1) {
-                // Update State Lokal
+                // 1. Update data reaktif (List di sebelah kiri akan otomatis berubah)
                 alsintanList.value[index].status_mesin = data.status_mesin;
-                alsintanList.value[index].latitude = data.lat;
-                alsintanList.value[index].longitude = data.long;
+                
+                // Pastikan koordinat bukan 0,0 (Anti-Teleportasi)
+                const isGpsValid = data.lat !== 0 && data.long !== 0;
+                if (isGpsValid) {
+                    alsintanList.value[index].latitude = data.lat;
+                    alsintanList.value[index].longitude = data.long;
+                }
 
-                // Update Marker di Peta berdasarkan alsintan_id dari state lokal
+                // 2. Update Marker Peta Leaflet
                 const currentId = alsintanList.value[index].alsintan_id;
                 const marker = markers[currentId];
+                
                 if (marker) {
-                    marker.setLatLng([data.lat, data.long]);
+                    // Update warna icon
                     marker.setIcon(createIcon(data.status_mesin));
+                    // Update posisi koordinat
+                    if (isGpsValid) marker.setLatLng([data.lat, data.long]);
                 }
             }
         } catch (err) {
@@ -163,6 +171,7 @@ const connectMqtt = () => {
         }
     });
 };
+
 
 // Jika filter atau search diubah, gambar ulang markernya
 watch([searchQuery, filterStatus], () => {

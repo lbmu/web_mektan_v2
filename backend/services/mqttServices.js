@@ -35,34 +35,42 @@ client.on('connect', () => {
     client.subscribe(TOPIC);
 });
 
+// --- TAMBAHKAN 3 BLOK DETEKTOR INI ---
+client.on('error', (err) => {
+    console.error('❌ MQTT Error Terdeteksi:', err.message);
+});
+
+client.on('reconnect', () => {
+    console.log('🔄 Backend sedang mencoba menyambung ulang ke MQTT...');
+});
+
+client.on('offline', () => {
+    console.log('⚠️ Backend terputus dari broker MQTT.');
+});
+// ------------------------------------
+
 client.on('message', (topic, message) => {
     try {
         const rawData = JSON.parse(message.toString());
 
         // 🛠️ TAHAP ADAPTER: Menerjemahkan bahasa IoT Asli ke bahasa Database
         const data = {
-            // Jika alat tidak kirim ID, kita paksa menjadi ID 2 (Silakan sesuaikan dengan ID traktor Anda di DB)
-            id_alat: rawData.id_alat || 2, 
-            
-            // Logika Cerdas: Jika tegangan aki > 5V, anggap mesin ON. Jika tidak ada tegangan, default 'ON' sementara.
-            status_mesin: rawData.status_mesin || (rawData.voltage > 0 ? 'ON' : 'OFF'), 
-            
+            // Jika alat tidak kirim ID, kita paksa menjadi ID 5 (Silakan sesuaikan dengan ID traktor Anda di DB)
+            id_alat: rawData.id_alat, 
             lat: rawData.lat,
-            
-            // Baca "lng" dari IoT asli, atau "long" dari simulator
             long: rawData.lng || rawData.long, 
-            
-            voltage: rawData.voltage || 0
+            tegangan: rawData.tegangan || 0,
+            arus: rawData.arus || 0,
+            status_mesin: rawData.status_mesin || (rawData.tegangan > 0 ? 'ON' : 'OFF'),
         };
 
-        // 🛡️ TAHAP FILTER KEAMANAN: Jangan proses jika GPS belum Lock!
-        // Mencegah koordinat (0, 0) masuk dan merusak tampilan peta.
-        // if (!data.lat || !data.long || (data.lat === 0 && data.long === 0)) {
-        //     console.log(`⏳ [ID:${data.id_alat}] Sinyal GPS belum Lock. Data lokasi diabaikan sementara...`);
-        //     return; 
-        // }
+        // 🛡️ TAHAP FILTER KEAMANAN: Jangan proses jika GPS belum Lock! Mencegah koordinat (0, 0) masuk dan merusak tampilan peta.
+        if (!data.lat || !data.long || (data.lat === 0 && data.long === 0)) {
+            console.log(`⏳ [ID:${data.id_alat}] Sinyal GPS belum Lock. Data lokasi diabaikan sementara...`);
+            return; 
+        }
 
-        console.log(`📡 Data Asli Masuk [ID:${data.id_alat} | Mesin:${data.status_mesin} | Voltase:${data.voltage}V]`);
+        console.log(`📡 Data Asli Masuk [ID:${data.id_alat} | Koordinat: ${data.lat}, ${data.long} | Voltase:${data.tegangan}V | Arus:${data.arus}mA | Mesin:${data.status_mesin}]`);
 
         // LANGKAH 1: Ambil data posisi TERAKHIR
         const queryLastPos = `SELECT latitude, longitude FROM alsintan WHERE alsintan_id = $1`;

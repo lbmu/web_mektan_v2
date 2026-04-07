@@ -61,6 +61,7 @@ const connectMqtt = () => {
                 // Update tampilan tabel secara langsung (Reaktif)
                 items.value[index].status_mesin = data.status_mesin;
                 items.value[index].tegangan_aki = data.tegangan || data.volt; // Sesuaikan dengan payload simulator
+                items.value[index].arus = data.arus || data.current; // Sesuaikan dengan payload simulator
             }
         } catch (err) {
             console.error("MQTT parsing error:", err);
@@ -160,7 +161,7 @@ onUnmounted(() => {
                 </td>
                 <td>
                    <small class="d-block"><i class="bi bi-battery-charging text-warning"></i> {{ item.tegangan_aki || '0' }} V</small>
-                   <small class="d-block"><i class="bi bi-speedometer2 text-primary"></i> {{ item.total_hour_meter || '0' }} Jam</small>
+                   <small class="d-block"><i class="bi bi-lightning-charge-fill text-primary"></i> {{ item.arus|| '0' }} mAh</small>
                 </td>
                 <td>
                    <span class="badge bg-light text-dark border">{{ item.status_operasional }}</span>

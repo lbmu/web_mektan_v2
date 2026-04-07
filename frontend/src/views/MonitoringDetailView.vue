@@ -151,37 +151,40 @@ const connectMqtt = () => {
         try {
             const data = JSON.parse(message.toString());
             
-            // --- PERBAIKAN BUG KRITIS ---
-            // Kita cocokkan 'kode_perangkat' dari MQTT dengan 'kode_perangkat' traktor yang sedang dibuka
-            if (infoAlat.value && data.kode_perangkat === infoAlat.value.kode_perangkat) {
+            // KUNCI UTAMA: Cocokkan id_alat dari MQTT dengan ID halaman saat ini
+            if (data.id_alat == id) {
                 
-                // 1. UPDATE STATUS MESIN
+                // 1. UPDATE STATUS REAKTIF
                 statusMesin.value = data.status_mesin;
 
-                // 2. TANGKAP KOORDINAT BARU
-                const newPoint = [parseFloat(data.lat), parseFloat(data.long)];
+                const isGpsValid = data.lat !== 0 && data.long !== 0;
+                
+                if (isGpsValid) {
+                    const newPoint = [parseFloat(data.lat), parseFloat(data.long)];
 
-                // 3. GESER MARKER TRAKTOR
-                if (marker && activeTab.value === 'LIVE') {
-                    marker.setLatLng(newPoint);
-                    map.panTo(newPoint);
-                }
-
-                // 4. GAMBAR GARIS & HITUNG JARAK (HANYA JIKA MESIN ON)
-                if (statusMesin.value === 'ON') {
-                    if (activeTab.value === 'LIVE' && polyline) {
-                        polyline.addLatLng(newPoint);
+                    // 2. GESER MARKER TRAKTOR
+                    if (marker && activeTab.value === 'LIVE') {
+                        marker.setLatLng(newPoint);
+                        map.panTo(newPoint); // Peta otomatis mengikuti traktor
                     }
-                    
-                    const lastPoint = historyCoordsLive.value[historyCoordsLive.value.length - 1];
-                    if (lastPoint) {
-                        const dist = map.distance(lastPoint, newPoint);
-                        // Filter GPS Noise
-                        if (dist > 0.5) {
-                            totalJarakLive.value += dist;
+
+                    // 3. GAMBAR GARIS & HITUNG JARAK (Hanya jika mesin ON)
+                    if (statusMesin.value === 'ON') {
+                        if (activeTab.value === 'LIVE' && polyline) {
+                            polyline.addLatLng(newPoint);
                         }
+                        
+                        // Kalkulasi jarak
+                        if (historyCoordsLive.value.length > 0) {
+                            const lastPoint = historyCoordsLive.value[historyCoordsLive.value.length - 1];
+                            const dist = map.distance(lastPoint, newPoint);
+                            // Filter jarak minimal 0.5 meter untuk mencegah noise GPS
+                            if (dist > 0.5) {
+                                totalJarakLive.value += dist;
+                            }
+                        }
+                        historyCoordsLive.value.push(newPoint);
                     }
-                    historyCoordsLive.value.push(newPoint);
                 }
             }
         } catch (err) {
@@ -189,6 +192,7 @@ const connectMqtt = () => {
         }
     });
 };
+
 
 // --- COMPUTED ESTIMASI ---
 const luasHektar = computed(() => {
