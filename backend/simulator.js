@@ -3,7 +3,7 @@ const readline = require('readline');
 
 
 const CONFIG = {
-    ID_ALAT: 5, 
+    ID_ALAT: 1, 
     TOPIC: 'project-mektan/v1/data', 
     BROKER: 'mqtts://a9ff4edaea834015978986b00dc65210.s1.eu.hivemq.cloud:8883', 
     USERNAME: 'simon_alsintan',

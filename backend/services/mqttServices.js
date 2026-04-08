@@ -56,7 +56,7 @@ client.on('message', (topic, message) => {
         // 🛠️ TAHAP ADAPTER: Menerjemahkan bahasa IoT Asli ke bahasa Database
         const data = {
             // Jika alat tidak kirim ID, kita paksa menjadi ID 5 (Silakan sesuaikan dengan ID traktor Anda di DB)
-            id_alat: rawData.id_alat, 
+            id_alat: rawData.id_alat || 5, 
             lat: rawData.lat,
             long: rawData.lng || rawData.long, 
             tegangan: rawData.tegangan || 0,
