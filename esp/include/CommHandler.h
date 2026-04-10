@@ -35,6 +35,7 @@ public:
         int *usat = 0,
         float *accuracy = 0
     );
+    unsigned long getNetworkTimestamp();
 
 private:
     int _rxPin;

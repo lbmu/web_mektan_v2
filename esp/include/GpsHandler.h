@@ -23,6 +23,7 @@ public:
     double getLat();
     double getLng();
     void echoRawData();
+    unsigned long getUnixTime();
 
 private:
     int _rxPin;

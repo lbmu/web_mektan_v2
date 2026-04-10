@@ -1,5 +1,6 @@
 #include "GpsHandler.h"
 #include "espOTA.h"
+#include  <time.h>
 
 GpsHandler::GpsHandler(int rxPin, int txPin, int serialPort): _rxPin(rxPin), _txPin(txPin) {
     _serial = new HardwareSerial(serialPort);
@@ -72,4 +73,19 @@ void GpsHandler::echoRawData() {
         char c = _serial->read();
         DEBUG_WRITE(c); // Kirim langsung ke monitor (Passthrough)
     }
+}
+
+unsigned long GpsHandler::getUnixTime() {
+    if (!_gps.date.isValid() || !_gps.time.isValid() || _gps.date.year() < 2000) return 0;
+    struct tm t = {0};
+
+    t.tm_year = _gps.date.year() - 1900;
+    t.tm_mon = _gps.date.month() - 1;
+    t.tm_mday = _gps.date.day();
+
+    t.tm_hour = _gps.time.hour();
+    t.tm_min = _gps.time.minute();
+    t.tm_sec = _gps.time.second();
+
+    return mktime(&t);
 }

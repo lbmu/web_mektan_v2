@@ -89,7 +89,15 @@ Untuk memulai proyek menggunakan PlatformIO
 2. QUICK ACCESS > PIO Home > Open Projects
 3. Pilih folder `esp` di Repository (Pastikan terdapat file `platformio.ini`)
 4. Build (Opsional)
-
+5. rename/tambahkan file `secrets.example.h` di folder `include` menjadi `secrets.h`
+    ```
+    mv secrets.example.h secrets.h
+    ```
+    atau
+    ```
+    cp secrets.example.h secrets.h
+    ```
+    
 ## Struktur Kode
 
 Proyek ini menggunakan framework arduino yang dibungkus oleh OOP C++. Setiap sub-sistem diberikan kelasnya masing-masing.

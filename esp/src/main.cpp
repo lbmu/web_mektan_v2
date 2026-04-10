@@ -57,7 +57,7 @@ struct SharedData {
 struct bufferedData {
     double lat;
     double lng;
-    float power_mW;
+    float current_mA;
     float voltage_V;
     unsigned long timestamp;
 };
@@ -70,7 +70,31 @@ const int MAX_QUEUE_SIZE = 200;
 
 // --- FUNCTION ---
 unsigned long getCurrentTimestamp() {
-    return time(NULL);
+    unsigned long ts = 0;
+
+    // ambil dari modul SIM
+    ts = comm.getNetworkTimestamp();
+    if (ts > 1000000000) {
+        // DEBUG_PRINT("✅ [TIME] Source: SIM7600 | UNIX Epoch: ");
+        // DEBUG_PRINTLN(ts);
+        return ts;
+    }
+
+    // ambil dari gps
+    if (gpsHandler.isValid()) {
+        ts = gpsHandler.getUnixTime();
+        if (ts > 1000000000) {
+        // DEBUG_PRINT("✅ [TIME] Source: GPS | UNIX Epoch: ");
+        // DEBUG_PRINTLN(ts);
+        return ts;
+        }
+    }
+
+    // pasrah
+    ts = time(NULL);
+    DEBUG_PRINT("⚠️ [TIME] Source: Internal ESP32 (Akurasi Rendah) | UNIX Epoch: ");
+    DEBUG_PRINTLN(ts);
+    return ts;
 }
 
 // --- TASKS ---
@@ -109,6 +133,8 @@ void TaskTelnet(void *pvParameters) {
 }
 
 #endif
+
+// End of Task 0
 
 // Task 1: Telemetry via 4G (MQTT HiveMQ)
 void TaskTelemetry(void *pvParameters) {
@@ -253,7 +279,7 @@ void TaskTelemetry(void *pvParameters) {
             currentData.lat = latestData.lat;
             currentData.lng = latestData.lng;
             currentData.voltage_V = latestData.voltage_V;
-            currentData.power_mW = latestData.power_mW;
+            currentData.current_mA = latestData.current_mA;
             xSemaphoreGive(dataMutex);
         }
 
@@ -270,12 +296,12 @@ void TaskTelemetry(void *pvParameters) {
 
                 // Perakitan JSON data antrean
                 String oldJson = "{";
+                oldJson += "\"id\":" + String(DEVICE_ID) + ",";
                 oldJson += "\"lat\":" + (isnan(oldData.lat) ? "null" : String(oldData.lat, 6)) + ",";
-                oldJson += "\"lng\":" + (isnan(oldData.lng) ? "null" : String(oldData.lng, 6)) + ",";
-                oldJson += "\"voltage\":" + (isnan(oldData.voltage_V) ? "null" : String(oldData.voltage_V, 2)) + ",";
-                oldJson += "\"power\":" + (isnan(oldData.power_mW) ? "null" : String(oldData.power_mW, 2)) + ",";
-                oldJson += "\"engine\":" + String((oldData.voltage_V > 4.0) ? 1 : 0) + ",";
-                oldJson += "\"timestamp\":" + String(oldData.timestamp);
+                oldJson += "\"long\":" + (isnan(oldData.lng) ? "null" : String(oldData.lng, 6)) + ",";
+                oldJson += "\"V\":" + (isnan(oldData.voltage_V) ? "null" : String(oldData.voltage_V, 2)) + ",";
+                oldJson += "\"I\":" + (isnan(oldData.current_mA) ? "null" : String(oldData.current_mA, 2)) + ",";
+                oldJson += "\"ts\":" + String(oldData.timestamp);
                 oldJson += "}";
 
                 // Kirim data buffer
@@ -297,12 +323,12 @@ void TaskTelemetry(void *pvParameters) {
 
             // Kalau gak ada buffer
             String currentJson = "{";
+            currentJson += "\"id\":" + String(DEVICE_ID) + ",";
             currentJson += "\"lat\":" + (isnan(currentData.lat) ? "null" : String(currentData.lat, 6)) + ",";
-            currentJson += "\"lng\":" + (isnan(currentData.lng) ? "null" : String(currentData.lng, 6)) + ",";
-            currentJson += "\"voltage\":" + (isnan(currentData.voltage_V) ? "null" : String(currentData.voltage_V, 2)) + ",";
-            currentJson += "\"power\":" + (isnan(currentData.power_mW) ? "null" : String(currentData.power_mW, 2)) + ",";
-            currentJson += "\"engine\":" + String(isEngineOn ? 1 : 0) + ",";
-            currentJson += "\"timestamp\":" + String(currentData.timestamp);
+            currentJson += "\"long\":" + (isnan(currentData.lng) ? "null" : String(currentData.lng, 6)) + ",";
+            currentJson += "\"V\":" + (isnan(currentData.voltage_V) ? "null" : String(currentData.voltage_V, 2)) + ",";
+            currentJson += "\"I\":" + (isnan(currentData.current_mA) ? "null" : String(currentData.current_mA, 2)) + ",";
+            currentJson += "\"ts\":" + String(currentData.timestamp);
             currentJson += "}";
 
             // Kirim data (real-time)
@@ -389,7 +415,6 @@ void TaskMonitor(void *pvParameters) {
         // --- PRINT DETAILED REPORT ---
         #ifdef REPORT
         DEBUG_PRINTLN("\n--- [TASK] Power & Location Report ---");
-
         DEBUG_PRINT("Bus Voltage : "); DEBUG_PRINT(pData.busVoltage_V); DEBUG_PRINTLN(" V");
         DEBUG_PRINT("Shunt Volt  : "); DEBUG_PRINT(pData.shuntVoltage_mV); DEBUG_PRINTLN(" mV");
         DEBUG_PRINT("Load Voltage: "); DEBUG_PRINT(pData.loadVoltage_V); DEBUG_PRINTLN(" V");
@@ -488,4 +513,4 @@ void loop() {
     vTaskDelete(NULL);
 }
 
-// Ini kalau udah nyampe 500 baris, mikro nya LANGSUNG FREEZE FEATURE. padahal kode udah modular jir, tapi kayanya ga ngaruh :v [masih spaghetti code juga]
+// Ini kalau udah nyampe 500 baris [ternyata sudah] , mikro nya LANGSUNG FREEZE FEATURE. padahal kode udah modular jir, tapi kayanya ga ngaruh :v [masih spaghetti code juga]

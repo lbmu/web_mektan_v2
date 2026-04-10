@@ -161,7 +161,7 @@ git clone https://github.com/lbmu/web_mektan_v2.git
 Di-fork juga boleh
 
 ```
-# command buat forking (git fork gitu)
+# command buat forking (git fork gitu?)
 ```
 
 ### Versioning
@@ -191,34 +191,34 @@ untuk sekarang, upload kode ke repo remote bisa menggunakan script yang sudah di
 
 Jika skrip nya bermasalah, cari tahu sendiri biar sekalian belajar :stuck_out_tongue_closed_eyes:
 
-## Library
+## Arsitektur Kode
+
+### Library
 
 Library digunakan untuk mendukung perkembangan proyek. 
-
-### Perception Layer
 
 Konfigurasi library bisa dilakukan di dalam [file](/esp/platformio.ini) `platformio.ini` bagian `lib_deps`. Explore library yang didukung oleh PlatformIO di PIO Home (Yang logo  alien), dan detail library nya [di sini](https://registry.platformio.org/search?t=library).
 Untuk File Library level *hardware* dapat ditemukan di dalam environment konfigurasi PlatformIO. Defaultnya adalah `.pio/libdeps/nama_board` pada proyek PlatformIO. 
 
-Library yang dipake di edge :sob:
+---
 * Sensor daya: [Adafruit INA219](https://github.com/adafruit/Adafruit_INA219)
 * Sensor GPS: [TinyGPSPlus](https://github.com/mikalhart/TinyGPSPlus)
 * OTA Monitoring: [ESPTelnet](https://github.com/LennartHennigs/ESPTelnet)
-
-### Network Layer
-
-Library buat MQTT dan protokol komunikasi :signal_strength:
-
-Modul SIM:
-
+---
 * Basic Security: [ESP_SSLClient](https://github.com/mobizt/ESP_SSLClient)
 * AT/MQTT Handle: 
   * [PubSubCLient](https://github.com/knolleary/pubsubclient)
   * [TinyGSM](https://github.com/vshymanskyy/TinyGSM)
-
+---
 Backend:
 * Apa aja dul
+---
+Frontend:
+* Apa aja dul
+---
+### Struktur kode
 
+![jir le](https://i.pinimg.com/1200x/3a/52/81/3a5281b2d6fe5e52f87b5f90703d314c.jpg)
 
 ## DOKUMENTASI DAN PANDUAN
 

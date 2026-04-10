@@ -1,5 +1,6 @@
 #include "CommHandler.h"
 #include "espOTA.h"
+#include <time.h>
 
 CommHandler::CommHandler(int rxPin, int txPin, long baudRate, int serialPort) 
     : _rxPin(rxPin), _txPin(txPin), _baudRate(baudRate) {
@@ -139,4 +140,38 @@ bool CommHandler::disableGNSS() {
 bool CommHandler::getGNSSData(float *lat, float *lng, float *speed, float *alt, int *vsat, int *usat, float *accuracy) {
     return _modem->getGPS(lat, lng, speed, alt, vsat, usat, accuracy);
 }
-    
+
+unsigned long CommHandler::getNetworkTimestamp() {
+    int year =0,
+        month = 0,
+        day = 0,
+        hour = 0,
+        min = 0,
+        sec = 0;
+    float timezone = 0;
+
+    if (_modem->getNetworkTime(&year, &month, &day, &hour, &min, &sec, &timezone)) {
+        
+        // Ini output raw
+        // DEBUG_PRINT("🕒 [SIM7600] Raw Network Time: ");
+        // DEBUG_PRINT(year); DEBUG_PRINT("/");
+        // DEBUG_PRINT(month); DEBUG_PRINT("/");
+        // DEBUG_PRINT(day); DEBUG_PRINT(" ");
+        // DEBUG_PRINT(hour); DEBUG_PRINT(":");
+        // DEBUG_PRINT(min); DEBUG_PRINT(":");
+        // DEBUG_PRINTLN(sec);
+
+        // Ini udah keproses
+        struct tm t = {0};
+        t.tm_year = (year > 2000) ? (year - 1900) : (year + 100); // Format C++ (Tahun sejak 1900)
+        t.tm_mon  = month - 1;  // Format C++ (Bulan 0 - 11)
+        t.tm_mday = day;
+        t.tm_hour = hour;
+        t.tm_min  = min;
+        t.tm_sec  = sec;
+
+        unsigned long epoch = mktime(&t);
+        return epoch;
+    }
+    return 0;
+}
