@@ -138,7 +138,7 @@ Sebelum dimulai, sangat disarankan untuk melakukan [pemanasan](https://docs.plat
 
 Pinout sistem terdapat di dalam [header file](/esp/include/pinout.h) `pinout.h`.
 
-![Skematik PCB](/assets/skematik.svg)
+![Skematik PCB](/assets/Schematic_GPS_Tracker_Alsintan_V3_2026-04-20.svg)
 
 ## Periferal Pin
 
