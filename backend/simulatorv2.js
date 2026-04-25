@@ -4,10 +4,12 @@ const readline = require('readline');
 // --- KONFIGURASI SIMULATOR ---
 const CONFIG = {
     // Ganti ID ini sesuai dengan ID alat yang ada di database Anda (misal: 20)
-    ID_ALAT: 20, 
+    ID_ALAT: 1, 
     // Topik MQTT (Harus sama persis dengan Frontend & Backend)
     TOPIC: 'project-mektan/v1/data', 
-    BROKER: 'mqtt://broker.hivemq.com',
+    BROKER: 'mqtts://a9ff4edaea834015978986b00dc65210.s1.eu.hivemq.cloud:8883', 
+    USERNAME: 'simon_alsintan',
+    PASSWORD: 'BPMektanJabar12', 
     // Lokasi Awal (Misal: Tengah Sawah di Subang)
     START_LAT: -6.972258,
     START_LONG: 107.629303
@@ -23,7 +25,11 @@ let state = {
 };
 
 // Setup Koneksi MQTT
-const client = mqtt.connect(CONFIG.BROKER);
+const client = mqtt.connect(CONFIG.BROKER, {
+    username: CONFIG.USERNAME,
+    password: CONFIG.PASSWORD,
+    rejectUnauthorized: false // Membantu menghindari error sertifikat TLS di komputer lokal
+});
 
 client.on('connect', () => {
     console.clear();
