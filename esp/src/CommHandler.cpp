@@ -133,7 +133,7 @@ bool CommHandler::enableGNSS() {
 }
 
 bool CommHandler::disableGNSS() {
-    DEBUG_PRINTLN("Term GNSS Internal SIM7600");
+    DEBUG_PRINT("-");
     return _modem->disableGPS();
 }
 

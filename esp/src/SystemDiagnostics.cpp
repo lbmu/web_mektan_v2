@@ -158,7 +158,7 @@ void SystemDiagnostics::runPerformanceMonitor() {
 
         DEBUG_PRINTLN("======================================================");
 
-        // Delay 5 detik
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        // Delay 10 detik
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
 }

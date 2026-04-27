@@ -82,6 +82,9 @@ Di dalam folder esp, pastikan struktur foldernya sebagai berikut
 └── test            # test environment (tidak/belum digunakan)
 ```
 
+> [!WARNING]
+> PlatformIO mungkin simpel, tapi makan storage. Satu framework/toolchain bisa ratusan MB. Proceed w/ caution
+
 ## Inisialisasi Proyek
 
 Untuk memulai proyek menggunakan PlatformIO

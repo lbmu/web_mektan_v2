@@ -274,20 +274,24 @@ void TaskTelemetry(void *pvParameters) {
         
         // 4. Protokol Publish Data
         bufferedData currentData;
+
         // Sinkronisasi Mutex
         if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
             currentData.lat = latestData.lat;
             currentData.lng = latestData.lng;
             currentData.voltage_V = latestData.voltage_V;
             currentData.current_mA = latestData.current_mA;
-            xSemaphoreGive(dataMutex);
         }
 
         // Ambil timestamp
         currentData.timestamp = getCurrentTimestamp();
 
-        // Cek Koneksi MQTT
-        if (mqttConnected && (millis() - lastPublishTime >= currentPublishInterval)) {
+        ////////////////////////////
+        // Logika Pengiriman data //
+        ////////////////////////////
+
+        // anjay mabar
+        if (lteConnected && mqttConnected && (millis() - lastPublishTime >= currentPublishInterval)) {
             bufferedData oldData;
 
             // Cek data buffer
@@ -330,15 +334,17 @@ void TaskTelemetry(void *pvParameters) {
             currentJson += "\"I\":" + (isnan(currentData.current_mA) ? "null" : String(currentData.current_mA, 2)) + ",";
             currentJson += "\"ts\":" + String(currentData.timestamp);
             currentJson += "}";
-
+            
             // Kirim data (real-time)
             if (comm.publishMQTT(MQTT_TOPIC, currentJson)) {
+                DEBUG_PRINT("✅✅✅");
                 lastPublishTime = millis();
             }
+
         }        
         
-        // Kalau belum ada sinyal
-        else if (!mqttConnected && (millis() - lastPublishTime >= currentPublishInterval)) {
+        // mati dua nya nya 
+        else if (!lteConnected & (millis() - lastPublishTime >= currentPublishInterval)) {
             // Buang dulu kalau buffer penuh
             if (uxQueueSpacesAvailable(dataQueue) == 0) {
                 DEBUG_PRINTLN("⚠️ [BUFFER] Penuh! Membuang data terlama...");
@@ -350,6 +356,20 @@ void TaskTelemetry(void *pvParameters) {
             xQueueSend(dataQueue, &currentData, 0);
             DEBUG_PRINT("💾 [BUFFER] Data disimpan. Total antrean: ");
             DEBUG_PRINTLN(uxQueueMessagesWaiting(dataQueue));
+
+            lastPublishTime = millis();
+        }
+
+        //  modul nyala, mqtt belom
+        else if (lteConnected && !mqttConnected && (millis() - lastPublishTime >= currentPublishInterval)) {
+            // nampung data
+            if (uxQueueSpacesAvailable(dataQueue) == 0) {
+                bufferedData dummy;
+                xQueueReceive(dataQueue, &dummy, 0); // yang lama dibuang
+            }
+
+            xQueueSend(dataQueue, &currentData, 0);
+            DEBUG_PRINTLN("nunggu mqtt...");
 
             lastPublishTime = millis();
         }
@@ -499,6 +519,7 @@ void setup() {
     xTaskCreatePinnedToCore(
         TaskMonitor, "Monitor_Task", 4096, NULL, 1, &monitorHandle, 1
     );
+    // uncomment baris di bawah biar sistemnya keliatan kompleks :v
     diagnostics.run(TEST_PERFORMANCE_MONITOR);
     #endif
     
