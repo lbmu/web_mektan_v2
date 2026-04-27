@@ -8,6 +8,7 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const items = ref([]); 
 const loading = ref(true);
+const selectedAlat = ref(null);
 
 // State Peta & MQTT
 let map = null;
@@ -20,6 +21,23 @@ const MQTT_PORT = Number(import.meta.env.VITE_MQTT_PORT);
 const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
 const MQTT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
 const MQTT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
+
+const currentTime = ref('');
+const currentDate = ref('');
+let clockInterval = null;
+
+const updateClock = () => {
+    const now = new Date();
+    // Format Jam: 14:30:45 WIB
+    currentTime.value = now.toLocaleTimeString('id-ID', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+    }) + ' WIB';
+
+    // Format Tanggal: Selasa, 14 April 2026
+    currentDate.value = now.toLocaleDateString('id-ID', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+};
 
 // --- 1. FETCH DATA UTAMA ---
 const fetchData = async () => {
@@ -88,6 +106,8 @@ const options = {
         items.value[index].status_mesin = data.status_mesin;
         items.value[index].latitude = data.lat;
         items.value[index].longitude = data.long;
+        items.value[index].tegangan_aki = data.tegangan; 
+        items.value[index].arus = data.arus;
         
         // Update Marker Peta
         updateMarker(data.id_alat, data.lat, data.long, data.status_mesin);
@@ -114,6 +134,14 @@ const initGlobalMap = () => {
     });
 
     if (group.length > 0) map.fitBounds(group, { padding: [30, 30] });
+
+    const mapContainer = document.getElementById('global-map');
+    if (mapContainer) {
+        const resizeObserver = new ResizeObserver(() => {
+            if (map) map.invalidateSize();
+        });
+        resizeObserver.observe(mapContainer);
+    }
 };
 
 const createMarker = (alat) => {
@@ -146,7 +174,10 @@ const createMarker = (alat) => {
         .addTo(map)
         .bindPopup(`<b>${alat.nama_alat}</b><br>
                     Status: <b class="${colorClass}">${alat.status_mesin}</b><br>
-                    Lat: ${lat.toFixed(4)}, Long: ${lng.toFixed(4)}`);
+                    Lat: ${lat.toFixed(4)}, Long: ${lng.toFixed(4)}`)
+        .on('click', () => {
+            selectedAlat.value = alat;
+        });
 };
 
 const updateMarker = (id, lat, lng, status) => {
@@ -227,18 +258,54 @@ const initChart = () => {
 
 const goToDetail = (id) => router.push({ name: 'monitoring-detail', params: { id } });
 
-onMounted(() => fetchData());
-onUnmounted(() => { if(mqttClient) mqttClient.end(); });
+onMounted(() => {
+    fetchData();
+    // Jalankan jam segera, lalu perbarui setiap 1 detik (1000 ms)
+    updateClock();
+    clockInterval = setInterval(updateClock, 1000);
+});
+
+onUnmounted(() => { 
+    if(mqttClient) mqttClient.end(); 
+    // Hapus interval jam saat pindah halaman
+    if(clockInterval) clearInterval(clockInterval);
+});
 </script>
 
 <template>
   <div class="container-fluid pb-5">
     
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h3 class="fw-bold text-dark mb-0">📡 Dashboard Utama</h3>
-        <p class="text-muted small">Pusat informasi dan kontrol monitoring real-time Balai Mektan.</p>
-      </div>
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        
+        <div>
+            <h3 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-broadcast text-primary"></i> 
+                Pusat Kendali Si-Alsintan
+            </h3>
+            <p class="text-muted mb-0" style="font-size: 0.9rem;">
+                Monitoring Armada & Telemetri Real-Time Balai Mektan Jawa Barat
+            </p>
+        </div>
+
+        <div class="d-flex align-items-center gap-3 bg-light px-4 py-2 rounded-pill shadow-sm border">
+            
+            <div class="d-flex align-items-center gap-2 border-end pe-3">
+                <div class="spinner-grow text-success" style="width: 12px; height: 12px;" role="status">
+                    <span class="visually-hidden">Online</span>
+                </div>
+                <span class="fw-bold text-success" style="font-size: 0.8rem; letter-spacing: 1px;">SISTEM ONLINE</span>
+            </div>
+
+            <div class="text-end">
+                <div class="fw-bold text-dark" style="font-size: 1.1rem; line-height: 1.2;">
+                    {{ currentTime }}
+                </div>
+                <div class="text-muted" style="font-size: 0.75rem;">
+                    {{ currentDate }}
+                </div>
+            </div>
+
+        </div>
     </div>
 
     <div v-if="loading" class="text-center py-5">
@@ -300,9 +367,6 @@ onUnmounted(() => { if(mqttClient) mqttClient.end(); });
                     <div class="card-body">
                         <h6 :class="warningList.length > 0 ? 'text-white-50' : 'text-muted'">Perlu Perhatian</h6>
                         <h2 class="fw-bold mb-0">{{ warningList.length }} <small class="fs-6">Isu</small></h2>
-                        <small v-if="warningList.length > 0" class="d-block mt-1 text-white-50" style="font-size: 10px;">
-                            *Aki lemah (< 11.5V) atau unit rusak
-                        </small>
                     </div>
                 </div>
             </div>
@@ -310,13 +374,13 @@ onUnmounted(() => { if(mqttClient) mqttClient.end(); });
 
         <div class="row g-3 mb-4">
             <div class="col-lg-8">
-                <div class="card border-0 shadow-sm h-100">
+                <div class="card border-0 shadow-sm h-100 d-flex flex-column">
                     <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
                         <span><i class="bi bi-map me-2"></i> Sebaran Armada Keseluruhan</span>
                         <span class="badge bg-success" v-if="totalLive > 0"><i class="bi bi-broadcast"></i> Live Mode Active</span>
                     </div>
-                    <div class="card-body p-0">
-                        <div id="global-map" style="height: 450px; width: 100%; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;"></div>
+                    <div class="card-body p-0 d-flex flex-column flex-grow-1">
+                        <div id="global-map" class="flex-grow-1" style="min-height: 450px; width: 100%; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;"></div>
                     </div>
                 </div>
             </div>
@@ -337,6 +401,47 @@ onUnmounted(() => { if(mqttClient) mqttClient.end(); });
                         </div>
                     </div>
                     
+                    <div class="card border-0 shadow-sm flex-fill" style="min-height: 130px;">
+                        <div class="card-header bg-dark text-white fw-bold py-2 small d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-cpu-fill me-1 text-info"></i> Telemetri Unit</span>
+                            <span class="badge bg-secondary" v-if="!selectedAlat">Standby</span>
+                            <span class="badge bg-primary" v-else>{{ selectedAlat.kode_perangkat }}</span>
+                        </div>
+                        
+                        <div class="card-body p-3 d-flex flex-column justify-content-center align-items-center" v-if="!selectedAlat">
+                            <i class="bi bi-hand-index-thumb fs-3 text-muted opacity-50 mb-1"></i>
+                            <span class="text-muted small text-center">Klik marker traktor di peta untuk memantau kelistrikan.</span>
+                        </div>
+
+                        <div class="card-body p-2 d-flex flex-column justify-content-center" v-else>
+                            <div class="row g-0 text-center align-items-center">
+                                <div class="col-6 border-end px-2">
+                                    <small class="text-muted fw-bold d-block mb-1" style="font-size: 10px; letter-spacing: 0.5px;">VOLTASE AKI</small>
+                                    <div class="fw-bolder" :class="(selectedAlat.tegangan_aki || 0) < 11.5 ? 'text-danger' : 'text-success'" style="font-size: 1.8rem; line-height: 1;">
+                                        {{ selectedAlat.tegangan_aki || 0 }}<span class="fs-6 text-muted fw-normal ms-1">V</span>
+                                    </div>
+                                    <div class="progress mt-2 mx-auto" style="height: 5px; width: 70%;">
+                                        <div class="progress-bar" 
+                                             :class="(selectedAlat.tegangan_aki || 0) < 11.5 ? 'bg-danger' : 'bg-success'" 
+                                             :style="{ width: Math.min(((selectedAlat.tegangan_aki || 0) / 14) * 100, 100) + '%' }">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6 px-2">
+                                    <small class="text-muted fw-bold d-block mb-1" style="font-size: 10px; letter-spacing: 0.5px;">ARUS BEBAN</small>
+                                    <div class="fw-bolder text-info" style="font-size: 1.8rem; line-height: 1;">
+                                        {{ selectedAlat.arus || 0 }}<span class="fs-6 text-muted fw-normal ms-1">A</span>
+                                    </div>
+                                    <div class="mt-2">
+                                        <span class="badge" :class="selectedAlat.status_mesin === 'ON' ? 'bg-primary' : 'bg-secondary'" style="font-size: 9px;">
+                                            {{ selectedAlat.status_mesin === 'ON' ? 'MESIN AKTIF' : 'IDLE' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="card border-0 shadow-sm flex-fill">
                         <div class="card-header bg-danger text-white fw-bold py-2 small d-flex justify-content-between align-items-center">
                             <span><i class="bi bi-exclamation-triangle-fill me-1"></i> Log Peringatan</span>
@@ -367,7 +472,9 @@ onUnmounted(() => { if(mqttClient) mqttClient.end(); });
                 </div>
             </div>
         </div>
-
+        <div class="text-center mt-4 pt-3 border-top text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+            &copy; 2026 Balai Pengembangan Mekanisasi Pertanian - Pemprov Jawa Barat. Versi 1.1.0
+        </div>
     </div>
   </div>
 </template>
