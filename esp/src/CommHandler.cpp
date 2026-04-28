@@ -128,12 +128,12 @@ void CommHandler::serialPassthrough() {
  */
 
 bool CommHandler::enableGNSS() {
-    DEBUG_PRINT("+");
+    // DEBUG_PRINT("+");
     return _modem->enableGPS();
 }
 
 bool CommHandler::disableGNSS() {
-    DEBUG_PRINT("-");
+    // DEBUG_PRINT("-");
     return _modem->disableGPS();
 }
 
