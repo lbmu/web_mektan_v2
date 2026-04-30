@@ -33,6 +33,7 @@
 #define RUN_TASK // <- Buat run task biasa
 // #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
 // #define REPORT
+// #define PAPER
 
 // Instansiasi Objek Modul Baru
 ESP_OTA Ota;
@@ -235,10 +236,10 @@ void TaskTelemetry(void *pvParameters) {
          */
 
         bool m8nStatus = true;
-        // if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+        if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
             m8nStatus = latestData.isM8NActive;
-            // xSemaphoreGive(dataMutex);
-        // }
+            xSemaphoreGive(dataMutex);
+        }
         
         // cek status modul GPS
         if (!m8nStatus) {
@@ -248,23 +249,23 @@ void TaskTelemetry(void *pvParameters) {
 
             // Ambil koordinat lewat modul SIM
             if (comm.getGNSSData(&simLat, &simLng)) {
-                // if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+                if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
                     latestData.lat = simLat;
                     latestData.lng = simLng;
                     latestData.gpsUpdated = true;
-                    // xSemaphoreGive(dataMutex);
-                // }
+                    xSemaphoreGive(dataMutex);
+                }
                 // DEBUG_PRINT("🛰️!");
             }
 
             // Kalau gak bisa nangkep koordinat, return NaN
             else {
-                // if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+                if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
                     latestData.lat = NAN;
                     latestData.lng = NAN;
                     latestData.gpsUpdated = false;
-                //     xSemaphoreGive(dataMutex);
-                // }
+                    xSemaphoreGive(dataMutex);
+                }
             }
         }
 
@@ -280,15 +281,15 @@ void TaskTelemetry(void *pvParameters) {
         unsigned long startTime = micros();
 
         // Sinkronisasi Mutex
-        // if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+        if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
             latency = micros() - startTime;
             currentData.lat = latestData.lat;
             currentData.lng = latestData.lng;
             currentData.voltage_V = latestData.voltage_V;
             currentData.current_mA = latestData.current_mA;
         
-        //     xSemaphoreGive(dataMutex);
-        // }
+            xSemaphoreGive(dataMutex);
+        }
 
         // Ambil timestamp
         currentData.timestamp = getCurrentTimestamp();
@@ -348,6 +349,7 @@ void TaskTelemetry(void *pvParameters) {
                 lastPublishTime = millis();
             }
             
+            #ifdef PAPER
             if (sampleCount < 500) {
                 sampleCount++;
                 DEBUG_PRINT(sampleCount);
@@ -356,6 +358,7 @@ void TaskTelemetry(void *pvParameters) {
                 DEBUG_PRINT(";");
                 DEBUG_PRINTLN(currentJson);
             }
+            #endif
         }        
         
         // mati dua nya nya 
@@ -402,7 +405,7 @@ void TaskGPS(void *pvParameters) {
         if (gpsHandler.update()) {
             
             // Ambil Mutex
-            // if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+            if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
                 // Update data jika lokasi valid
                 if (gpsHandler.isValid() && gpsHandler.getAge() < 5000) {
                     latestData.lat = gpsHandler.getLat();
@@ -417,8 +420,8 @@ void TaskGPS(void *pvParameters) {
                     // latestData.gpsUpdated = false;
                 }
 
-            //     xSemaphoreGive(dataMutex);
-            // }
+                xSemaphoreGive(dataMutex);
+            }
         }
         vTaskDelay(10 / portTICK_PERIOD_MS); 
     }
@@ -435,7 +438,7 @@ void TaskMonitor(void *pvParameters) {
         double currentLng = 0.0;
         bool validGPS = false;
 
-        // if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+        if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
             currentLat = latestData.lat;
             currentLng = latestData.lng;
             validGPS = latestData.gpsUpdated;
@@ -444,8 +447,8 @@ void TaskMonitor(void *pvParameters) {
             latestData.voltage_V = pData.loadVoltage_V;
             latestData.current_mA = pData.current_mA;
             
-        //     xSemaphoreGive(dataMutex);
-        // }
+            xSemaphoreGive(dataMutex);
+        }
 
         // --- PRINT DETAILED REPORT ---
         #ifdef REPORT
@@ -535,7 +538,7 @@ void setup() {
         TaskMonitor, "Monitor_Task", 4096, NULL, 1, &monitorHandle, 1
     );
     // uncomment baris di bawah biar sistemnya keliatan kompleks :v
-    // diagnostics.run(TEST_PERFORMANCE_MONITOR);
+    diagnostics.run(TEST_PERFORMANCE_MONITOR);
     #endif
     
     // Gunakan untuk diagnosis sistem
