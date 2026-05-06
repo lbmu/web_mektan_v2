@@ -15,6 +15,7 @@ let map = null;
 let markers = {}; 
 let mqttClient = null;
 let chartInstance = null;
+let rpmChartInstance = null;
 
 const MQTT_HOST = import.meta.env.VITE_MQTT_HOST;
 const MQTT_PORT = Number(import.meta.env.VITE_MQTT_PORT);
@@ -108,7 +109,14 @@ const options = {
         items.value[index].longitude = data.long;
         items.value[index].tegangan_aki = data.tegangan; 
         items.value[index].arus = data.arus;
+        items.value[index].rpm = data.rpm || 0;
+        items.value[index].bbm_persen = data.bbm_persen || 0;
         
+        if (selectedAlat.value && selectedAlat.value.alsintan_id == data.id_alat) {
+            selectedAlat.value = items.value[index];
+            nextTick(() => initRpmChart());
+        }
+
         // Update Marker Peta
         updateMarker(data.id_alat, data.lat, data.long, data.status_mesin);
         
@@ -256,6 +264,43 @@ const initChart = () => {
     }
 };
 
+const initRpmChart = () => {
+    const ctx = document.getElementById('rpmGauge');
+    if (!ctx || !selectedAlat.value) return;
+
+    const rpmValue = selectedAlat.value.rpm || 0;
+    const data = {
+        datasets: [{
+            data: [rpmValue, 3000 - rpmValue],
+            backgroundColor: [
+                rpmValue > 2400 ? '#dc3545' : '#198754', // Merah jika > 2400 RPM
+                '#e9ecef'
+            ],
+            borderWidth: 0,
+            circumference: 180,
+            rotation: 270,
+            cutout: '85%'
+        }]
+    };
+
+    if (rpmChartInstance) {
+        rpmChartInstance.data.datasets[0].data = [rpmValue, 3000 - rpmValue];
+        rpmChartInstance.data.datasets[0].backgroundColor[0] = rpmValue > 2400 ? '#dc3545' : '#198754';
+        rpmChartInstance.update('none'); // Update tanpa animasi agar ringan
+    } else {
+        rpmChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { tooltip: { enabled: false }, legend: { display: false } },
+                animation: { duration: 0 }
+            }
+        });
+    }
+};
+
 const goToDetail = (id) => router.push({ name: 'monitoring-detail', params: { id } });
 
 onMounted(() => {
@@ -276,7 +321,6 @@ onUnmounted(() => {
   <div class="container-fluid pb-5">
     
     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-        
         <div>
             <h3 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
                 <i class="bi bi-broadcast text-primary"></i> 
@@ -288,14 +332,12 @@ onUnmounted(() => {
         </div>
 
         <div class="d-flex align-items-center gap-3 bg-light px-4 py-2 rounded-pill shadow-sm border">
-            
             <div class="d-flex align-items-center gap-2 border-end pe-3">
                 <div class="spinner-grow text-success" style="width: 12px; height: 12px;" role="status">
                     <span class="visually-hidden">Online</span>
                 </div>
                 <span class="fw-bold text-success" style="font-size: 0.8rem; letter-spacing: 1px;">SISTEM ONLINE</span>
             </div>
-
             <div class="text-end">
                 <div class="fw-bold text-dark" style="font-size: 1.1rem; line-height: 1.2;">
                     {{ currentTime }}
@@ -304,7 +346,6 @@ onUnmounted(() => {
                     {{ currentDate }}
                 </div>
             </div>
-
         </div>
     </div>
 
@@ -314,7 +355,6 @@ onUnmounted(() => {
 
     <div v-else>
         <div class="row g-3 mb-4">
-            
             <div class="col-md-3">
                 <div class="card border-0 shadow-sm bg-primary text-white h-100">
                     <div class="card-body">
@@ -323,49 +363,37 @@ onUnmounted(() => {
                     </div>
                 </div>
             </div>
-            
             <div class="col-md-3">
                 <div class="card border-0 shadow-sm bg-success text-white h-100 overflow-hidden position-relative">
                     <div class="position-absolute top-0 end-0 p-3 opacity-25">
                         <i class="bi bi-broadcast fs-1"></i>
                     </div>
-
                     <div class="card-body position-relative z-1">
                         <div class="d-flex justify-content-between align-items-center">
                             <div>
                                 <h6 class="text-white-50">Sedang Aktif</h6>
                                 <h2 class="fw-bold mb-0">{{ totalLive }} <small class="fs-6">Unit</small></h2>
                             </div>
-                            
                             <div v-if="totalLive > 0" class="radar-container">
                                 <div class="radar-ring"></div>
                                 <div class="radar-ring delay-1"></div>
-                                <!-- <i class="bi bi-activity position-relative z-2 fs-3"></i> -->
-                            </div>
-                            <div v-else class="opacity-50">
-                                <!-- <i class="bi bi-power fs-2 opacity-50"></i> -->
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
             <div class="col-md-3">
                 <div class="card border-0 shadow-sm bg-info text-white h-100 position-relative overflow-hidden">
-                    <div class="position-absolute bottom-0 end-0 p-2 opacity-25" style="transform: rotate(-15deg) scale(1.5);">
-                        
-                    </div>
                     <div class="card-body position-relative z-1">
                         <h6 class="text-white-50 mb-2 text-uppercase fw-bold" style="font-size: 11px;">Total Cakupan Lahan</h6>
                         <h2 class="fw-bold mb-0">{{ totalLuasLahanGlobal }} <small class="fs-6">Ha</small></h2>
                     </div>
                 </div>
             </div>
-
             <div class="col-md-3">
-                <div class="card border-0 shadow-sm h-100" :class="warningList.length > 0 ? 'bg-danger text-white' : 'bg-danger text-white'">
+                <div class="card border-0 shadow-sm h-100 bg-danger text-white">
                     <div class="card-body">
-                        <h6 :class="warningList.length > 0 ? 'text-white-50' : 'text-muted'">Perlu Perhatian</h6>
+                        <h6 class="text-white-50">Perlu Perhatian</h6>
                         <h2 class="fw-bold mb-0">{{ warningList.length }} <small class="fs-6">Isu</small></h2>
                     </div>
                 </div>
@@ -391,87 +419,102 @@ onUnmounted(() => {
                     <div class="card border-0 shadow-sm flex-fill">
                         <div class="card-header bg-white fw-bold py-3"><i class="bi bi-pie-chart-fill me-2 text-primary"></i> Rasio Kondisi Fisik</div>
                         <div class="card-body">
-                            <div style="height: 220px; position: relative;">
+                            <div style="height: 200px; position: relative;">
                                 <canvas id="statusChart"></canvas>
                                 <div class="position-absolute start-50 translate-middle text-center" style="top: 35%; pointer-events: none;">
-                                    <div class="fw-bolder" style="font-size: 3rem; color: #1e293b; line-height: 1;">{{ totalAset }}</div>
-                                    <div class="text-uppercase fw-bold" style="font-size: 0.7rem; color: #94a3b8; letter-spacing: 2px; margin-top: 2px;">Unit</div>
+                                    <div class="fw-bolder" style="font-size: 2.5rem; color: #1e293b; line-height: 1;">{{ totalAset }}</div>
+                                    <div class="text-uppercase fw-bold" style="font-size: 0.6rem; color: #94a3b8; letter-spacing: 2px;">Unit</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="card border-0 shadow-sm flex-fill" style="min-height: 130px;">
+                    <div class="card border-0 shadow-sm flex-fill">
                         <div class="card-header bg-dark text-white fw-bold py-2 small d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-cpu-fill me-1 text-info"></i> Telemetri Unit</span>
+                            <span><i class="bi bi-speedometer2 me-1 text-info"></i> Telemetri Live</span>
                             <span class="badge bg-secondary" v-if="!selectedAlat">Standby</span>
                             <span class="badge bg-primary" v-else>{{ selectedAlat.kode_perangkat }}</span>
                         </div>
                         
                         <div class="card-body p-3 d-flex flex-column justify-content-center align-items-center" v-if="!selectedAlat">
-                            <i class="bi bi-hand-index-thumb fs-3 text-muted opacity-50 mb-1"></i>
-                            <span class="text-muted small text-center">Klik marker traktor di peta untuk memantau kelistrikan.</span>
+                            <i class="bi bi-cursor-fill fs-3 text-muted opacity-50 mb-2"></i>
+                            <span class="text-muted small text-center px-3">Pilih unit pada peta untuk memantau performa mesin.</span>
                         </div>
 
-                        <div class="card-body p-2 d-flex flex-column justify-content-center" v-else>
-                            <div class="row g-0 text-center align-items-center">
-                                <div class="col-6 border-end px-2">
-                                    <small class="text-muted fw-bold d-block mb-1" style="font-size: 10px; letter-spacing: 0.5px;">VOLTASE AKI</small>
-                                    <div class="fw-bolder" :class="(selectedAlat.tegangan_aki || 0) < 11.5 ? 'text-danger' : 'text-success'" style="font-size: 1.8rem; line-height: 1;">
-                                        {{ selectedAlat.tegangan_aki || 0 }}<span class="fs-6 text-muted fw-normal ms-1">V</span>
-                                    </div>
-                                    <div class="progress mt-2 mx-auto" style="height: 5px; width: 70%;">
-                                        <div class="progress-bar" 
-                                             :class="(selectedAlat.tegangan_aki || 0) < 11.5 ? 'bg-danger' : 'bg-success'" 
-                                             :style="{ width: Math.min(((selectedAlat.tegangan_aki || 0) / 14) * 100, 100) + '%' }">
-                                        </div>
-                                    </div>
+                        <div class="card-body p-3 d-flex flex-column justify-content-center" v-else>
+                            
+                            <div class="row g-0 mb-3 border-bottom pb-2">
+                                <div class="col-6 border-end text-center px-2">
+                                    <small class="text-muted fw-bold d-block" style="font-size: 9px; letter-spacing: 0.5px;">VOLTASE AKI</small>
+                                    <span class="fw-bolder" :class="selectedAlat.tegangan_aki < 11.5 ? 'text-danger' : 'text-success'" style="font-size: 1.2rem;">
+                                        {{ selectedAlat.tegangan_aki }}<span class="fs-6 fw-normal ms-1">V</span>
+                                    </span>
                                 </div>
-                                <div class="col-6 px-2">
-                                    <small class="text-muted fw-bold d-block mb-1" style="font-size: 10px; letter-spacing: 0.5px;">ARUS BEBAN</small>
-                                    <div class="fw-bolder text-info" style="font-size: 1.8rem; line-height: 1;">
-                                        {{ selectedAlat.arus || 0 }}<span class="fs-6 text-muted fw-normal ms-1">A</span>
+                                <div class="col-6 text-center px-2">
+                                    <small class="text-muted fw-bold d-block" style="font-size: 9px; letter-spacing: 0.5px;">ARUS BEBAN</small>
+                                    <span class="fw-bolder text-info" style="font-size: 1.2rem;">
+                                        {{ selectedAlat.arus }}<span class="fs-6 fw-normal ms-1">A</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="position-relative mb-2" style="height: 120px;" v-show="selectedAlat.rpm > 0 || selectedAlat.bbm_persen > 0">
+                                <canvas id="rpmGauge"></canvas>
+                                <div class="position-absolute start-50 translate-middle-x text-center" style="bottom: 5px;">
+                                    <div class="fw-bolder mb-0" style="font-size: 1.8rem; line-height: 1;" :class="(selectedAlat.rpm || 0) > 2400 ? 'text-danger' : 'text-dark'">
+                                        {{ selectedAlat.rpm || 0 }}
                                     </div>
-                                    <div class="mt-2">
-                                        <span class="badge" :class="selectedAlat.status_mesin === 'ON' ? 'bg-primary' : 'bg-secondary'" style="font-size: 9px;">
-                                            {{ selectedAlat.status_mesin === 'ON' ? 'MESIN AKTIF' : 'IDLE' }}
-                                        </span>
+                                    <div class="text-muted fw-bold" style="font-size: 0.6rem; letter-spacing: 1px;">KM/H</div>
+                                </div>
+                            </div>
+
+                            <div class="mt-3" v-show="selectedAlat.rpm > 0 || selectedAlat.bbm_persen > 0">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="fw-bold text-muted" style="font-size: 10px;">LEVEL BAHAN BAKAR</small>
+                                    <small class="fw-bold" :class="(selectedAlat.bbm_persen || 0) < 20 ? 'text-danger' : 'text-warning'">
+                                        {{ selectedAlat.bbm_persen || 0 }}% <span class="text-muted fw-normal">({{ (((selectedAlat.bbm_persen || 0) / 100) * 60).toFixed(1) }}L)</span>
+                                    </small>
+                                </div>
+                                <div class="progress" style="height: 8px; border-radius: 10px;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         :class="(selectedAlat.bbm_persen || 0) < 20 ? 'bg-danger' : 'bg-warning'"
+                                         :style="{ width: (selectedAlat.bbm_persen || 0) + '%' }">
                                     </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
-
                     <div class="card border-0 shadow-sm flex-fill">
                         <div class="card-header bg-danger text-white fw-bold py-2 small d-flex justify-content-between align-items-center">
                             <span><i class="bi bi-exclamation-triangle-fill me-1"></i> Log Peringatan</span>
                             <span class="badge bg-white text-danger">{{ warningList.length }}</span>
                         </div>
-                        <div class="card-body p-0 overflow-auto custom-scrollbar" style="max-height: 160px;">
+                        <div class="card-body p-0 overflow-auto custom-scrollbar" style="max-height: 150px;">
                             <ul class="list-group list-group-flush">
                                 <li v-for="w in warningList" :key="w.alsintan_id" 
                                     class="list-group-item d-flex justify-content-between align-items-center list-group-item-action"
                                     @click="goToDetail(w.alsintan_id)" style="cursor: pointer;">
                                     <div>
-                                        <div class="fw-bold text-danger" style="font-size: 13px;">{{ w.nama_alat }}</div>
-                                        <small class="text-muted" style="font-size:11px;">
+                                        <div class="fw-bold text-danger" style="font-size: 12px;">{{ w.nama_alat }}</div>
+                                        <small class="text-muted" style="font-size:10px;">
                                             Aki: <span :class="w.tegangan_aki < 11.5 ? 'text-danger fw-bold' : ''">{{ w.tegangan_aki }}V</span> | 
-                                            <span :class="w.status_operasional === 'Rusak' ? 'text-danger fw-bold' : ''">{{ w.status_operasional }}</span>
+                                            {{ w.status_operasional }}
                                         </small>
                                     </div>
                                     <i class="bi bi-chevron-right text-muted small"></i>
                                 </li>
                                 <li v-if="warningList.length === 0" class="list-group-item text-center text-muted py-4 border-0">
-                                    <i class="bi bi-check-circle text-success fs-3 d-block mb-1"></i>
-                                    <small>Semua sistem & perangkat aman</small>
+                                    <i class="bi bi-check-circle text-success fs-4 d-block mb-1"></i>
+                                    <small>Sistem aman</small>
                                 </li>
                             </ul>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
+
         <div class="text-center mt-4 pt-3 border-top text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">
             &copy; 2026 Balai Pengembangan Mekanisasi Pertanian - Pemprov Jawa Barat. Versi 1.1.0
         </div>
