@@ -18,6 +18,7 @@ public:
     PowerMonitor();
     bool begin();
     PowerData read(); // Mengembalikan semua data sekaligus
+    // void 
 
 private:
     Adafruit_INA219 _ina219;

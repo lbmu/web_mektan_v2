@@ -44,22 +44,29 @@ SystemDiagnostics diagnostics(&powerMonitor, &gpsHandler, &comm);
 
 // --- SHARED DATA & MUTEX ---
 // Struktur data bersama antar task
+
 struct SharedData {
     double lat;
     double lng;
+    double hdop;
+    int sat;
     float power_mW;
     float voltage_V;
     float current_mA;
     bool gpsUpdated;
     bool isM8NActive;
+    float fuel_R;
 };
 
 // Struktur data buat ngirim paket data
 struct bufferedData {
     double lat;
     double lng;
+    int hdop;
+    int sat;
     float current_mA;
     float voltage_V;
+    float fuel_R;
     unsigned long timestamp;
 };
 
@@ -188,10 +195,23 @@ void TaskTelemetry(void *pvParameters) {
             DEBUG_PRINTLN("📡 [TELEMETRY] Menghubungkan ke Broker HiveMQ...");
             
             // disableCore0WDT();
-            bool isConnected = comm.connectMQTT(MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS);
+            bool isConnected = comm.connectMQTT(MQTT_BROKER_1,
+                                                MQTT_PORT, 
+                                                MQTT_CLIENT_ID, 
+                                                MQTT_USER_1, 
+                                                MQTT_PASS_1
+                                            );
+
+            bool isConnected_2 = comm.connectMQTT(
+                                                MQTT_BROKER_2,
+                                                MQTT_PORT,
+                                                MQTT_CLIENT_ID,
+                                                MQTT_USER_2,
+                                                MQTT_PASS_2
+                                            );
             // enableCore0WDT();
             
-            if (isConnected) {
+            if (isConnected || isConnected_2) {
                 DEBUG_PRINTLN("✅ [TELEMETRY] Terhubung ke Broker! Siap publish data.");
                 mqttConnected = true;
                 mqttFailCount = 0;
@@ -213,65 +233,65 @@ void TaskTelemetry(void *pvParameters) {
         }
 
         // 4. Logika interval kirim data
-        float currentVolt = 0.0;
-        if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
-            currentVolt = latestData.voltage_V;
-            xSemaphoreGive(dataMutex);
-        }
+        // float currentVolt = 0.0;
+        // if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+        //     currentVolt = latestData.voltage_V;
+        //     xSemaphoreGive(dataMutex);
+        // }
         
-        // Hysteresis?
-        if (currentVolt >= ENGINE_ON_V && isEngineOn) {
-            isEngineOn = true;
-            currentPublishInterval = ACTIVE_INTERVAL;
-            DEBUG_PRINT(">");
-        }
-        else if (currentVolt <= ENGINE_OFF_V && !isEngineOn) {
-            isEngineOn = false;
-            currentPublishInterval = HEARTBEAT_INTERVAL;
-            DEBUG_PRINT("<");
-        }
+        // // Hysteresis?
+        // if (currentVolt >= ENGINE_ON_V && isEngineOn) {
+        //     isEngineOn = true;
+        //     currentPublishInterval = ACTIVE_INTERVAL;
+        //     DEBUG_PRINT(">");
+        // }
+        // else if (currentVolt <= ENGINE_OFF_V && !isEngineOn) {
+        //     isEngineOn = false;
+        //     currentPublishInterval = HEARTBEAT_INTERVAL;
+        //     DEBUG_PRINT("<");
+        // }
         
         /* @brief GPS SIM7600G
          * aktif jika M8N rusak (for now)
          */
 
-        bool m8nStatus = true;
-        if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
-            m8nStatus = latestData.isM8NActive;
-            xSemaphoreGive(dataMutex);
-        }
+        // bool m8nStatus = true;
+        // if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+        //     m8nStatus = latestData.isM8NActive;
+        //     xSemaphoreGive(dataMutex);
+        // }
         
         // cek status modul GPS
-        if (!m8nStatus) {
-            float simLat = 0, simLng = 0;
+        // if (!m8nStatus) {
+        //     float simLat = 0, simLng = 0;
 
-            comm.enableGNSS();
+        //     comm.enableGNSS();
 
-            // Ambil koordinat lewat modul SIM
-            if (comm.getGNSSData(&simLat, &simLng)) {
-                if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
-                    latestData.lat = simLat;
-                    latestData.lng = simLng;
-                    latestData.gpsUpdated = true;
-                    xSemaphoreGive(dataMutex);
-                }
-                // DEBUG_PRINT("🛰️!");
-            }
+        //     // Ambil koordinat lewat modul SIM
+        //     if (comm.getGNSSData(&simLat, &simLng)) {
+        //         if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+        //             latestData.lat = simLat;
+        //             latestData.lng = simLng;
+        //             latestData.gpsUpdated = true;
+        //             xSemaphoreGive(dataMutex);
+        //         }
+        //         // DEBUG_PRINT("🛰️!");
+        //     }
 
-            // Kalau gak bisa nangkep koordinat, return NaN
-            else {
-                if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
-                    latestData.lat = NAN;
-                    latestData.lng = NAN;
-                    latestData.gpsUpdated = false;
-                    xSemaphoreGive(dataMutex);
-                }
-            }
-        }
+        //     // Kalau gak bisa nangkep koordinat, return NaN
+        //     else {
+        //         if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+        //             latestData.lat = NAN;
+        //             latestData.lng = NAN;
+        //             latestData.gpsUpdated = false;
+        //             xSemaphoreGive(dataMutex);
+        //         }
+        //     }
+        // }
 
         // Kalau Neo nya udah nyala
-        else 
-            comm.disableGNSS();
+        // else 
+        //     comm.disableGNSS();
         
         // 4. Protokol Publish Data
         bufferedData currentData;
@@ -285,8 +305,11 @@ void TaskTelemetry(void *pvParameters) {
             latency = micros() - startTime;
             currentData.lat = latestData.lat;
             currentData.lng = latestData.lng;
+            currentData.hdop = latestData.hdop;
+            currentData.sat = latestData.sat;
             currentData.voltage_V = latestData.voltage_V;
             currentData.current_mA = latestData.current_mA;
+            currentData.fuel_R = latestData.fuel_R;
         
             xSemaphoreGive(dataMutex);
         }
@@ -337,9 +360,11 @@ void TaskTelemetry(void *pvParameters) {
             String currentJson = "{";
             currentJson += "\"id\":" + String(DEVICE_ID) + ",";
             currentJson += "\"lat\":" + (isnan(currentData.lat) ? "null" : String(currentData.lat, 6)) + ",";
-            currentJson += "\"long\":" + (isnan(currentData.lng) ? "null" : String(currentData.lng, 6)) + ",";
+            currentJson += "\"lng\":" + (isnan(currentData.lng) ? "null" : String(currentData.lng, 6)) + ",";
             currentJson += "\"V\":" + (isnan(currentData.voltage_V) ? "null" : String(currentData.voltage_V, 2)) + ",";
             currentJson += "\"I\":" + (isnan(currentData.current_mA) ? "null" : String(currentData.current_mA, 2)) + ",";
+            currentJson += "\"bbm\":" + (isnan(currentData.fuel_R) ? "null" : String(currentData.fuel_R, 2)) + ",";
+            currentJson += "\"hd\":" + (isnan(currentData.hdop) ? "null" : String(currentData.hdop)) + ",";
             currentJson += "\"ts\":" + String(currentData.timestamp);
             currentJson += "}";
             
@@ -348,6 +373,8 @@ void TaskTelemetry(void *pvParameters) {
                 // DEBUG_PRINT("✅✅✅");
                 lastPublishTime = millis();
             }
+
+            // if (comm.publishMQTT(MQTT_TOPIC))
             
             #ifdef PAPER
             if (sampleCount < 500) {
@@ -411,13 +438,15 @@ void TaskGPS(void *pvParameters) {
                     latestData.lat = gpsHandler.getLat();
                     latestData.lng = gpsHandler.getLng();
                     latestData.gpsUpdated = true;
+                    latestData.hdop = gpsHandler.getHDOP();
+                    latestData.sat = gpsHandler.getSatellites();
                 }
                 else {
                     latestData.isM8NActive = false;
 
-                    // latestData.lat = NAN;
-                    // latestData.lng = NAN;
-                    // latestData.gpsUpdated = false;
+                    latestData.lat = NAN;
+                    latestData.lng = NAN;
+                    latestData.gpsUpdated = false;
                 }
 
                 xSemaphoreGive(dataMutex);
@@ -432,16 +461,21 @@ void TaskMonitor(void *pvParameters) {
     while (1) {
         // Baca data sensor melalui modul PowerMonitor
         PowerData pData = powerMonitor.read();
+        // float fuel = 0;
 
         // --- UPDATE SHARED DATA ---
         double currentLat = 0.0;
         double currentLng = 0.0;
+        int hdop;
+        int sat;
         bool validGPS = false;
 
         if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
             currentLat = latestData.lat;
             currentLng = latestData.lng;
             validGPS = latestData.gpsUpdated;
+            hdop = latestData.hdop;
+            sat = latestData.sat;
             
             latestData.power_mW = pData.power_mW;
             latestData.voltage_V = pData.loadVoltage_V;
@@ -458,7 +492,11 @@ void TaskMonitor(void *pvParameters) {
         DEBUG_PRINT("Load Voltage: "); DEBUG_PRINT(pData.loadVoltage_V); DEBUG_PRINTLN(" V");
         DEBUG_PRINT("Current     : "); DEBUG_PRINT(pData.current_mA); DEBUG_PRINTLN(" mA");
         DEBUG_PRINT("Power       : "); DEBUG_PRINT(pData.power_mW); DEBUG_PRINTLN(" mW");
-        DEBUG_PRINTF("GPS         : %.6f, %.6f\n", currentLat, currentLng);
+        DEBUG_PRINTF("GPS        : %.6f, %.6f\n", currentLat, currentLng);
+        DEBUG_PRINTF("Sat        : %d\n", sat);
+        DEBUG_PRINTF("HDOP       : %d\n", hdop);
+
+
         DEBUG_PRINTLN("---------------------------------------------------");
         #endif
 
@@ -487,7 +525,8 @@ void setup() {
     
     // Init GPS Module
     DEBUG_PRINTLN("===============[ Initializing GPS ]===============");
-        if (!gpsHandler.begin(9600)) {
+
+    if (!gpsHandler.begin(9600)) {
         DEBUG_PRINTLN("❌ GPS Not Found!");
     } else {
         DEBUG_PRINTLN("✅ GPS Connected");
@@ -502,6 +541,7 @@ void setup() {
     } else {
         DEBUG_PRINTLN("✅ INA219 Connected");
     }
+    
     DEBUG_PRINTLN("==================================================");
     DEBUG_PRINTLN("");
 
@@ -543,7 +583,7 @@ void setup() {
     
     // Gunakan untuk diagnosis sistem
     #ifdef RUN_DIAGNOSTICS
-    // diagnostics.run(TEST_LAB_PASSTHROUGH); // Yang ini buat tes GPS dalem ruangan (Cek modul doang, belum bisa ngirim koordinat)
+    diagnostics.run(TEST_LAB_PASSTHROUGH); // Yang ini buat tes GPS dalem ruangan (Cek modul doang, belum bisa ngirim koordinat)
     // diagnostics.run(TEST_SIM_PASSTHROUGH); // Yang ini buat ngirimin AT Command
     #endif
 }

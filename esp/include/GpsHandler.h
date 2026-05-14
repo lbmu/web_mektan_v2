@@ -22,6 +22,10 @@ public:
     // Getter data
     double getLat();
     double getLng();
+    double getHDOP();
+    int getSatellites();
+    double getCourse();
+
     void echoRawData();
     unsigned long getUnixTime();
 

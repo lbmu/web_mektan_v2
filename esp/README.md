@@ -100,7 +100,6 @@ Untuk memulai proyek menggunakan PlatformIO
     ```
     cp secrets.example.h secrets.h
     ```
-6. Konfigurasi isi file sesuai
     
 ## Struktur Kode
 

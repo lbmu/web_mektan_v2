@@ -1,0 +1,167 @@
+ets Jul 29 2019 12:21:46
+
+rst:0x8 (TG1WDT_SYS_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+invalid header: 0x0a06a151
+invalid header: 0xc46f7a05
+invalid header: 0x02ac809c
+invalid header: 0x86878eaf
+invalid header: 0xa5a9524e
+invalid header: 0x0570bd13
+invalid header: 0x137eb133
+invalid header: 0x55cdd9dd
+invalid header: 0x44444444
+invalid header: 0x3b874345
+invalid header: 0x6b59e918
+invalid header: 0x8cb1d170
+invalid header: 0x40004000
+invalid header: 0x2782034c
+invalid header: 0x44864f54
+invalid header: 0x35813078
+invalid header: 0x02788447
+invalid header: 0x79238295
+invalid heaets Jul 29 2019 12:21:46
+
+rst:0x7 (TG0WDT_SYS_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+invalid header: 0x11411640
+invalid header: 0xb5000244
+invalid header: 0x022145bd
+invalid header: 0x280c03a1
+invalid header: 0x18870314
+invalid header: 0x922228ff
+invalid header: 0x333e636a
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid heaets Jul 29 2019 12:21:46
+
+rst:0x7 (TG0WDT_SYS_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0x3a33a222
+invalid header: 0x10a00180
+invalid header: 0x8e039683
+invalid header: 0xaed00225
+invalid header: 0x422280f0
+invalid he�ets Jul 29 2019 12:21:46
+
+rst:0x7 (TG0WDT_SYS_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+invalid header: 0x84913185
+invalid header: 0x8813a058
+invalid header: 0x46080881
+invalid header: 0x81900d20
+invalid header: 0x0408638a
+invalid header: 0xb99d1300
+invalid header: 0xa880e59f
+invalid header: 0x9fd331b8
+invalid header: 0x142cfa45
+invalid header: 0x88acc888
+invalid header: 0x7341c00a
+invalid header: 0xe2b80020
+invalid header: 0x5ac34ac3
+invalid header: 0x0065620c
+invalid header: 0x86722881
+invalid header: 0x940512a8
+invalid header: 0x82002c1d
+invalid header: 0x98034742
+invalid heaets Jul 29 2019 12:21:46
+
+rst:0x7 (TG0WDT_SYS_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+invalid header: 0x66d326cc
+invalid header: 0x706a024a
+invalid header: 0x810a11a8
+invalid header: 0x6e72044e
+invalid header: 0x6c6aa265
+invalid header: 0xa5ce22e2
+invalid header: 0x06cea006
+invalid header: 0x54561105
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid he�ets Jul 29 2019 12:21:46
+
+rst:0x7 (TG0WDT_SYS_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0x09010500
+invalid header: 0x54044535
+invalid header: 0x38000000
+invalid header: 0xff7d507a
+invalid header: 0x8afaa828
+invalid heaets Jul 29 2019 12:21:46
+
+rst:0x7 (TG0WDT_SYS_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+invalid header: 0x2128ac83
+invalid header: 0xaf20e257
+invalid header: 0x2cc802e1
+invalid header: 0x84903696
+invalid header: 0x6f2a2e88
+invalid header: 0x86df88a8
+invalid header: 0x0e0f07d9
+invalid header: 0x508c4852
+invalid header: 0x206c1b1d
+invalid header: 0x00000000
+invalid header: 0x23aba22a
+invalid header: 0xb66f026e
+invalid header: 0x47105e42
+invalid header: 0xe7e49ec7
+invalid header: 0x0b26f070
+invalid header: 0x02ea64b6
+invalid header: 0x14a990c8
+invalid header: 0xc444540c
+invalid heaets Jul 29 2019 12:21:46
+
+rst:0x7 (TG0WDT_SYS_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+invalid header: 0xbe001b1b
+invalid header: 0x86ff5338
+invalid header: 0x81573511
+invalid header: 0x7b00174b
+invalid header: 0x305eb0fe
+invalid header: 0x54004cbc
+invalid header: 0x85896744
+invalid header: 0x60138282
+invalid header: 0xc51f85c7
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff
+invalid header: 0xffffffff

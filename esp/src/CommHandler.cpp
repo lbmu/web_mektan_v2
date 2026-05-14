@@ -64,7 +64,7 @@ bool CommHandler::connectMQTT(String broker, int port, String clientId, String u
 
     DEBUG_PRINT("MQTT: Jabat Tangan TLS ke "); 
     DEBUG_PRINT(broker); 
-    DEBUG_PRINT("...");
+    DEBUG_PRINTLN("...");
 
     bool status;
     if (user == "" && pass == "") {
@@ -128,12 +128,12 @@ void CommHandler::serialPassthrough() {
  */
 
 bool CommHandler::enableGNSS() {
-    // DEBUG_PRINT("+");
+    DEBUG_PRINT("+");
     return _modem->enableGPS();
 }
 
 bool CommHandler::disableGNSS() {
-    // DEBUG_PRINT("-");
+    DEBUG_PRINT("-");
     return _modem->disableGPS();
 }
 

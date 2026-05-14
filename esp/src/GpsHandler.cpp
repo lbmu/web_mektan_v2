@@ -68,6 +68,18 @@ double GpsHandler::getLng() {
     return _filteredLng;
 }
 
+double GpsHandler::getHDOP() {
+    return _gps.hdop.value();
+}
+
+int GpsHandler::getSatellites() {
+    return _gps.satellites.value();
+}
+
+double GpsHandler::getCourse() {
+    return _gps.course.value();
+}
+
 void GpsHandler::echoRawData() {
     while (_serial->available()) {
         char c = _serial->read();
