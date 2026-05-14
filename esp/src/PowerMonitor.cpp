@@ -1,5 +1,5 @@
 #include "PowerMonitor.h"
-#include "math.h"
+#include <math.h>
 
 PowerMonitor::PowerMonitor() {
     _isConnected = false;

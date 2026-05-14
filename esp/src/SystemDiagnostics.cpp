@@ -1,6 +1,9 @@
+#include <esp_system.h>
+#include <LittleFS.h>
+
 #include "SystemDiagnostics.h"
-#include "esp_system.h"
 #include "espOTA.h"
+#include "DataHandler.h"
 
 extern TaskHandle_t telnetTaskHandle;
 extern TaskHandle_t telemetryTaskHandle;
@@ -17,16 +20,13 @@ SystemDiagnostics::SystemDiagnostics(PowerMonitor* pwr, GpsHandler* gps, CommHan
 void SystemDiagnostics::run(DiagnosticMode mode) {
     DEBUG_PRINTLN("\n=== SYSTEM DIAGNOSTICS ===");
     
-    if (mode == TEST_LAB_PASSTHROUGH) {
-        runLabTest();
-    }
-    else if (mode == TEST_SIM_PASSTHROUGH) {
-        runSimTest();
-    }
-    else if (mode == TEST_PERFORMANCE_MONITOR) {
-        runPerformanceMonitor();
+    if (mode == TEST_NMEA_PASSTHROUGH) runLabTest();
+    
+    else if (mode == TEST_SIM_PASSTHROUGH) runSimTest();
+    else if (mode == TEST_PERFORMANCE_MONITOR) runPerformanceMonitor();
+    else if (mode == TEST_STORAGE_MONITOR) runStorageMonitor();
     // ... mode lain bisa ditambahkan nanti ...
-    }
+    
 }
 
 void SystemDiagnostics::runLabTest() {
@@ -161,4 +161,55 @@ void SystemDiagnostics::runPerformanceMonitor() {
         // Delay 10 detik
         vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
+}
+
+void SystemDiagnostics::runStorageMonitor() {
+    DEBUG_PRINTLN(">> MODE: LITTLEFS STORAGE MONITOR");
+    DEBUG_PRINTLN(">> Membaca rekam jejak history offline...\n");
+
+    if (!LittleFS.begin(true)) {
+        DEBUG_PRINTLN("❌ [DIAGNOSTICS] Gagal Mount LittleFS!");
+        while(1) vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+
+    while (1)
+    {
+        if (!LittleFS.exists("/tel_log.bin"))
+        {
+            DEBUG_PRINTLN("📭 File buffer kosong atau tidak ada (Sudah terkirim / Belum ada data offline).");
+        }
+        else {
+            File file = LittleFS.open("/tel_log.bin", FILE_READ);
+            if (!file) {DEBUG_PRINTLN("❌ Gagal membuka file /telemetry_log.bin untuk dibaca!");}
+            else {
+                size_t fileSize = file.size();
+                size_t recordCount = fileSize / sizeof(bufferedData);
+
+                DEBUG_PRINTLN("==================================================");
+                DEBUG_PRINTF("📁 STATUS BUFFER: %u bytes (Total: %u data antrean)\n", fileSize, recordCount);
+                DEBUG_PRINTLN("==================================================");
+
+                bufferedData data;
+                int i = 1;
+
+                while (file.available() >= sizeof(bufferedData))
+                {
+                    file.read((uint8_t*)&data, sizeof(bufferedData));
+                    DEBUG_PRINTF("[%03d] TS: %lu | Lat: %.6f, Lng: %.6f | V: %.2f V, I: %.2f mA\n", 
+                        i, 
+                        data.timestamp, 
+                        data.lat, 
+                        data.lng, 
+                        data.voltage_V, 
+                        data.current_mA
+                    );
+                    i++;
+                }
+                file.close();
+                DEBUG_PRINTLN("==================================================\n");
+            }
+        }
+        vTaskDelay(15000 / portTICK_PERIOD_MS);
+    }
+    
 }

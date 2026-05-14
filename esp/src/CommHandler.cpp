@@ -29,7 +29,7 @@ bool CommHandler::begin() {
     
     DEBUG_PRINTLN("[MODEM] Cek Status(Init)...");
     if (!_modem->init()) { 
-        DEBUG_PRINTLN("[MODEM] No respsonses. Restarting...");
+        DEBUG_PRINTLN("[MODEM] No responses. Restarting...");
         if (!_modem->restart())
             return false;
     }
@@ -58,28 +58,12 @@ bool CommHandler::configureNetwork() {
     return true;
 }
 
-bool CommHandler::connectMQTT(String broker, int port, String clientId, String user, String pass) {
-    _mqtt->setServer(broker.c_str(), port);
-    _mqtt->setSocketTimeout(10); 
-
-    DEBUG_PRINT("MQTT: Jabat Tangan TLS ke "); 
-    DEBUG_PRINT(broker); 
-    DEBUG_PRINTLN("...");
-
-    bool status;
-    if (user == "" && pass == "") {
-        status = _mqtt->connect(clientId.c_str());
-    } else {
-        status = _mqtt->connect(clientId.c_str(), user.c_str(), pass.c_str());
-    }
-
-    if (status) {
-        return true;
-    } else {
-        DEBUG_PRINT(" [GAGAL] Kode Error (rc): ");
-        DEBUG_PRINTLN(_mqtt->state());
-        return false;
-    }
+void CommHandler::configMQTT(String broker, int port, String clientId, String user, String pass) {
+    _broker = broker;
+    _port = port;
+    _clientID = clientId;
+    _user = user;
+    _pass = pass;
 }
 
 bool CommHandler::publishMQTT(String topic, String payload) {
@@ -89,10 +73,46 @@ bool CommHandler::publishMQTT(String topic, String payload) {
     return false;
 }
 
-void CommHandler::loop() {
+bool CommHandler::maintainConnection() {
+    if (!_lteConnected) {
+        DEBUG_PRINTLN("\n📡 Modem belum siap. Mencoba inisialisasi...");
+        if (begin()) {
+            _lteConnected = true;
+            _mqttFailCount = 0;
+        }
+        else {
+            DEBUG_PRINTLN("❌ Gagal Connect 4G. Coba lagi nanti...");
+            return false;
+        }
+    }
+    
+    if (_lteConnected && !_mqtt->connected()) {
+        DEBUG_PRINTLN("📡 Menghubungkan ke Broker HiveMQ...");
+        _mqtt->setServer(_broker.c_str(), _port);
+        _mqtt->setSocketTimeout(10);
+
+        bool status = (_user == "" && _pass == "") ?
+            _mqtt->connect(_clientID.c_str()) :
+            _mqtt->connect(_clientID.c_str(), _user.c_str(), _pass.c_str());
+        if (status) {
+            DEBUG_PRINTLN("✅ Terhubung ke Broker! Siap publish data.");
+            _mqttFailCount = 0;
+        }
+        else {
+            _mqttFailCount++;
+            DEBUG_PRINTF("⚠️ Gagal Connect MQTT (Percobaan %d/15)\n", _mqttFailCount);
+            if (_mqttFailCount >= 15) {
+                DEBUG_PRINTLN("🔄 Internet/Sinyal putus! Me-reset Modem 4G...");
+                _lteConnected = false;
+            }
+            return false;
+        }
+    }
     if (_mqtt->connected()) {
         _mqtt->loop();
+        return true;
     }
+    return false;
 }
 
 extern String telnetPendingCmd;

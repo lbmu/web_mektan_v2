@@ -2,7 +2,8 @@
 #include <Arduino.h>
 
 // Modul untuk OTA
-#include <espOTA.h>
+
+#include "espOTA.h"
 
 /* @brief
  * semua data sensitif meliputi SSID, PASS, OTA PASS
@@ -13,13 +14,15 @@
  * makanya bahasa nya semi baku
  */
 
-#include <secrets.h>
-
 // Modul untuk sistem
+#include "secrets.h"
 #include "GpsHandler.h"
 #include "PowerMonitor.h"
 #include "CommHandler.h"
 #include "SystemDiagnostics.h"
+#include "DataHandler.h"
+
+#include <ArduinoJson.h>
 
 /* @brief
  * pinout juga sama 
@@ -32,6 +35,8 @@
 // cek notip (komentar untuk disable) [shortcut di VS Code: Ctrl + /]
 #define RUN_TASK // <- Buat run task biasa
 // #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
+
+// Misc
 // #define REPORT
 // #define PAPER
 
@@ -40,41 +45,16 @@ ESP_OTA Ota;
 CommHandler comm(SIM_RX_PIN, SIM_TX_PIN, COMM_BAUDRATE, SIM_SERIAL_PORT);
 GpsHandler gpsHandler(GPS_RX_PIN, GPS_TX_PIN, GPS_SERIAL_PORT);
 PowerMonitor powerMonitor;
+DataHandler dataHandler;
+DataManager data;
 SystemDiagnostics diagnostics(&powerMonitor, &gpsHandler, &comm);
 
 // --- SHARED DATA & MUTEX ---
 // Struktur data bersama antar task
 
-struct SharedData {
-    double lat;
-    double lng;
-    double hdop;
-    int sat;
-    float power_mW;
-    float voltage_V;
-    float current_mA;
-    bool gpsUpdated;
-    bool isM8NActive;
-    float fuel_R;
-};
-
-// Struktur data buat ngirim paket data
-struct bufferedData {
-    double lat;
-    double lng;
-    int hdop;
-    int sat;
-    float current_mA;
-    float voltage_V;
-    float fuel_R;
-    unsigned long timestamp;
-};
-
 // --- VARIABEL dan PENDUKUNG ---
 SharedData latestData;
 SemaphoreHandle_t dataMutex;
-QueueHandle_t dataQueue;
-const int MAX_QUEUE_SIZE = 200;
 
 // --- FUNCTION ---
 unsigned long getCurrentTimestamp() {
@@ -146,11 +126,7 @@ void TaskTelnet(void *pvParameters) {
 
 // Task 1: Telemetry via 4G (MQTT HiveMQ)
 void TaskTelemetry(void *pvParameters) {
-    static bool lteConnected = false;
-    static bool mqttConnected = false; 
-
-    // Penghitung kegagalan
-    static int mqttFailCount = 0;
+    
 
     // if (esp_reset_reason() == ESP_RST_POWERON) {
     //     DEBUG_PRINTLN("\n⏳ [TELEMETRY] Cold Boot Terdeteksi. Menunggu SIM7600 pemanasan (60 detik)...");
@@ -161,12 +137,14 @@ void TaskTelemetry(void *pvParameters) {
 
     // Variabel untuk jeda publish tanpa blocking
     unsigned long lastPublishTime = 0;
-    
+    unsigned long lastSaveTime = 0;
+
     // Manajemen Daya
     const float ENGINE_ON_V = 4.0;
     const float ENGINE_OFF_V = 3.5;
 
     // yang ini interval ngirim data tergantung nyala mesin (5/60 detik)
+    const unsigned long OFFLINE_SAVE_INTERVAL = 5000;
     const unsigned long ACTIVE_INTERVAL = 5000;
     const unsigned long HEARTBEAT_INTERVAL = 60000;
 
@@ -175,62 +153,9 @@ void TaskTelemetry(void *pvParameters) {
 
     while (1) {
         // 1. Cek Koneksi Jaringan 4G
-        if (!lteConnected) {
-            DEBUG_PRINTLN("\n📡 [TELEMETRY] Modem belum siap. Mencoba inisialisasi...");
-            // disableCore0WDT;
-            bool isModemReady = comm.begin();
-            // enableCore0WDT;
-            if (isModemReady) {
-                lteConnected = true;
-                mqttFailCount = 0;
-            } else {
-                DEBUG_PRINTLN("❌ [TELEMETRY] Gagal Connect 4G. Coba lagi 2 detik...");
-                vTaskDelay(2000 / portTICK_PERIOD_MS); 
-                continue; 
-            }
-        }
-
         // 2. Cek Koneksi ke Broker MQTT
-        if (lteConnected && !mqttConnected) {
-            DEBUG_PRINTLN("📡 [TELEMETRY] Menghubungkan ke Broker HiveMQ...");
-            
-            // disableCore0WDT();
-            bool isConnected = comm.connectMQTT(MQTT_BROKER_1,
-                                                MQTT_PORT, 
-                                                MQTT_CLIENT_ID, 
-                                                MQTT_USER_1, 
-                                                MQTT_PASS_1
-                                            );
-
-            bool isConnected_2 = comm.connectMQTT(
-                                                MQTT_BROKER_2,
-                                                MQTT_PORT,
-                                                MQTT_CLIENT_ID,
-                                                MQTT_USER_2,
-                                                MQTT_PASS_2
-                                            );
-            // enableCore0WDT();
-            
-            if (isConnected || isConnected_2) {
-                DEBUG_PRINTLN("✅ [TELEMETRY] Terhubung ke Broker! Siap publish data.");
-                mqttConnected = true;
-                mqttFailCount = 0;
-            } else {
-                mqttFailCount++;
-                DEBUG_PRINTF("⚠️ [TELEMETRY] Gagal Connect MQTT (Percobaan %d/15)\n", mqttFailCount);
-                if (mqttFailCount >= 15) {
-                    DEBUG_PRINTLN("🔄 [TELEMETRY] Internet/Sinyal putus! Me-reset Modem 4G...");
-                    lteConnected = false;
-                }
-                vTaskDelay(2000 / portTICK_PERIOD_MS); 
-                continue; 
-            }
-        }
-
         // 3. JAGA KONEKSI (Keep-Alive TLS & MQTT)
-        if (mqttConnected) {
-            comm.loop();
-        }
+        bool isOnline = comm.maintainConnection();
 
         // 4. Logika interval kirim data
         // float currentVolt = 0.0;
@@ -322,101 +247,70 @@ void TaskTelemetry(void *pvParameters) {
         ////////////////////////////
 
         // anjay mabar
-        if (lteConnected && mqttConnected && (millis() - lastPublishTime >= currentPublishInterval)) {
-            bufferedData oldData;
+        if (isOnline) {
 
-            // Cek data buffer
-            while (uxQueueMessagesWaiting(dataQueue) > 0) {
-                xQueuePeek(dataQueue, &oldData, 0);
+            if (dataHandler.hasData()) {
+                // Cek data buffer
 
-                // Perakitan JSON data antrean
-                String oldJson = "{";
-                oldJson += "\"id\":" + String(DEVICE_ID) + ",";
-                oldJson += "\"lat\":" + (isnan(oldData.lat) ? "null" : String(oldData.lat, 6)) + ",";
-                oldJson += "\"long\":" + (isnan(oldData.lng) ? "null" : String(oldData.lng, 6)) + ",";
-                oldJson += "\"V\":" + (isnan(oldData.voltage_V) ? "null" : String(oldData.voltage_V, 2)) + ",";
-                oldJson += "\"I\":" + (isnan(oldData.current_mA) ? "null" : String(oldData.current_mA, 2)) + ",";
-                oldJson += "\"ts\":" + String(oldData.timestamp);
-                oldJson += "}";
+                File file = dataHandler.openForRead();
+                if (file) {
+                    bufferedData oldData;
+                    bool allSent = true;
+                    while (file.available() >= sizeof(bufferedData)) {
+                        file.read((uint8_t*)&oldData, sizeof(bufferedData));
 
-                // Kirim data buffer
-                if (comm.publishMQTT(MQTT_TOPIC, oldJson)) {
-                    DEBUG_PRINTLN("📦 [BUFFER] Data history terkirim!");
-                    xQueueReceive(dataQueue, &oldData, 0);
+                        String oldJson = dataHandler.buildJson(oldData, String(DEVICE_ID));
 
-                    // BARIS INI JANGAN DIHAPUS
-                    // NANTI DIKIRA DDOS SAMA SI BROKER NYA
-                    vTaskDelay(200 / portTICK_PERIOD_MS);
-                    ///////////////////////////////////////
-                    //////////////// JOMOK ////////////////
-                }   ///////////////////////////////////////
-                else {
-                    DEBUG_PRINTLN("⚠️ [BUFFER] Gagal kirim history. Stop flushing.");
-                    break;
+                        if (comm.publishMQTT(MQTT_TOPIC, oldJson)) {
+                            DEBUG_PRINT("📦");
+                            vTaskDelay(200 / portTICK_PERIOD_MS);
+                        }
+                        else {
+                            DEBUG_PRINTLN("⚠️");
+                            allSent = false;
+                            break;
+                        }
+                    }
+                    file.close();
+
+                    if (allSent) {
+                        dataHandler.clearData();
+                        DEBUG_PRINTLN("🗑️");
+                    }
                 }
             }
-
-            // Kalau gak ada buffer
-            String currentJson = "{";
-            currentJson += "\"id\":" + String(DEVICE_ID) + ",";
-            currentJson += "\"lat\":" + (isnan(currentData.lat) ? "null" : String(currentData.lat, 6)) + ",";
-            currentJson += "\"lng\":" + (isnan(currentData.lng) ? "null" : String(currentData.lng, 6)) + ",";
-            currentJson += "\"V\":" + (isnan(currentData.voltage_V) ? "null" : String(currentData.voltage_V, 2)) + ",";
-            currentJson += "\"I\":" + (isnan(currentData.current_mA) ? "null" : String(currentData.current_mA, 2)) + ",";
-            currentJson += "\"bbm\":" + (isnan(currentData.fuel_R) ? "null" : String(currentData.fuel_R, 2)) + ",";
-            currentJson += "\"hd\":" + (isnan(currentData.hdop) ? "null" : String(currentData.hdop)) + ",";
-            currentJson += "\"ts\":" + String(currentData.timestamp);
-            currentJson += "}";
             
-            // Kirim data (real-time)
-            if (comm.publishMQTT(MQTT_TOPIC, currentJson)) {
-                // DEBUG_PRINT("✅✅✅");
-                lastPublishTime = millis();
-            }
 
-            // if (comm.publishMQTT(MQTT_TOPIC))
-            
-            #ifdef PAPER
-            if (sampleCount < 500) {
-                sampleCount++;
-                DEBUG_PRINT(sampleCount);
-                DEBUG_PRINT(";");
-                DEBUG_PRINT(latency);
-                DEBUG_PRINT(";");
-                DEBUG_PRINTLN(currentJson);
-            }
-            #endif
-        }        
-        
-        // mati dua nya nya 
-        else if (!lteConnected & (millis() - lastPublishTime >= currentPublishInterval)) {
-            // Buang dulu kalau buffer penuh
-            if (uxQueueSpacesAvailable(dataQueue) == 0) {
-                DEBUG_PRINTLN("⚠️ [BUFFER] Penuh! Membuang data terlama...");
-                bufferedData dummy;
-                xQueueReceive(dataQueue, &dummy, 0);
-            }
+                // Kalau gak ada buffer, kirim data aktual (real-time)
+                if (millis() - lastPublishTime >= ACTIVE_INTERVAL) {
+                    String currentJson = dataHandler.buildJson(currentData, String(DEVICE_ID));
 
-            // Kalau buffer gk penuh, simpen ke buffer
-            xQueueSend(dataQueue, &currentData, 0);
-            DEBUG_PRINT("💾 [BUFFER] Data disimpan. Total antrean: ");
-            DEBUG_PRINTLN(uxQueueMessagesWaiting(dataQueue));
-
-            lastPublishTime = millis();
+                    // Kirim data (real-time)
+                    if (comm.publishMQTT(MQTT_TOPIC, currentJson)) {
+                        // DEBUG_PRINT("✅✅✅");
+                        lastPublishTime = millis();
+                    }
+                    
+                    #ifdef PAPER
+                    if (sampleCount < 500) {
+                        sampleCount++;
+                        DEBUG_PRINT(sampleCount);
+                        DEBUG_PRINT(";");
+                        DEBUG_PRINT(latency);
+                        DEBUG_PRINT(";");
+                        DEBUG_PRINTLN(currentJson);
+                    }
+                    #endif
+                }                
         }
-
-        //  modul nyala, mqtt belom
-        else if (lteConnected && !mqttConnected && (millis() - lastPublishTime >= currentPublishInterval)) {
-            // nampung data
-            if (uxQueueSpacesAvailable(dataQueue) == 0) {
-                bufferedData dummy;
-                xQueueReceive(dataQueue, &dummy, 0); // yang lama dibuang
+        
+        //  modul atau MQTT belom nyala
+        else {
+            if (millis() - lastSaveTime >= currentPublishInterval) {
+                if (dataHandler.saveData(currentData)) {DEBUG_PRINT("💾");}
+                else {DEBUG_PRINTLN("⚠️");}
+                lastSaveTime = millis();
             }
-
-            xQueueSend(dataQueue, &currentData, 0);
-            DEBUG_PRINTLN("nunggu mqtt...");
-
-            lastPublishTime = millis();
         }
         // Delay sangat pendek (50ms) agar task FreeRTOS tidak monopoli CPU,
         // namun cukup sering untuk memanggil comm.loop() dengan lancar
@@ -437,9 +331,9 @@ void TaskGPS(void *pvParameters) {
                 if (gpsHandler.isValid() && gpsHandler.getAge() < 5000) {
                     latestData.lat = gpsHandler.getLat();
                     latestData.lng = gpsHandler.getLng();
-                    latestData.gpsUpdated = true;
                     latestData.hdop = gpsHandler.getHDOP();
                     latestData.sat = gpsHandler.getSatellites();
+                    latestData.gpsUpdated = true;
                 }
                 else {
                     latestData.isM8NActive = false;
@@ -522,6 +416,12 @@ void setup() {
     DEBUG_BEGIN();
     DEBUG_PRINTLN("==================================================");
     DEBUG_PRINTLN("");
+
+    // init littleFS
+    Serial.println("============[ Initializing Fail-Safe ]===========");
+    dataHandler.begin();
+    DEBUG_PRINTLN("==================================================");
+    DEBUG_PRINTLN("");
     
     // Init GPS Module
     DEBUG_PRINTLN("===============[ Initializing GPS ]===============");
@@ -545,20 +445,16 @@ void setup() {
     DEBUG_PRINTLN("==================================================");
     DEBUG_PRINTLN("");
 
+    DEBUG_PRINTLN("===============[ Initializing SIM ]===============");
+    comm.configMQTT(MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS);
+    DEBUG_PRINTLN("==================================================");
+    DEBUG_PRINTLN("");
+
     // Create Mutex
     dataMutex = xSemaphoreCreateMutex();
+    
+    // Init Modul 4G
 
-    // Store and Forward
-    dataQueue = xQueueCreate(MAX_QUEUE_SIZE, sizeof(bufferedData));
-    if (dataQueue == NULL)
-        {
-            DEBUG_PRINTLN("No Queue!");
-        }
-    else {
-        DEBUG_PRINTLN("Queue Ready! [200 data max]");
-        }
-
-    // Init Sistem
     #ifdef USE_TELNET_DEBUG
     xTaskCreatePinnedToCore(
         TaskTelnet, "Telnet_Task", 4096, NULL, 1, &telnetTaskHandle, 1
@@ -578,13 +474,14 @@ void setup() {
         TaskMonitor, "Monitor_Task", 4096, NULL, 1, &monitorHandle, 1
     );
     // uncomment baris di bawah biar sistemnya keliatan kompleks :v
-    diagnostics.run(TEST_PERFORMANCE_MONITOR);
+    // diagnostics.run(TEST_PERFORMANCE_MONITOR);
     #endif
     
     // Gunakan untuk diagnosis sistem
     #ifdef RUN_DIAGNOSTICS
-    diagnostics.run(TEST_LAB_PASSTHROUGH); // Yang ini buat tes GPS dalem ruangan (Cek modul doang, belum bisa ngirim koordinat)
+    // diagnostics.run(TEST_NMEA_PASSTHROUGH); // Yang ini buat tes GPS dalem ruangan (Cek modul doang, belum bisa ngirim koordinat)
     // diagnostics.run(TEST_SIM_PASSTHROUGH); // Yang ini buat ngirimin AT Command
+    diagnostics.run(TEST_STORAGE_MONITOR);
     #endif
 }
 

@@ -14,11 +14,11 @@ public:
     CommHandler(int rxPin, int txPin, long baudRate, int serialPort);
 
     bool begin();
-    bool connectMQTT(String broker, int port, String clientId, String user = "", String pass = "");
+    void configMQTT(String broker, int port, String clientId, String user = "", String pass = "");
     bool publishMQTT(String topic, String payload);
     
     // Wajib dipanggil berkala agar PubSubClient tidak terputus
-    void loop(); 
+    bool maintainConnection();
 
     // Meneruskan data untuk SystemDiagnostics
     void serialPassthrough();
@@ -48,6 +48,15 @@ private:
     TinyGsmClient* _baseClient;
     ESP_SSLClient* _secureClient;
     PubSubClient* _mqtt;
+
+    String _broker;
+    int _port;
+    String _clientID;
+    String _user;
+    String _pass;
+
+    bool _lteConnected = false;
+    int _mqttFailCount = 0;
 
     bool configureNetwork();
 };

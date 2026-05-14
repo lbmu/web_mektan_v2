@@ -7,11 +7,12 @@
 #include "espOTA.h"
 
 enum DiagnosticMode {
-    TEST_CONNECTION_CHECK,    // Cek sekilas (True/False)
-    TEST_DATA_MONITOR,        // Data matang (Latitude, Voltage)
-    TEST_LAB_PASSTHROUGH,     // Raw NMEA & Sensor Check
-    TEST_SIM_PASSTHROUGH,      // Cek Modul 4G
-    TEST_PERFORMANCE_MONITOR
+    TEST_CONNECTION_CHECK,      // Cek sekilas (True/False)
+    TEST_DATA_MONITOR,          // Data matang (Latitude, Voltage)
+    TEST_NMEA_PASSTHROUGH,      // Raw NMEA & Sensor Check
+    TEST_SIM_PASSTHROUGH,       // Cek Modul 4G
+    TEST_PERFORMANCE_MONITOR,   // Heap Monitor RTOS
+    TEST_STORAGE_MONITOR        // Cek file buffer
 };
 
 class SystemDiagnostics {
@@ -27,4 +28,5 @@ private:
     void runLabTest();
     void runSimTest();
     void runPerformanceMonitor();
+    void runStorageMonitor();
 };
