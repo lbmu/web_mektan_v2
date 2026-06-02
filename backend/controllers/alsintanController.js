@@ -48,9 +48,10 @@ exports.getAlsintanById = (req, res) => {
 
 // 3. CREATE
 exports.createAlsintan = (req, res) => {
+    // TAMBAHAN: Tangkap lebar_implemen dari request body
     const {
         kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri,
-        status_sensor, status_operasional, deskripsi, kapasitas_lahan,
+        status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen
     } = req.body;
 
     const gambar = req.file ? req.file.filename : 'default.jpg';
@@ -59,17 +60,20 @@ exports.createAlsintan = (req, res) => {
         return res.status(400).json({ pesan: 'Kode perangkat dan nama alat harus diisi' });
     }
 
+    // TAMBAHAN: Masukkan lebar_implemen ke kueri INSERT ($11)
     const queryAlat = `
         INSERT INTO alsintan (
             kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
-            status, status_sensor, status_operasional, deskripsi, kapasitas_lahan, gambar
-        ) VALUES ($1, $2, $3, $4, $5, 'OFF', $6, $7, $8, $9, $10)
+            status, status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen, gambar
+        ) VALUES ($1, $2, $3, $4, $5, 'OFF', $6, $7, $8, $9, $10, $11)
         RETURNING alsintan_id
     `;
 
+    // TAMBAHAN: Masukkan nilai ke array, berikan default 1.89 jika kosong
     const values = [
         kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri,
-        status_sensor, status_operasional, deskripsi, kapasitas_lahan, gambar
+        status_sensor, status_operasional, deskripsi, kapasitas_lahan, 
+        lebar_implemen || 1.89, gambar
     ];
 
     db.query(queryAlat, values, (err, result) => {
@@ -102,9 +106,10 @@ exports.createAlsintan = (req, res) => {
 // 4. UPDATE (DENGAN SAPU OTOMATIS FILE LAMA)
 exports.updateAlsintan = (req, res) => {
     const id = req.params.id;
+    // TAMBAHAN: Tangkap lebar_implemen dari request body
     const {
         kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
-        status_sensor, status_operasional, deskripsi, kapasitas_lahan
+        status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen
     } = req.body;
     
     // INTIP GAMBAR LAMA DULU
@@ -113,18 +118,23 @@ exports.updateAlsintan = (req, res) => {
         
         const gambarLama = rowsResult.rows.length > 0 ? rowsResult.rows[0].gambar : null;
 
+        // TAMBAHAN: Tambahkan lebar_implemen = $10 pada kueri UPDATE
         let query = `
             UPDATE alsintan SET
                 kode_perangkat = $1, nama_alat = $2, kategori_alat = $3, merk_alat = $4,
                 nomor_seri = $5, status_sensor = $6, status_operasional = $7,
-                deskripsi = $8, kapasitas_lahan = $9
+                deskripsi = $8, kapasitas_lahan = $9, lebar_implemen = $10
         `;
 
+        // TAMBAHAN: Masukkan nilai ke array, berikan default 1.89 jika kosong
         let values = [
             kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
-            status_sensor, status_operasional, deskripsi, kapasitas_lahan
+            status_sensor, status_operasional, deskripsi, kapasitas_lahan, 
+            lebar_implemen || 1.89
         ]; 
-        let paramCounter = 10;
+        
+        // Sesuaikan paramCounter menjadi 11 karena field sebelumnya sudah sampai 10
+        let paramCounter = 11;
 
         if (req.file) {
             query += `, gambar = $${paramCounter} `;

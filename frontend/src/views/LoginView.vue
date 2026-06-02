@@ -141,7 +141,7 @@ const handleLogin = async () => {
                             </lottie-player>
                         </div>
 
-                        <h3 class="fw-bolder text-dark mb-1 tracking-tight">E-Mektan</h3>
+                        <h3 class="fw-bolder text-dark mb-1 tracking-tight">MyMektan</h3>
                         <p class="text-muted small">Masukan kredensial Anda untuk melanjutkan</p>
                     </div>
 

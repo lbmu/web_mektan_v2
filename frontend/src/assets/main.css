@@ -1,16 +1,33 @@
 /* =========================================
+   0. FORCED DESKTOP VIEW (OPSI B FIX)
+   ========================================= */
+html, body, #app {
+    min-width: 1280px !important; /* Kunci ukuran minimum sebesar layar laptop */
+    overflow-x: auto !important;  /* Izinkan scroll ke samping di layar kecil */
+}
+
+/* FIX: Mencegah background SweetAlert terpotong saat layar digeser (scrolling) */
+body.swal2-shown:not(.swal2-no-backdrop) {
+    overflow-y: auto !important; /* Cegah SweetAlert mengunci scrollbar bawaan */
+}
+.swal2-container {
+    min-width: 1280px !important; 
+    position: fixed !important;
+}
+
+/* =========================================
    1. GLOBAL VARIABLES (Kerangka Asli Anda)
    ========================================= */
 :root {
     --sidebar-width: 260px;  
     --sidebar-width-close: 80px; 
     --navbar-height: 60px;      
-    --primary-color: #2563eb;   /* Biru cerah modern ala startup */
-    --sidebar-bg: #1e293b;      /* Warna Gelap Sidebar (Slate modern) */
-    --bg-light: #f8fafc;        /* Warna Background Konten abu-abu sangat muda */
-    --hover-bg: #334155;        /* Warna saat hover elemen */
+    --primary-color: #2563eb;   
+    --sidebar-bg: #1e293b;      
+    --bg-light: #f8fafc;        
+    --hover-bg: #334155;        
     --transition-speed: 0.3s;   
-    --text-color: #e2e8f0;      /* Teks sidebar */
+    --text-color: #e2e8f0;      
     --hover-color: #334155;
 }
 
@@ -45,7 +62,7 @@ body {
     z-index: 1000;
     transition: width var(--transition-speed);
     white-space: nowrap; 
-    box-shadow: 4px 0 15px rgba(0,0,0,0.05); /* Shadow diperhalus */
+    box-shadow: 4px 0 15px rgba(0,0,0,0.05); 
 }
 
 .sidebar-wrapper.closed {
@@ -70,7 +87,6 @@ body {
 /* =========================================
    4. COMPONENT STYLES (Menu & Interaksi)
    ========================================= */
-
 .nav-list {
     list-style: none;
     padding: 0;
@@ -88,7 +104,7 @@ body {
     background: none;
     border: none;
     width: 100%;
-    font-size: 15px; /* Sedikit dikecilkan agar elegan */
+    font-size: 15px; 
     transition: background 0.2s, color 0.2s;
 }
 
@@ -102,7 +118,7 @@ body {
     color: white !important;
     font-weight: 600;
     box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2); 
-    border-radius: 0 8px 8px 0; /* Aksen lengkung di kanan menu aktif */
+    border-radius: 0 8px 8px 0; 
     margin-right: 10px;
 }
 
@@ -121,7 +137,7 @@ body {
 /* --- SUBMENU --- */
 .sub-menu {
     display: none; 
-    background-color: #0f172a; /* Warna submenu lebih gelap dari sidebar */
+    background-color: #0f172a; 
     padding-left: 0;
     list-style: none;
 }
@@ -233,5 +249,3 @@ a.card:hover, .cursor-pointer.card:hover, .card-modern:hover {
     border-color: #93c5fd !important;
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
 }
-
-/*

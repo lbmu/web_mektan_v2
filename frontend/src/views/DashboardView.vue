@@ -15,7 +15,7 @@ let map = null;
 let markers = {}; 
 let mqttClient = null;
 let chartInstance = null;
-let rpmChartInstance = null;
+let speedoChartInstance = null;
 
 const MQTT_HOST = import.meta.env.VITE_MQTT_HOST;
 const MQTT_PORT = Number(import.meta.env.VITE_MQTT_PORT);
@@ -80,12 +80,12 @@ const warningList = computed(() => {
     });
 });
 
-// --- 3. KONEKSI MQTT (REAL-TIME UPDATE) ---
+// --- MQTT UNTUK DASHBOARD VIEW ---
 const connectMqtt = () => {
-const options = {
+    const options = {
         host: MQTT_HOST,
         port: MQTT_PORT,
-        protocol: 'wss', // Jalur aman
+        protocol: 'wss', // Jalur aman yang terbukti sukses
         path: '/mqtt',
         username: MQTT_USERNAME,
         password: MQTT_PASSWORD
@@ -93,38 +93,63 @@ const options = {
 
     mqttClient = mqtt.connect(options);
 
-  mqttClient.on('connect', () => {
-    mqttClient.subscribe(MQTT_TOPIC);
-  });
+    mqttClient.on('connect', () => {
+        console.log("📡 Connected to MQTT (Dashboard View - JSON Baru)");
+        mqttClient.subscribe(MQTT_TOPIC);
+    });
 
-  mqttClient.on('message', (topic, message) => {
-    try {
-      const data = JSON.parse(message.toString());
-      const index = items.value.findIndex(i => i.alsintan_id == data.id_alat);
-      
-      if (index !== -1) {
-        // Update data reaktif (otomatis mengubah angka di kartu atas)
-        items.value[index].status_mesin = data.status_mesin;
-        items.value[index].latitude = data.lat;
-        items.value[index].longitude = data.long;
-        items.value[index].tegangan_aki = data.tegangan; 
-        items.value[index].arus = data.arus;
-        items.value[index].rpm = data.rpm || 0;
-        items.value[index].bbm_persen = data.bbm_persen || 0;
-        
-        if (selectedAlat.value && selectedAlat.value.alsintan_id == data.id_alat) {
-            selectedAlat.value = items.value[index];
-            nextTick(() => initRpmChart());
+    mqttClient.on('message', (topic, message) => {
+        try {
+            const data = JSON.parse(message.toString());
+            
+            // 1. SESUAIKAN PENCARIAN ID (Gunakan data.id, bukan data.id_alat)
+            const index = items.value.findIndex(i => i.alsintan_id == data.id);
+            
+            if (index !== -1) {
+                // 2. PARSING DATA BARU
+                const tegangan = parseFloat(data.V) || 0;
+                // Logika otomatis mesin (disamakan dengan MonitoringDetail: >= 13.0V)
+                const statusMesinBaru = tegangan > 13.0 ? 'ON' : 'OFF'; 
+                const lat = parseFloat(data.lat);
+                const long = parseFloat(data.long || data.lng);
+
+                // 3. UPDATE DATA REAKTIF (Untuk mengubah angka di kartu atas)
+                items.value[index].status_mesin = statusMesinBaru;
+                items.value[index].latitude = lat;
+                items.value[index].longitude = long;
+                items.value[index].tegangan_aki = tegangan; 
+                items.value[index].arus = parseFloat(data.I) || 0;
+                
+                // Ganti bbm_persen dengan bbm
+                items.value[index].bbm = parseFloat(data.bbm) || 0; 
+                
+                // Tambahkan parameter sinyal (Opsional jika ingin ditampilkan di Dashboard)
+                items.value[index].hdop = parseInt(data.hd) || 0;
+                items.value[index].satelit = parseInt(data.st) || 0;
+
+                // [PENTING] Speedometer sudah dihapus, jadi tidak perlu di-update lagi.
+                
+                if (selectedAlat.value && selectedAlat.value.alsintan_id == data.id) {
+                    selectedAlat.value = items.value[index];
+                    
+                    // ⚠️ CATATAN: Jika initSpeedoChart() sebelumnya menggunakan data speedometer, 
+                    // fungsi itu mungkin akan error sekarang. Sebaiknya ubah chart tersebut 
+                    // menjadi Chart Arus/Tegangan, atau hapus baris di bawah ini jika chart sudah dihapus.
+                    // nextTick(() => initSpeedoChart()); 
+                }
+
+                // 4. UPDATE MARKER PETA (Hanya jika koordinat valid)
+                if (lat !== 0 && long !== 0 && !isNaN(lat)) {
+                    updateMarker(data.id, lat, long, statusMesinBaru);
+                }
+                
+                // 5. UPDATE CHART SECARA REAL-TIME
+                initChart(); 
+            }
+        } catch (err) {
+            console.error("Gagal parsing MQTT di Dashboard:", err);
         }
-
-        // Update Marker Peta
-        updateMarker(data.id_alat, data.lat, data.long, data.status_mesin);
-        
-        // Update Chart secara real-time
-        initChart(); 
-      }
-    } catch (err) {}
-  });
+    });
 };
 
 // --- 4. MAPS LEAFLET ---
@@ -264,16 +289,19 @@ const initChart = () => {
     }
 };
 
-const initRpmChart = () => {
-    const ctx = document.getElementById('rpmGauge');
+const initSpeedoChart = () => {
+    const ctx = document.getElementById('speedoGauge');
     if (!ctx || !selectedAlat.value) return;
 
-    const rpmValue = selectedAlat.value.rpm || 0;
+    // Menangkap nilai speedometer (0-15 km/jam)
+    const speedValue = selectedAlat.value.speedometer || 0;
+    const maxSpeed = 20; 
+
     const data = {
         datasets: [{
-            data: [rpmValue, 3000 - rpmValue],
+            data: [speedValue, maxSpeed - speedValue],
             backgroundColor: [
-                rpmValue > 2400 ? '#dc3545' : '#198754', // Merah jika > 2400 RPM
+                speedValue > 12 ? '#dc3545' : '#198754', // Merah jika > 12 Km/Jam (Kecepatan tinggi untuk panen)
                 '#e9ecef'
             ],
             borderWidth: 0,
@@ -283,12 +311,12 @@ const initRpmChart = () => {
         }]
     };
 
-    if (rpmChartInstance) {
-        rpmChartInstance.data.datasets[0].data = [rpmValue, 3000 - rpmValue];
-        rpmChartInstance.data.datasets[0].backgroundColor[0] = rpmValue > 2400 ? '#dc3545' : '#198754';
-        rpmChartInstance.update('none'); // Update tanpa animasi agar ringan
+    if (speedoChartInstance) {
+        speedoChartInstance.data.datasets[0].data = [speedValue, maxSpeed - speedValue];
+        speedoChartInstance.data.datasets[0].backgroundColor[0] = speedValue > 12 ? '#dc3545' : '#198754';
+        speedoChartInstance.update('none');
     } else {
-        rpmChartInstance = new Chart(ctx, {
+        speedoChartInstance = new Chart(ctx, {
             type: 'doughnut',
             data: data,
             options: {
@@ -324,7 +352,7 @@ onUnmounted(() => {
         <div>
             <h3 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
                 <i class="bi bi-broadcast text-primary"></i> 
-                Pusat Kendali Si-Alsintan
+                Pusat Kendali MyMektan
             </h3>
             <p class="text-muted mb-0" style="font-size: 0.9rem;">
                 Monitoring Armada & Telemetri Real-Time Balai Mektan Jawa Barat
@@ -458,17 +486,17 @@ onUnmounted(() => {
                                 </div>
                             </div>
 
-                            <div class="position-relative mb-2" style="height: 120px;" v-show="selectedAlat.rpm > 0 || selectedAlat.bbm_persen > 0">
-                                <canvas id="rpmGauge"></canvas>
+                            <div class="position-relative mb-2" style="height: 120px;" v-show="selectedAlat.speedometer > 0 || selectedAlat.bbm_persen > 0">
+                                <canvas id="speedoGauge"></canvas>
                                 <div class="position-absolute start-50 translate-middle-x text-center" style="bottom: 5px;">
-                                    <div class="fw-bolder mb-0" style="font-size: 1.8rem; line-height: 1;" :class="(selectedAlat.rpm || 0) > 2400 ? 'text-danger' : 'text-dark'">
-                                        {{ selectedAlat.rpm || 0 }}
+                                    <div class="fw-bolder mb-0" style="font-size: 1.8rem; line-height: 1;" :class="(selectedAlat.speedometer || 0) > 12 ? 'text-danger' : 'text-dark'">
+                                        {{ selectedAlat.speedometer || 0 }}
                                     </div>
                                     <div class="text-muted fw-bold" style="font-size: 0.6rem; letter-spacing: 1px;">KM/H</div>
                                 </div>
                             </div>
 
-                            <div class="mt-3" v-show="selectedAlat.rpm > 0 || selectedAlat.bbm_persen > 0">
+                            <div class="mt-3" v-show="selectedAlat.speedometer > 0 || selectedAlat.bbm_persen > 0">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <small class="fw-bold text-muted" style="font-size: 10px;">LEVEL BAHAN BAKAR</small>
                                     <small class="fw-bold" :class="(selectedAlat.bbm_persen || 0) < 20 ? 'text-danger' : 'text-warning'">

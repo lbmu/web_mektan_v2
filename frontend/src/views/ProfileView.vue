@@ -21,12 +21,17 @@ const fileFoto = ref(null);
 const previewFoto = ref(null);
 const loading = ref(false);
 
-
-//Ambil ID dari storage
+// Ambil ID dari storage
 const getSession = () => {
     const session = localStorage.getItem('user');
     if (session) return JSON.parse(session);
     return null;
+};
+
+// IMPROVEMENT: Fungsi untuk merapikan teks Role
+const formatRole = (role) => {
+    if (!role) return '-';
+    return role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 };
 
 onMounted(async () => {
@@ -36,7 +41,6 @@ onMounted(async () => {
         window.location.href = '/login';
         return;
     }
-
 
     try {
         const response = await axios.get(`${API_BASE_URL}/users/profile/${session.id}`);
@@ -106,11 +110,12 @@ const handleUpdate = async () => {
             // Update LocalStorage agar nama/foto di Sidebar ikut berubah
             const newData = response.data.data;
             const newSession = {
+                ...session, // Pertahankan data sesi lain jika ada
                 id: newData.user_id,
                 username: newData.username,
-                nama: newData.nama_lengkap, // Update nama
+                nama: newData.nama_lengkap, 
                 role: newData.role,
-                foto: newData.foto_profil     // Update foto
+                foto: newData.foto_profil     
             };
             localStorage.setItem('user', JSON.stringify(newSession));
 
@@ -130,41 +135,46 @@ const handleUpdate = async () => {
 </script>
 
 <template>
-    <div class="container-fluid p-4">
-        <h2 class="mb-4 fw-bold text-primary">👤 Profil Pengguna</h2>
+    <div class="container-fluid p-4 pb-5">
+        <h3 class="mb-4 fw-bold text-primary"><i class="bi bi-person-circle me-2"></i>Profil Pengguna</h3>
 
-        <div class="row">
-            <div class="col-md-4 mb-4">
-                <div class="card shadow-sm border-0 text-center p-4">
-                    <div class="position-relative d-inline-block mx-auto mb-3">
-                        <img :src="previewFoto || 'https://via.placeholder.com/150'" 
-                            class="rounded-circle img-thumbnail" 
-                            style="width: 150px; height: 150px; object-fit: cover;">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 text-center p-4 h-100">
+                    
+                    <div class="position-relative d-inline-block mx-auto mb-4 mt-2">
+                        <div class="rounded-circle shadow-sm p-1 bg-white" style="width: 160px; height: 160px;">
+                            <img :src="previewFoto || 'https://via.placeholder.com/150'" 
+                                class="rounded-circle w-100 h-100" 
+                                style="object-fit: cover; border: 1px solid #e9ecef;">
+                        </div>
                         
-                        <label for="uploadFoto" class="btn btn-sm btn-primary position-absolute bottom-0 end-0 rounded-circle" style="width: 35px; height: 35px;">
-                            <i class="bi bi-camera-fill"></i>
+                        <label for="uploadFoto" 
+                               class="btn btn-primary position-absolute rounded-circle d-flex align-items-center justify-content-center shadow" 
+                               style="width: 42px; height: 42px; bottom: 5px; right: 5px; border: 3px solid white; cursor: pointer; transition: transform 0.2s;">
+                            <i class="bi bi-camera-fill fs-5"></i>
                         </label>
                         <input type="file" id="uploadFoto" hidden @change="handleFileUpload" accept="image/*">
                     </div>
                     
-                    <h5 class="fw-bold">{{ formData.nama_lengkap }}</h5>
-                    <span class="badge bg-info text-dark">{{ formData.role }}</span>
-                    <p class="text-muted small mt-2">{{ formData.email }}</p>
+                    <h4 class="fw-bold text-dark mb-1">{{ formData.nama_lengkap }}</h4>
+                    <span class="badge bg-info text-dark px-3 py-2 rounded-pill fw-bold">{{ formatRole(formData.role) }}</span>
+                    <p class="text-muted small mt-3"><i class="bi bi-envelope-fill me-1"></i> {{ formData.email }}</p>
                 </div>
             </div>
 
             <div class="col-md-8">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white py-3">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-header bg-white py-3 border-bottom-0">
                         <h6 class="m-0 fw-bold text-primary"><i class="bi bi-pencil-square me-2"></i>Edit Informasi</h6>
                     </div>
-                    <div class="card-body p-4">
+                    <div class="card-body p-4 pt-2">
                         <form @submit.prevent="handleUpdate">
                             
                             <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label small fw-bold">Username (Tidak bisa diubah)</label>
-                                    <input type="text" class="form-control bg-light" v-model="formData.username" readonly>
+                                <div class="col-md-6 mb-3 mb-md-0">
+                                    <label class="form-label small fw-bold text-muted">Username (Tidak bisa diubah)</label>
+                                    <input type="text" class="form-control bg-light text-secondary fw-bold" v-model="formData.username" readonly>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-bold">Email</label>
@@ -178,7 +188,7 @@ const handleUpdate = async () => {
                             </div>
 
                             <div class="row mb-3">
-                                <div class="col-md-6">
+                                <div class="col-md-6 mb-3 mb-md-0">
                                     <label class="form-label small fw-bold">NIP / Nomor Induk</label>
                                     <input type="text" class="form-control" v-model="formData.nip" placeholder="Belum diisi">
                                 </div>
@@ -188,17 +198,17 @@ const handleUpdate = async () => {
                                 </div>
                             </div>
 
-                            <hr class="my-4">
+                            <hr class="my-4 text-muted opacity-25">
 
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-danger">Ganti Password (Opsional)</label>
-                                <input type="password" class="form-control" v-model="formData.password" placeholder="Isi hanya jika ingin mengganti password...">
+                            <div class="mb-4">
+                                <label class="form-label small fw-bold text-warning-emphasis"><i class="bi bi-shield-lock-fill me-1"></i>Ganti Password (Opsional)</label>
+                                <input type="password" class="form-control border-warning-subtle" v-model="formData.password" placeholder="Isi hanya jika ingin mengganti password Anda...">
                             </div>
 
-                            <div class="d-flex justify-content-end">
-                                <button type="submit" class="btn btn-primary px-4 fw-bold" :disabled="loading">
+                            <div class="d-flex justify-content-end mt-4">
+                                <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm" :disabled="loading">
                                     <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                                    {{ loading ? 'Menyimpan...' : 'SIMPAN PERUBAHAN' }}
+                                    {{ loading ? 'MENYIMPAN...' : 'SIMPAN PERUBAHAN' }}
                                 </button>
                             </div>
 
@@ -209,3 +219,11 @@ const handleUpdate = async () => {
         </div>
     </div>
 </template>
+
+<style scoped>
+/* Sedikit efek hover pada tombol kamera */
+label[for="uploadFoto"]:hover {
+    transform: scale(1.05);
+    background-color: #0b5ed7; /* Warna primary sedikit lebih gelap */
+}
+</style>
