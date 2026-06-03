@@ -1,18 +1,19 @@
 const { Pool } = require('pg');
 
 const db = new Pool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT,
+    // Menggunakan Connection String tunggal yang diberikan Neon
+    connectionString: process.env.DATABASE_URL,
+    // Wajib diaktifkan agar Neon.tech mengizinkan koneksi dari luar
+    ssl: {
+        rejectUnauthorized: false 
+    }
 });
 
 db.connect((err, client, release) => {
     if (err) {
         console.error('❌ Gagal koneksi ke database PostgreSQL:', err.stack);
     } else {
-        console.log('✅ Berhasil koneksi ke database PostgreSQL (db_alsintan)');
+        console.log('✅ Berhasil koneksi ke database publik (Neon.tech)');
         release(); 
     }
 });
