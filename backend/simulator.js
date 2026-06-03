@@ -2,7 +2,7 @@ const mqtt = require('mqtt');
 const readline = require('readline');
 
 const CONFIG = {
-    ID_ALAT: 1, // Disesuaikan menjadi 'id' nanti
+    ID_ALAT: 1, 
     TOPIC: 'project-mektan/v1/data', 
     BROKER: 'mqtts://a9ff4edaea834015978986b00dc65210.s1.eu.hivemq.cloud:8883', 
     USERNAME: 'simon_alsintan',
@@ -35,13 +35,14 @@ function generateTractorPath() {
             info = "⚠️ Simulasi Drift (HDOP Buruk)";
         }
 
-        path.push({ lat: currentLat, long: currentLng, V: 13, I: 4.2, bbm: 85, hd: hdop, st: 8, info: info });
+        // PERBAIKAN: long menjadi lng, BBM dihapus
+        path.push({ lat: currentLat, lng: currentLng, V: 13, I: 4.2, hd: hdop, st: 8, info: info });
     }
 
     // FASE 2: U-Turn di Ujung Lahan
     // Geser sedikit lintang (latitude) ke arah luar/samping untuk pindah jalur
     const uTurnLat = endLat - 0.000020; 
-    path.push({ lat: uTurnLat, long: endLng, V: 14.1, I: 4.2, bbm: 84, hd: 120, st: 8, info: "🔄 Putar Balik" });
+    path.push({ lat: uTurnLat, lng: endLng, V: 14.1, I: 4.2, hd: 120, st: 8, info: "🔄 Putar Balik" });
 
     // FASE 3: Mundur (Titik B kembali ke A di jalur sebelah)
     for (let i = 0; i <= steps; i++) {
@@ -49,7 +50,7 @@ function generateTractorPath() {
         let currentLat = uTurnLat + ((startLat - uTurnLat) * (i / steps));
         let currentLng = endLng + ((startLng - endLng) * (i / steps));
 
-        path.push({ lat: currentLat, long: currentLng, V: 14, I: 4.2, bbm: 83, hd: 110, st: 9, info: "Lurus Kembali" });
+        path.push({ lat: currentLat, lng: currentLng, V: 14, I: 4.2, hd: 110, st: 9, info: "Lurus Kembali" });
     }
 
     return path;
@@ -91,14 +92,13 @@ function publishPacket() {
     // Jika user menekan SPASI untuk mematikan mesin, paksa Voltase (V) turun di bawah 12V
     const currentVoltage = isEngineOn ? point.V : 0.5; 
 
-    // Struktur JSON Terbaru
+    // Struktur JSON Terbaru (BBM dihapus, menggunakan lng)
     const payload = {
         id: CONFIG.ID_ALAT,
         lat: point.lat,
-        long: point.long,
+        lng: point.lng,
         V: currentVoltage,
         I: isEngineOn ? point.I : 0.5, // Arus drop jika mesin mati
-        bbm: point.bbm,
         hd: point.hd,
         st: point.st,
         ts: Math.floor(Date.now() / 1000) // Waktu Unix saat ini
@@ -114,6 +114,7 @@ function publishPacket() {
         }
     }
 
+    // Teruskan JSON payload yang dikirim agar bisa dilihat di layar Console UI
     renderUI(payload, point.info);
 }
 
@@ -126,15 +127,24 @@ process.stdin.on('keypress', (str, key) => {
 
     if (key.name === 'space') {
         isEngineOn = !isEngineOn; 
-        renderUI(pathData[currentIndex], "Kontak Diputar"); 
+        // Render UI sementara (pakai data dummy titik saat ini)
+        renderUI({
+            lat: pathData[currentIndex].lat,
+            lng: pathData[currentIndex].lng,
+            V: isEngineOn ? pathData[currentIndex].V : 0.5,
+            I: isEngineOn ? pathData[currentIndex].I : 0.5,
+            st: pathData[currentIndex].st,
+            hd: pathData[currentIndex].hd,
+            ts: Math.floor(Date.now() / 1000)
+        }, "Kontak Diputar"); 
         publishPacket(); 
     }
 });
 
 // --- 7. TAMPILAN CONSOLE (UI) ---
-function renderUI(currentData = pathData[currentIndex], infoLabel = "Menunggu") {
+function renderUI(currentData = {lat: 0, lng: 0, st: 0, hd: 0, V: 0, I: 0}, infoLabel = "Menunggu") {
     console.clear();
-    console.log(`🚜 AVERY ANR 127 SIMULATOR (ID: ${CONFIG.ID_ALAT}) - JSON v2`);
+    console.log(`🚜 AVERY ANR 127 SIMULATOR (ID: ${CONFIG.ID_ALAT}) - JSON v2.1`);
     console.log(`==================================================`);
     
     if (isEngineOn) {
@@ -146,11 +156,11 @@ function renderUI(currentData = pathData[currentIndex], infoLabel = "Menunggu") 
     }
 
     console.log(`--------------------------------------------------`);
-    console.log(`📍 KOORDINAT : ${currentData.lat.toFixed(6)}, ${currentData.long.toFixed(6)}`);
+    console.log(`📍 KOORDINAT : ${currentData.lat.toFixed(6)}, ${currentData.lng.toFixed(6)}`);
     console.log(`📶 GPS QUAL  : Satelit: ${currentData.st} | HDOP: ${(currentData.hd / 100).toFixed(2)}`);
     console.log(`⚡ TEGANGAN  : ${currentData.V} V`);
     console.log(`🔋 ARUS      : ${currentData.I} A`);
-    console.log(`⛽ BBM       : ${currentData.bbm}%`);
+    // BBM Dihapus
     console.log(`⏱️ TIMESTAMP : ${currentData.ts || Math.floor(Date.now() / 1000)}`);
     console.log(`--------------------------------------------------`);
     console.log(`\n🎮 KONTROL:`);

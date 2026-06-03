@@ -1,12 +1,16 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
 const items = ref([]);
 const loading = ref(true);
 const userRole = ref('');
 
-// Tarif default (Hanya Super Admin yang bisa edit di UI)
+// State untuk memantau proses loading saat menyimpan
+const isSavingTarif = ref(false); 
+
+// Tarif default (Akan ditimpa oleh data dari database)
 const tarifPerHa = ref(1500000); 
 
 const fetchData = async () => {
@@ -14,9 +18,37 @@ const fetchData = async () => {
         const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan`);
         items.value = response.data;
     } catch (error) {
-        console.error("Gagal ambil data:", error);
+        console.error("Gagal ambil data armada:", error);
     } finally {
         loading.value = false;
+    }
+};
+
+// --- FUNGSI BARU: MENGAMBIL TARIF DARI DATABASE ---
+const fetchTarif = async () => {
+    try {
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`);
+        tarifPerHa.value = Number(res.data.nilai);
+    } catch (e) {
+        console.error("Gagal meload tarif dari server");
+    }
+};
+
+// --- FUNGSI BARU: MENYIMPAN TARIF KE DATABASE (Hanya Super Admin) ---
+const saveTarif = async () => {
+    isSavingTarif.value = true;
+    try {
+        await axios.put(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`, { nilai: tarifPerHa.value });
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil!',
+            text: 'Tarif dasar telah dikunci untuk seluruh sistem.',
+            confirmButtonColor: '#198754'
+        });
+    } catch (e) {
+        Swal.fire('Error', 'Gagal menyimpan perubahan tarif', 'error');
+    } finally {
+        isSavingTarif.value = false;
     }
 };
 
@@ -40,6 +72,7 @@ onMounted(() => {
     const session = JSON.parse(localStorage.getItem('user'));
     if (session) userRole.value = session.role;
     fetchData();
+    fetchTarif(); // Panggil fungsi tarik tarif saat halaman dimuat
 });
 </script>
 
@@ -69,18 +102,25 @@ onMounted(() => {
                     </div>
                     <div class="card-body">
                         <label class="form-label text-muted small">Harga Jasa per Hektar (Acuan)</label>
-                        <div class="input-group mb-3">
+                        
+                        <div class="input-group mb-3 shadow-sm">
                             <span class="input-group-text bg-light border-end-0">Rp</span>
                             <input v-model="tarifPerHa" type="number" 
                                 class="form-control fw-bold border-start-0 text-end"
                                 :disabled="!['super_admin'].includes(userRole)">
+                                
+                            <button v-if="['super_admin'].includes(userRole)" @click="saveTarif" 
+                                    class="btn btn-primary fw-bold px-3 border-primary z-0" :disabled="isSavingTarif">
+                                <span v-if="isSavingTarif" class="spinner-border spinner-border-sm me-1"></span>
+                                <i v-else class="bi bi-floppy-fill me-1"></i> Simpan
+                            </button>
                         </div>
                         
                         <div v-if="!['super_admin'].includes(userRole)" class="alert alert-warning py-2 small mb-0">
                             <i class="bi bi-lock-fill"></i> Hanya <b>Super Admin</b> yang dapat mengubah acuan tarif dasar.
                         </div>
                         <small v-else class="text-muted" style="font-size:11px;">
-                            <i class="bi bi-info-circle"></i> Perubahan tarif akan langsung mengkalkulasi ulang seluruh tabel.
+                            <i class="bi bi-info-circle"></i> Perubahan tarif akan langsung tersimpan ke server dan berlaku global.
                         </small>
                     </div>
                 </div>

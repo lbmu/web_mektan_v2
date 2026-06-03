@@ -53,7 +53,7 @@ client.on('message', (topic, message) => {
             hdop: parseInt(rawData.hd) || 0,
             satelit: parseInt(rawData.st) || 0,
             ts: rawData.ts || 0,
-            status_mesin: parseFloat(rawData.V) > 13.0 ? 'ON' : 'OFF'
+            status_mesin: parseFloat(rawData.V) >= 11.5 ? 'ON' : 'OFF'
         };
 
         // 🚀 JALUR CEPAT (LIVE UI MAP)

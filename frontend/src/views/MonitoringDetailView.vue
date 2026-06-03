@@ -20,7 +20,8 @@ const id = route.params.id;
 // --- STATE ---
 const activeTab = ref('LIVE'); 
 const infoAlat = ref({});
-const lebarImplemen = ref(1.89); // Nilai bawaan, akan ditimpa oleh Database
+const lebarImplemen = ref(1.89); 
+const userRole = ref(''); // Penampung Hak Akses
 
 const getTodayDate = () => {
     const d = new Date();
@@ -48,7 +49,10 @@ const historyCoordsLive = ref([]);
 const historyDate = ref(getTodayDate()); 
 const historyCoordsPast = ref([]);
 const totalJarakPast = ref(0);
+
+// --- STATE TARIF DINAMIS ---
 const tarifPerHa = ref(1500000); 
+const isSavingTarif = ref(false);
 
 let map = null;
 let polyline = null; 
@@ -57,27 +61,52 @@ let mqttClient = null;
 let lastMesinStatus = 'UNKNOWN'; 
 let syncTimer = null; 
 
-// Watchdog Timer
 let offlineTimer = null;
 const TIMEOUT_BATAS_MS = 600000; 
 
-// --- HELPER FUNGSI UNTUK TAMPILAN STATUS ---
 const getTractorClass = (status) => {
   if (status === 'ON') return 'bg-success text-white animate-pulse';
   if (status === 'OFF') return 'bg-dark text-white-50';
   return 'bg-secondary text-white'; 
 };
 
-// --- 1. AMBIL DATA AWAL DARI DATABASE ---
+// --- FUNGSI TARIF DINAMIS ---
+const fetchTarif = async () => {
+    try {
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`);
+        tarifPerHa.value = Number(res.data.nilai);
+    } catch (e) {
+        console.error("Gagal meload tarif dari server");
+    }
+};
+
+const saveTarif = async () => {
+    isSavingTarif.value = true;
+    try {
+        await axios.put(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`, { nilai: tarifPerHa.value });
+        // Gunakan efek "Toast" agar pop-up tidak menutupi tengah layar saat sedang fokus memonitoring
+        Swal.fire({ 
+            toast: true, 
+            position: 'top-end', 
+            icon: 'success', 
+            title: 'Tarif global diperbarui', 
+            showConfirmButton: false, 
+            timer: 2500 
+        });
+    } catch (e) {
+        Swal.fire('Error', 'Gagal menyimpan tarif', 'error');
+    } finally { 
+        isSavingTarif.value = false; 
+    }
+};
+
 const fetchData = async () => {
     try {
         const resALat = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}`);
         const data = resALat.data;
         infoAlat.value = data;
         
-        // MENARIK LEBAR IMPLEMEN DARI DATABASE
         lebarImplemen.value = parseFloat(data.lebar_implemen || 1.89);
-
         jarakBersihValid.value = parseFloat(data.total_jarak_kerja || 0);
         if (jarakMentahSensor.value === 0) jarakMentahSensor.value = jarakBersihValid.value; 
 
@@ -108,7 +137,6 @@ const fetchCleanDataOnly = async () => {
     } catch (error) {}
 };
 
-// --- LOGIKA PETA ---
 const initMap = () => {
     const container = document.getElementById('monitor-map');
     if (!container) return;
@@ -162,7 +190,6 @@ const fetchHistoryByDate = async () => {
     } catch (error) {}
 };
 
-// --- MQTT (JALUR CEPAT & REAL-TIME) ---
 const connectMqtt = () => {
     const options = {
         host: MQTT_HOST,
@@ -239,7 +266,6 @@ const connectMqtt = () => {
 
 const luasHektar = computed(() => {
     const jarak = activeTab.value === 'LIVE' ? jarakBersihValid.value : totalJarakPast.value;
-    // PENGHITUNGAN DINAMIS MENGGUNAKAN VARIABEL DB
     return (jarak * lebarImplemen.value) / 10000;
 });
 
@@ -275,6 +301,12 @@ watch(historyDate, () => {
 });
 
 onMounted(() => {
+    // 1. Tarik Sesi Akun
+    const session = JSON.parse(localStorage.getItem('user'));
+    if (session) userRole.value = session.role;
+    
+    // 2. Load Data Terpusat
+    fetchTarif();
     fetchData();
     connectMqtt(); 
     syncTimer = setInterval(fetchCleanDataOnly, 10000);
@@ -312,7 +344,7 @@ onUnmounted(() => {
       <div class="col-lg-8 h-100">
         <div class="card shadow-sm border-0 h-100 position-relative overflow-hidden">
           
-          <div class="position-absolute top-0 start-50 translate-middle-x mt-3 z-3 bg-white rounded-pill shadow-sm p-1 d-flex gap-1 border">
+          <div class="position-absolute top-0 start-50 translate-middle-x mt-3 z-3 bg-white shadow-sm p-1 d-flex gap-1 border">
               <button class="btn btn-sm rounded-pill fw-bold" 
                       style="min-width: 150px; padding-block: 8px;"
                       :class="activeTab === 'LIVE' ? 'btn-primary' : 'btn-light text-muted'"
@@ -391,10 +423,20 @@ onUnmounted(() => {
             <div class="card border border-warning shadow-sm bg-warning bg-opacity-10 flex-shrink-0">
               <div class="card-body">
                 <label class="small text-muted fw-bold d-block mb-1">Tarif Jasa per Hektar</label>
-                <div class="input-group input-group-sm mb-3">
+                
+                <div class="input-group input-group-sm mb-3 shadow-sm">
                     <span class="input-group-text bg-white">Rp</span>
-                    <input type="number" v-model="tarifPerHa" class="form-control fw-bold border-start-0">
+                    <input type="number" v-model="tarifPerHa" class="form-control fw-bold border-start-0"
+                           :disabled="!['super_admin'].includes(userRole)">
+                    
+                    <button v-if="['super_admin'].includes(userRole)" @click="saveTarif" 
+                            class="btn btn-warning fw-bold px-2 border-warning z-0" 
+                            :disabled="isSavingTarif" title="Simpan Tarif Global">
+                        <span v-if="isSavingTarif" class="spinner-border spinner-border-sm"></span>
+                        <i v-else class="bi bi-check-lg"></i>
+                    </button>
                 </div>
+                
                 <div class="d-flex justify-content-between align-items-center border-top border-warning pt-2">
                   <span class="fw-bold text-warning-emphasis">Total Tagihan</span>
                   <span class="h5 mb-0 fw-bold text-dark">Rp {{ Math.round(estimasiBiaya).toLocaleString('id-ID') }}</span>

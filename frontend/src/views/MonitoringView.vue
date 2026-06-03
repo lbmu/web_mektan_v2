@@ -247,30 +247,31 @@ onUnmounted(() => {
   <div class="container-fluid d-flex flex-column pb-1" style="height: calc(100vh - 4.5rem);">
     
     <div class="row g-0 bg-light flex-grow-1" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-        <div class="col-md-4 col-lg-3 bg-white d-flex flex-column border-end position-relative" style="height: 100%;">
+        
+        <div class="col-md-5 col-lg-4 bg-white d-flex flex-column border-end position-relative" style="height: 100%;">
             
-            <div class="p-3 border-bottom bg-light">
+            <div class="p-3 border-bottom bg-light flex-shrink-0">
                 <h5 class="fw-bold mb-0 text-primary">
                     <i class="bi bi-geo-alt-fill me-1"></i> Lokasi Traktor
                 </h5>
             </div>
 
-            <div class="d-flex flex-column h-100">
-                <div class="p-3 border-bottom">
+            <div class="d-flex flex-column h-100 overflow-hidden">
+                <div class="p-3 border-bottom flex-shrink-0">
                     <input v-model="searchQuery" type="text" class="form-control mb-2 bg-light border-0" placeholder="🔍 Cari nama / kode alat...">
                     
-                    <div class="btn-group w-100 shadow-sm" role="group">
+                    <div class="d-flex w-100 gap-2">
                         <input type="radio" class="btn-check" name="btnradio" id="btnAll" value="ALL" v-model="filterStatus">
-                        <label class="btn btn-outline-primary btn-sm" for="btnAll" style="font-size: 9px;">Semua</label>
+                        <label class="btn btn-outline-primary btn-sm rounded-pill flex-fill shadow-sm fw-bold px-0" for="btnAll" style="font-size: 11px; padding-block: 6px;">Semua</label>
 
                         <input type="radio" class="btn-check" name="btnradio" id="btnOn" value="ON" v-model="filterStatus">
-                        <label class="btn btn-outline-success btn-sm" for="btnOn" style="font-size: 9px;">Kerja</label>
+                        <label class="btn btn-outline-success btn-sm rounded-pill flex-fill shadow-sm fw-bold px-0" for="btnOn" style="font-size: 11px; padding-block: 6px;">Kerja</label>
 
                         <input type="radio" class="btn-check" name="btnradio" id="btnOff" value="OFF" v-model="filterStatus">
-                        <label class="btn btn-outline-dark btn-sm" for="btnOff" style="font-size: 9px;">Parkir</label>
+                        <label class="btn btn-outline-dark btn-sm rounded-pill flex-fill shadow-sm fw-bold px-0" for="btnOff" style="font-size: 11px; padding-block: 6px;">Parkir</label>
 
                         <input type="radio" class="btn-check" name="btnradio" id="btnOffline" value="OFFLINE" v-model="filterStatus">
-                        <label class="btn btn-outline-danger btn-sm" for="btnOffline" style="font-size: 9px;">Offline</label>
+                        <label class="btn btn-outline-danger btn-sm rounded-pill flex-fill shadow-sm fw-bold px-0" for="btnOffline" style="font-size: 11px; padding-block: 6px;">Offline</label>
                     </div>
                 </div>
 
@@ -308,12 +309,12 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div class="col-md-8 col-lg-9 position-relative bg-dark h-100">
-            <div id="main-map" style="height: 100%; width: 100%;"></div>
+        <div class="col-md-7 col-lg-8 d-flex flex-column bg-dark p-0" style="height: 100%;">
+            <div id="main-map" class="flex-grow-1 w-100"></div>
         </div>
     </div>
 
-    <div class="text-center mt-3 pt-2 text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+    <div class="text-center mt-2 flex-shrink-0 text-muted" style="font-size: 0.75rem; letter-spacing: 0.5px;">
         &copy; 2026 Balai Pengembangan Mekanisasi Pertanian - Pemprov Jawa Barat. Versi 1.1.0
     </div>
 
