@@ -1,17 +1,20 @@
 #pragma once
 
+#define DEVICE_ID 1
+
 // OTA
-#define WIFI_SSID "NAMA_SSID"
-#define WIFI_PASS "P4$$W0RD_W1Fl"
-#define OTA_PASS  "lBU_MEG4"
+#define WIFI_SSID "anjay"
+#define WIFI_PASS "passwordussahakanhurufbesardankecilsertaangkadansimbol"
+#define OTA_PASS  "inibiarbisauploadkodelewatwifi"
+
+#define MQTT_CLIENT_ID "traktor_00"
+#define MQTT_PORT 1883                      // Gunakan 8883 jika pakai TLS/SSL, 1883 buat tes publik 
+#define MQTT_TOPIC "isibebas"
 
 // Broker
-#define MQTT_BROKER "a9ff4edaea834015978986b00dc65210.s1.eu.hivemq.cloud"   // Sesuaikan jika pakai cluster private
-#define MQTT_PORT 8883                                                      // Gunakan 8883 jika pakai TLS/SSL, 1883 buat tes publik 
-#define MQTT_CLIENT_ID "traktor_1"
-#define MQTT_TOPIC "topik?"
-#define MQTT_USER "simon_alsintan"                                          // Isi jika HiveMQ Anda butuh username
-#define MQTT_PASS "BPMektanJabar12"                                         // Isi jika HiveMQ Anda butuh password
+#define MQTT_BROKER "isi_pake_cluster_url"  // Sesuaikan jika pakai cluster private
+#define MQTT_USER "ambatukam"               // Isi jika HiveMQ Anda butuh username
+#define MQTT_PASS "Woil4suki"               // Isi jika HiveMQ Anda butuh password
 
 // Sertifikat CA
 const char HIVEMQ_CA[] =

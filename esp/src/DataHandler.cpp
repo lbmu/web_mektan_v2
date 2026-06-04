@@ -55,8 +55,8 @@ String DataHandler::buildJson(const bufferedData& data, const String& deviceID) 
     if (isnan(data.current_mA)) doc["I"] = nullptr; 
     else doc["I"] = serialized(String(data.current_mA, 2));
     
-    if (isnan(data.fuel_R)) doc["bbm"] = nullptr; 
-    else doc["bbm"] = serialized(String(data.fuel_R, 2));
+    // if (isnan(data.fuel_R)) doc["bbm"] = nullptr; 
+    // else doc["bbm"] = serialized(String(data.fuel_R, 2));
     
     if (isnan(data.hdop)) doc["hd"] = nullptr; 
     else doc["hd"] = data.hdop;

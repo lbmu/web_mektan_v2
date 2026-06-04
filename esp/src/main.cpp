@@ -22,8 +22,6 @@
 #include "SystemDiagnostics.h"
 #include "DataHandler.h"
 
-#include <ArduinoJson.h>
-
 /* @brief
  * pinout juga sama 
  * disimpen di pinout.h
@@ -32,9 +30,22 @@
 
 #include "pinout.h"
 
-// cek notip (komentar untuk disable) [shortcut di VS Code: Ctrl + /]
-#define RUN_TASK // <- Buat run task biasa
-// #define RUN_DIAGNOSTICS // <-- Buat DIAGNOSIS SISTEM
+// ==================================================
+// KONFIGURASI MODE OPERASI (PILIH SALAH SATU)
+// ==================================================
+// #define RUN_TASK 
+// #define RUN_DIAGNOSTICS 
+#define RUN_SIMULATION 
+
+// ==================================================
+// SAFETY CHECK: Mencegah Multiple Define
+// ==================================================
+#if (defined(RUN_TASK) + defined(RUN_DIAGNOSTICS) + defined(RUN_SIMULATION)) > 1
+    #error "💥 KESALAHAN KOMPILASI: Bentrok Mode Terdeteksi! Pastikan hanya SATU mode (#define) yang aktif."
+#elif (defined(RUN_TASK) + defined(RUN_DIAGNOSTICS) + defined(RUN_SIMULATION)) == 0
+    #warning "⚠️ PERINGATAN: Tidak ada mode operasi yang diaktifkan. Mikrokontroler hanya akan booting lalu idle."
+#endif
+// ==================================================
 
 // Misc
 // #define REPORT
@@ -92,7 +103,6 @@ TaskHandle_t gpsTaskHandle = NULL;
 TaskHandle_t monitorHandle = NULL;
 
 // Task 0: OTA Debug
-
 #ifdef USE_TELNET_DEBUG
 ESPTelnet telnet;
 
@@ -122,19 +132,8 @@ void TaskTelnet(void *pvParameters) {
 
 #endif
 
-// End of Task 0
-
 // Task 1: Telemetry via 4G (MQTT HiveMQ)
 void TaskTelemetry(void *pvParameters) {
-    
-
-    // if (esp_reset_reason() == ESP_RST_POWERON) {
-    //     DEBUG_PRINTLN("\n⏳ [TELEMETRY] Cold Boot Terdeteksi. Menunggu SIM7600 pemanasan (60 detik)...");
-    //     // vTaskDelay akan menghentikan task ini sementara tanpa memicu Watchdog
-    //     // dan membiarkan Task GPS & Task Monitor tetap berjalan dengan normal
-    //     vTaskDelay(60000 / portTICK_PERIOD_MS); 
-    // }
-
     // Variabel untuk jeda publish tanpa blocking
     unsigned long lastPublishTime = 0;
     unsigned long lastSaveTime = 0;
@@ -151,78 +150,38 @@ void TaskTelemetry(void *pvParameters) {
     unsigned long currentPublishInterval = ACTIVE_INTERVAL;
     bool isEngineOn = true;
 
+    // --- TAMBAHAN UNTUK INISIALISASI NON-BLOCKING ---
+    bool isColdBoot = (esp_reset_reason() == ESP_RST_POWERON);
+    // Jika cold boot, tunggu 60 detik. Jika restart biasa (warm boot), cukup 10 detik.
+    const unsigned long WARMUP_DURATION = isColdBoot ? 30000 : 10000;
+    unsigned long taskStartTime = millis();
+    bool isSimReady = false;
+
+    if (isColdBoot) {
+        DEBUG_PRINTLN("\n⏳ [TELEMETRY] Cold Boot Terdeteksi. Menjalankan timer pemanasan SIM7600 di background...");
+    }
+
     while (1) {
-        // 1. Cek Koneksi Jaringan 4G
-        // 2. Cek Koneksi ke Broker MQTT
-        // 3. JAGA KONEKSI (Keep-Alive TLS & MQTT)
-        bool isOnline = comm.maintainConnection();
+        bool isOnline = false;
 
-        // 4. Logika interval kirim data
-        // float currentVolt = 0.0;
-        // if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
-        //     currentVolt = latestData.voltage_V;
-        //     xSemaphoreGive(dataMutex);
-        // }
-        
-        // // Hysteresis?
-        // if (currentVolt >= ENGINE_ON_V && isEngineOn) {
-        //     isEngineOn = true;
-        //     currentPublishInterval = ACTIVE_INTERVAL;
-        //     DEBUG_PRINT(">");
-        // }
-        // else if (currentVolt <= ENGINE_OFF_V && !isEngineOn) {
-        //     isEngineOn = false;
-        //     currentPublishInterval = HEARTBEAT_INTERVAL;
-        //     DEBUG_PRINT("<");
-        // }
-        
-        /* @brief GPS SIM7600G
-         * aktif jika M8N rusak (for now)
-         */
+        // 1. Cek Koneksi Jaringan & Inisialisasi Modul
+        if (millis() - taskStartTime < WARMUP_DURATION) {
+            // Selama fase inisialisasi, status SELALU offline.
+            // skip comm.maintainConnection() agar terhindar dari freeze/blocking.
+            isOnline = false;
+        } else {
+            if (!isSimReady) {
+                DEBUG_PRINTLN("\n✅ [TELEMETRY] Waktu pemanasan SIM selesai. Mulai menghubungkan...");
+                isSimReady = true;
+            }
+            // 2. JAGA KONEKSI (Baru dilakukan setelah modul siap)
+            isOnline = comm.maintainConnection();
+        }
 
-        // bool m8nStatus = true;
-        // if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
-        //     m8nStatus = latestData.isM8NActive;
-        //     xSemaphoreGive(dataMutex);
-        // }
-        
-        // cek status modul GPS
-        // if (!m8nStatus) {
-        //     float simLat = 0, simLng = 0;
-
-        //     comm.enableGNSS();
-
-        //     // Ambil koordinat lewat modul SIM
-        //     if (comm.getGNSSData(&simLat, &simLng)) {
-        //         if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
-        //             latestData.lat = simLat;
-        //             latestData.lng = simLng;
-        //             latestData.gpsUpdated = true;
-        //             xSemaphoreGive(dataMutex);
-        //         }
-        //         // DEBUG_PRINT("🛰️!");
-        //     }
-
-        //     // Kalau gak bisa nangkep koordinat, return NaN
-        //     else {
-        //         if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
-        //             latestData.lat = NAN;
-        //             latestData.lng = NAN;
-        //             latestData.gpsUpdated = false;
-        //             xSemaphoreGive(dataMutex);
-        //         }
-        //     }
-        // }
-
-        // Kalau Neo nya udah nyala
-        // else 
-        //     comm.disableGNSS();
-        
-        // 4. Protokol Publish Data
+        // 4. Protokol Publish / Save Data
         bufferedData currentData;
         static int sampleCount = 0;
         unsigned long latency = 0;
-
         unsigned long startTime = micros();
 
         // Sinkronisasi Mutex
@@ -239,33 +198,28 @@ void TaskTelemetry(void *pvParameters) {
             xSemaphoreGive(dataMutex);
         }
 
-        // Ambil timestamp
+        // Ambil timestamp (jika SIM mati, fungsi ini akan coba pakai data M8N atau fallback)
         currentData.timestamp = getCurrentTimestamp();
 
         ////////////////////////////
-        // Logika Pengiriman data //
+        // Logika Pengiriman Data //
         ////////////////////////////
 
-        // anjay mabar
         if (isOnline) {
-
+            // Cek data buffer di LittleFS
             if (dataHandler.hasData()) {
-                // Cek data buffer
-
                 File file = dataHandler.openForRead();
                 if (file) {
                     bufferedData oldData;
                     bool allSent = true;
                     while (file.available() >= sizeof(bufferedData)) {
                         file.read((uint8_t*)&oldData, sizeof(bufferedData));
-
                         String oldJson = dataHandler.buildJson(oldData, String(DEVICE_ID));
 
                         if (comm.publishMQTT(MQTT_TOPIC, oldJson)) {
                             DEBUG_PRINT("📦");
                             vTaskDelay(200 / portTICK_PERIOD_MS);
-                        }
-                        else {
+                        } else {
                             DEBUG_PRINTLN("⚠️");
                             allSent = false;
                             break;
@@ -280,43 +234,43 @@ void TaskTelemetry(void *pvParameters) {
                 }
             }
             
+            // Kalau gak ada buffer, kirim data aktual (real-time)
+            if (millis() - lastPublishTime >= ACTIVE_INTERVAL) {
+                String currentJson = dataHandler.buildJson(currentData, String(DEVICE_ID));
 
-                // Kalau gak ada buffer, kirim data aktual (real-time)
-                if (millis() - lastPublishTime >= ACTIVE_INTERVAL) {
-                    String currentJson = dataHandler.buildJson(currentData, String(DEVICE_ID));
-
-                    // Kirim data (real-time)
-                    if (comm.publishMQTT(MQTT_TOPIC, currentJson)) {
-                        // DEBUG_PRINT("✅✅✅");
-                        lastPublishTime = millis();
-                    }
-                    
-                    #ifdef PAPER
-                    if (sampleCount < 500) {
-                        sampleCount++;
-                        DEBUG_PRINT(sampleCount);
-                        DEBUG_PRINT(";");
-                        DEBUG_PRINT(latency);
-                        DEBUG_PRINT(";");
-                        DEBUG_PRINTLN(currentJson);
-                    }
-                    #endif
-                }                
+                // Kirim data (real-time)
+                if (comm.publishMQTT(MQTT_TOPIC, currentJson)) {
+                    lastPublishTime = millis();
+                }
+                
+                #ifdef PAPER
+                if (sampleCount < 500) {
+                    sampleCount++;
+                    DEBUG_PRINT(sampleCount);
+                    DEBUG_PRINT(";");
+                    DEBUG_PRINT(latency);
+                    DEBUG_PRINT(";");
+                    DEBUG_PRINTLN(currentJson);
+                }
+                #endif
+            }                
         }
         
-        //  modul atau MQTT belom nyala
+        // Modul komunikasi belum ter-inisialisasi (warmup) ATAU sedang offline
         else {
             if (millis() - lastSaveTime >= currentPublishInterval) {
-                if (dataHandler.saveData(currentData)) {DEBUG_PRINT("💾");}
-                else {DEBUG_PRINTLN("⚠️");}
+                if (dataHandler.saveData(currentData)) {
+                    DEBUG_PRINT("💾");
+                } else {
+                    DEBUG_PRINTLN("⚠️");
+                }
                 lastSaveTime = millis();
             }
         }
-        // Delay sangat pendek (50ms) agar task FreeRTOS tidak monopoli CPU,
-        // namun cukup sering untuk memanggil comm.loop() dengan lancar
+        
+        // Jeda ringan agar RTOS tidak monopoli Core
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
-    vTaskDelay(100 / portTICK_PERIOD_MS);
 }
 
 // Task 2: GPS Reading
@@ -418,7 +372,7 @@ void setup() {
     DEBUG_PRINTLN("");
 
     // init littleFS
-    Serial.println("============[ Initializing Fail-Safe ]===========");
+    Serial.println("=======[ Initializing Fail-Safe Mechanism]=======");
     dataHandler.begin();
     DEBUG_PRINTLN("==================================================");
     DEBUG_PRINTLN("");
@@ -445,6 +399,7 @@ void setup() {
     DEBUG_PRINTLN("==================================================");
     DEBUG_PRINTLN("");
 
+    // Init Modul 4G
     DEBUG_PRINTLN("===============[ Initializing SIM ]===============");
     comm.configMQTT(MQTT_BROKER, MQTT_PORT, MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS);
     DEBUG_PRINTLN("==================================================");
@@ -453,16 +408,22 @@ void setup() {
     // Create Mutex
     dataMutex = xSemaphoreCreateMutex();
     
-    // Init Modul 4G
-
+    // Telnet Debug
     #ifdef USE_TELNET_DEBUG
     xTaskCreatePinnedToCore(
         TaskTelnet, "Telnet_Task", 4096, NULL, 1, &telnetTaskHandle, 1
     );
     #endif
 
+    // Simulasi
+    #ifdef RUN_SIMULATION
+    DEBUG_PRINTLN("===============[ Simulation Mode ]================");
+    xTaskCreatePinnedToCore(
+        TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, &telemetryTaskHandle, 0
+    );
+    diagnostics.run(TEST_SIMULATION);
+    #endif
 
-    DEBUG_PRINTLN("===============[ Initializing SIM ]===============");
     #ifdef RUN_TASK
     xTaskCreatePinnedToCore(
         TaskTelemetry, "Telemetry_Task", 8192, NULL, 1, &telemetryTaskHandle, 0
@@ -474,14 +435,14 @@ void setup() {
         TaskMonitor, "Monitor_Task", 4096, NULL, 1, &monitorHandle, 1
     );
     // uncomment baris di bawah biar sistemnya keliatan kompleks :v
-    // diagnostics.run(TEST_PERFORMANCE_MONITOR);
+    diagnostics.run(TEST_PERFORMANCE_MONITOR);
     #endif
     
     // Gunakan untuk diagnosis sistem
     #ifdef RUN_DIAGNOSTICS
     // diagnostics.run(TEST_NMEA_PASSTHROUGH); // Yang ini buat tes GPS dalem ruangan (Cek modul doang, belum bisa ngirim koordinat)
     // diagnostics.run(TEST_SIM_PASSTHROUGH); // Yang ini buat ngirimin AT Command
-    diagnostics.run(TEST_STORAGE_MONITOR);
+    // diagnostics.run(TEST_STORAGE_MONITOR);
     #endif
 }
 

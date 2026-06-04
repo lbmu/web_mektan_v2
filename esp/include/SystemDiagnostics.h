@@ -12,7 +12,8 @@ enum DiagnosticMode {
     TEST_NMEA_PASSTHROUGH,      // Raw NMEA & Sensor Check
     TEST_SIM_PASSTHROUGH,       // Cek Modul 4G
     TEST_PERFORMANCE_MONITOR,   // Heap Monitor RTOS
-    TEST_STORAGE_MONITOR        // Cek file buffer
+    TEST_STORAGE_MONITOR,       // Cek file buffer
+    TEST_SIMULATION
 };
 
 class SystemDiagnostics {
@@ -29,4 +30,5 @@ private:
     void runSimTest();
     void runPerformanceMonitor();
     void runStorageMonitor();
+    void runSimulation();
 };

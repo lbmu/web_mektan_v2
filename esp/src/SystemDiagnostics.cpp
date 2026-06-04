@@ -5,6 +5,9 @@
 #include "espOTA.h"
 #include "DataHandler.h"
 
+extern SharedData latestData;
+extern SemaphoreHandle_t dataMutex;
+
 extern TaskHandle_t telnetTaskHandle;
 extern TaskHandle_t telemetryTaskHandle;
 extern TaskHandle_t gpsTaskHandle;
@@ -25,6 +28,7 @@ void SystemDiagnostics::run(DiagnosticMode mode) {
     else if (mode == TEST_SIM_PASSTHROUGH) runSimTest();
     else if (mode == TEST_PERFORMANCE_MONITOR) runPerformanceMonitor();
     else if (mode == TEST_STORAGE_MONITOR) runStorageMonitor();
+    else if (mode == TEST_SIMULATION) runSimulation();
     // ... mode lain bisa ditambahkan nanti ...
     
 }
@@ -212,4 +216,92 @@ void SystemDiagnostics::runStorageMonitor() {
         vTaskDelay(15000 / portTICK_PERIOD_MS);
     }
     
+}
+
+void SystemDiagnostics::runSimulation() {
+    DEBUG_PRINTLN(">> MODE: SIMULASI OPERASIONAL ALSINTAN (INTEGRATED)");
+    DEBUG_PRINTLN(">> Menyuplai data simulasi ke Shared Memory FreeRTOS...\n");
+
+    // Koordinat awal area pesawahan
+    double currentLat = -6.976300; 
+    double currentLng = 107.630500;
+
+    enum SimState { SAWAH_MODE, TOLL_MODE };
+    SimState currentState = SAWAH_MODE;
+    
+    unsigned long stateStartTime = millis();
+    const unsigned long MODE_DURATION = 30000; // 30 detik berganti mode
+
+    int stepCount = 0;
+    bool movingEast = true;
+    const int MAX_STEPS = 15;
+
+    while (1) {
+        unsigned long elapsed = millis() - stateStartTime;
+
+        // --- TRANSISI STATE ---
+        if (elapsed > MODE_DURATION) {
+            currentState = (currentState == SAWAH_MODE) ? TOLL_MODE : SAWAH_MODE;
+            stateStartTime = millis();
+            DEBUG_PRINTLN("\n=======================================================");
+            if (currentState == SAWAH_MODE) {
+                DEBUG_PRINTLN("🚜 TRANSISI: Mulai menggarap sawah (Pola Boustrophedon)...");
+            } else {
+                DEBUG_PRINTLN("🚚 TRANSISI: Mesin mati, masuk tol diangkut towing...");
+            }
+            DEBUG_PRINTLN("=======================================================\n");
+        }
+
+        // --- HITUNG VARIABEL SIMULASI ---
+        float simCurrent_mA = 0;
+        float simVoltage_V = 0;
+        int simHdop = random(1, 3);
+        int simSat = random(8, 14);
+
+        if (currentState == SAWAH_MODE) {
+            simVoltage_V = 13.8 + (random(-2, 3) / 10.0); 
+            simCurrent_mA = 1500.0 + random(-100, 100); 
+
+            double noiseLat = random(-3, 4) * 0.000001;
+            double noiseLng = random(-3, 4) * 0.000001;
+
+            if (movingEast) currentLng += 0.000015 + noiseLng; 
+            else currentLng -= 0.000015 + noiseLng; 
+            currentLat += noiseLat;
+
+            stepCount++;
+            if (stepCount >= MAX_STEPS) {
+                currentLat += 0.000025; 
+                movingEast = !movingEast;
+                stepCount = 0;
+                DEBUG_PRINTLN("   🔄 [INFO] Alsintan putar balik di ujung lahan...");
+            }
+        } 
+        else {
+            simVoltage_V = 12.2 + (random(-1, 2) / 10.0);
+            simCurrent_mA = 120.0 + random(-10, 10); 
+            currentLat -= 0.000150; 
+            currentLng -= 0.000150;
+        }
+
+        // --- SUNTIK DATA KE SHARED MEMORY VIA MUTEX ---
+        if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
+            latestData.lat = currentLat;
+            latestData.lng = currentLng;
+            latestData.hdop = simHdop;
+            latestData.sat = simSat;
+            latestData.voltage_V = simVoltage_V;
+            latestData.current_mA = simCurrent_mA;
+            latestData.gpsUpdated = true; // Set true agar TaskTelemetry menganggap data valid
+            
+            xSemaphoreGive(dataMutex);
+        }
+
+        DEBUG_PRINTF("[%s] Lat: %.6f | Lng: %.6f | V: %.1f V | I: %4.0f mA\n",
+            currentState == SAWAH_MODE ? "SAWAH" : "TOL  ",
+            currentLat, currentLng, simVoltage_V, simCurrent_mA
+        );
+
+        vTaskDelay(2000 / portTICK_PERIOD_MS); 
+    }
 }
