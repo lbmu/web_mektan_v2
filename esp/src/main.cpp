@@ -33,9 +33,9 @@
 // ==================================================
 // KONFIGURASI MODE OPERASI (PILIH SALAH SATU)
 // ==================================================
-// #define RUN_TASK 
+#define RUN_TASK 
 // #define RUN_DIAGNOSTICS 
-#define RUN_SIMULATION 
+// #define RUN_SIMULATION 
 
 // ==================================================
 // SAFETY CHECK: Mencegah Multiple Define
