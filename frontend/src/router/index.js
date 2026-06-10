@@ -73,23 +73,28 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const sessionString = localStorage.getItem('user');
+  const sessionString = sessionStorage.getItem('user');
+  const token = sessionStorage.getItem('token'); // 1. PERBAIKAN: Ambil token JWT dari brankas LocalStorage
+  
   let isAuthenticated = false;
   let userRole = '';
 
-  if (sessionString) {
+  // 2. PERBAIKAN: User dinyatakan sah login jika data user DAN token JWT tersedia
+  if (sessionString && token) {
       try {
           const userData = JSON.parse(sessionString);
           if (userData && userData.id) {
               isAuthenticated = true;
-              userRole = userData.role || 'operator'; // Ambil role
+              userRole = userData.role || 'operator'; 
           }
       } catch (e) {
-          localStorage.removeItem('user'); 
+          // Bersihkan sisa data jika ada kegagalan membaca JSON
+          sessionStorage.removeItem('user'); 
+          sessionStorage.removeItem('token'); 
       }
   }
 
-  // 1. Cek Login
+  // 1. Cek Kewajiban Login
   if (to.meta.requiresAuth && !isAuthenticated) {
     next({ name: 'login' });
     return;
@@ -101,9 +106,8 @@ router.beforeEach((to, from, next) => {
     return;
   }
 
-  // 3. Cek Hak Akses (RBAC)
+  // 3. Cek Hak Akses Tingkatan Pengguna (RBAC)
   if (to.meta.allowedRoles) {
-      // Jika role user saat ini TIDAK ADA di dalam daftar allowedRoles
       if (!to.meta.allowedRoles.includes(userRole)) {
           Swal.fire({
               icon: 'error',
@@ -115,7 +119,7 @@ router.beforeEach((to, from, next) => {
       }
   }
 
-  // Lolos semua pemeriksaan
+  // Lolos semua pemeriksaan keamanan
   next();
 });
 

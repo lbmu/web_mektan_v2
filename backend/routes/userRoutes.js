@@ -40,20 +40,23 @@ const upload = multer({
     }
 });
 
-// --- 1. ENDPOINT LOGIN ---
+// --- 1. ENDPOINT LOGIN (SUDAH DISELARASKAN DENGAN FRONTEND) ---
 router.post('/login', (req, res) => {
-    const { username, password } = req.body;
+    const { identifier, password } = req.body; 
+    
+    console.log("👉 Login Request untuk:", identifier); 
 
-    if (!username || !password) {
+    if (!identifier || !password) {
         return res.status(400).json({ status: false, message: "Username dan password wajib diisi" });
     }
 
-    // 1. Cari user berdasarkan username atau email
-    const query = "SELECT * FROM users WHERE username = $1 OR email = $1";
-    db.query(query, [username], async (err, result) => {
+    // Mencari berdasarkan username ATAU email
+    const query = "SELECT * FROM users WHERE username = $1 OR email = $2";
+    
+    db.query(query, [identifier, identifier], async (err, result) => {
         if (err) {
             console.error("❌ Login Database Error:", err.message);
-            return res.status(500).json({ status: false, message: "Terjadi kesalahan pada server" });
+            return res.status(500).json({ status: false, message: "Terjadi kesalahan pada database server" });
         }
 
         if (result.rows.length === 0) {
@@ -63,27 +66,35 @@ router.post('/login', (req, res) => {
         const user = result.rows[0];
 
         try {
-            // 2. Komparasi password input (teks biasa) dengan password di DB (hash bcrypt)
-            const isMatch = await bcrypt.compare(password, user.password);
+            let isMatch = false;
+
+            // FAILSAFE DETEKSI AUTOMATIS:
+            // Jika password di Neon diawali tanda '$', berarti itu adalah hash Bcrypt yang valid
+            if (user.password && user.password.startsWith('$')) {
+                isMatch = await bcrypt.compare(password, user.password);
+            } else {
+                // Jika tidak diawali '$', berarti di database Anda masih berupa teks biasa (plaintext)
+                // Jalankan perbandingan string biasa agar Anda tetap bisa login demi kelancaran testing
+                isMatch = (password === user.password);
+            }
             
             if (!isMatch) {
                 return res.status(401).json({ status: false, message: "Username atau Password salah" });
             }
 
-            // 3. Jika cocok, buat token JWT sebagai tiket akses resmi.
-            // Token diatur kedaluwarsa dalam 8 jam agar tidak menjadi sesi abadi.
+            // Pembuatan token keamanan JWT (Masa berlaku 8 Jam)
             const token = jwt.sign(
                 { userId: user.user_id, role: user.role },
                 process.env.JWT_SECRET,
                 { expiresIn: '8h' }
-            ); 
+            );
 
-            // 4. Kirim token beserta data profil ke frontend
+            // KUNCI PERBAIKAN: Menggunakan properti 'data' agar cocok 100% dengan komponen Vue Anda
             return res.json({
                 status: true,
                 message: "Login berhasil",
                 token: token,
-                user: {
+                data: {
                     id: user.user_id,
                     username: user.username,
                     nama: user.nama_lengkap,
@@ -93,8 +104,8 @@ router.post('/login', (req, res) => {
             });
 
         } catch (bcryptErr) {
-            console.error("❌ Bcrypt Error:", bcryptErr.message);
-            return res.status(500).json({ status: false, message: "Gagal memproses otentikasi" });
+            console.error("❌ Login Verification Error:", bcryptErr.message);
+            return res.status(500).json({ status: false, message: "Gagal memproses verifikasi keamanan" });
         }
     });
 });
@@ -117,7 +128,7 @@ router.get('/profile/:id', (req, res) => {
 });
 
 // --- 3. ENDPOINT UPDATE PROFILE ---
-router.put('/update/:id', upload.single('foto'), (req, res) => {
+router.put('/update/:id', upload.single('foto'), async (req, res) => {
     const userId = req.params.id;
     const { nama_lengkap, email, nip, no_hp, password } = req.body;
 
@@ -139,11 +150,20 @@ router.put('/update/:id', upload.single('foto'), (req, res) => {
         paramCounter++;
     }
 
-    if (safePass) {
-        console.log("🔒 Ada Password Baru");
-        query += `, password=$${paramCounter}`;
-        params.push(safePass);
-        paramCounter++;
+if (safePass) {
+        console.log("🔒 Ada Password Baru, memproses enkripsi...");
+        try {
+            const saltRounds = 10;
+            // Node.js mengenkripsi password teks menjadi hash bcrypt
+            const hashedPassword = await bcrypt.hash(safePass, saltRounds); 
+            
+            query += `, password=$${paramCounter}`;
+            params.push(hashedPassword); // Yang dikirim ke database adalah hasil hash!
+            paramCounter++;
+        } catch (hashError) {
+            console.error("❌ Hashing Error:", hashError.message);
+            return res.status(500).json({ status: false, message: "Gagal mengenkripsi password baru" });
+        }
     }
 
     query += ` WHERE user_id=$${paramCounter}`;

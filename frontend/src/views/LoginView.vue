@@ -55,7 +55,9 @@ const handleLogin = async () => {
 
         if (response.data.status) {
             const userData = response.data.data;
-            localStorage.setItem('user', JSON.stringify(userData));
+            sessionStorage.setItem('user', JSON.stringify(userData));
+
+            sessionStorage.setItem('token', response.data.token);
 
             // Swal Berhasil Custom dengan Animate.css
             Swal.fire({
@@ -75,6 +77,8 @@ const handleLogin = async () => {
             }).then(() => {
                 window.location.href = '/';
             });
+
+            router.push('/');
         }
     } catch (error) {
         const pesan = error.response?.data?.message || 'Terjadi kesalahan saat login.';

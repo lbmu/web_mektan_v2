@@ -16,8 +16,10 @@ const userName = ref('Admin');
 const userPhoto = ref(null);
 const userRole = ref('');
 
+
+
 onMounted(() => {
-    const session = localStorage.getItem('user');
+    const session = sessionStorage.getItem('user');
     if (session) {
         try {
             const userData = JSON.parse(session);
@@ -38,6 +40,12 @@ onMounted(() => {
 });  
 
 const handleLogout = () => {
+    // 1. Hapus data user
+    sessionStorage.removeItem('user');
+    
+    // 2. Hapus token keamanan
+    sessionStorage.removeItem('token');
+
     Swal.fire({
         title: 'Konfirmasi Logout',
         text: 'Apakah Anda yakin ingin logout?',
@@ -49,10 +57,13 @@ const handleLogout = () => {
         cancelButtonText: 'Batal'
     }) .then((result) => {
         if (result.isConfirmed) {
-            localStorage.removeItem('user');
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('token');
             window.location.href = '/login';
         }
     });
+
+    router.push('/login');
 };
 
 watch(() => props.isClosed, (newVal) => {
