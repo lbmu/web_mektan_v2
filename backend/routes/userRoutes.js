@@ -42,42 +42,59 @@ const upload = multer({
 
 // --- 1. ENDPOINT LOGIN ---
 router.post('/login', (req, res) => {
-    const { identifier, password } = req.body;
-    
-    console.log("👉 Login Request:", identifier); 
+    const { username, password } = req.body;
 
-    if (!identifier || !password) {
-        return res.status(400).json({ status: false, message: "Username/Email dan Password wajib diisi!" });
+    if (!username || !password) {
+        return res.status(400).json({ status: false, message: "Username dan password wajib diisi" });
     }
 
-    // PERUBAHAN POSTGRES: Gunakan $1, $2, $3 bukan ?
-    const query = "SELECT * FROM users WHERE (username = $1 OR email = $2) AND password = $3";
-    
-    db.query(query, [identifier, identifier, password], (err, results) => {
+    // 1. Cari user berdasarkan username atau email
+    const query = "SELECT * FROM users WHERE username = $1 OR email = $1";
+    db.query(query, [username], async (err, result) => {
         if (err) {
-            console.error("❌ Login DB Error:", err);
-            return res.status(500).json({ status: false, message: "Database Error" });
+            console.error("❌ Login Database Error:", err.message);
+            return res.status(500).json({ status: false, message: "Terjadi kesalahan pada server" });
         }
 
-        // PERUBAHAN POSTGRES: Hasil query ada di results.rows
-        if (results.rows.length > 0) {
-            const user = results.rows[0];
-            
-            console.log("✅ User Ditemukan:", user); 
+        if (result.rows.length === 0) {
+            return res.status(401).json({ status: false, message: "Username atau Password salah" });
+        }
 
-            res.json({
+        const user = result.rows[0];
+
+        try {
+            // 2. Komparasi password input (teks biasa) dengan password di DB (hash bcrypt)
+            const isMatch = await bcrypt.compare(password, user.password);
+            
+            if (!isMatch) {
+                return res.status(401).json({ status: false, message: "Username atau Password salah" });
+            }
+
+            // 3. Jika cocok, buat token JWT sebagai tiket akses resmi.
+            // Token diatur kedaluwarsa dalam 8 jam agar tidak menjadi sesi abadi.
+            const token = jwt.sign(
+                { userId: user.user_id, role: user.role },
+                process.env.JWT_SECRET,
+                { expiresIn: '8h' }
+            ); 
+
+            // 4. Kirim token beserta data profil ke frontend
+            return res.json({
                 status: true,
-                message: "Login Berhasil",
-                data: {
-                    id: user.user_id,          
-                    username: user.username,   
-                    nama: user.nama_lengkap,   
+                message: "Login berhasil",
+                token: token,
+                user: {
+                    id: user.user_id,
+                    username: user.username,
+                    nama: user.nama_lengkap,
                     role: user.role,
                     foto: user.foto_profil
                 }
             });
-        } else {
-            res.status(401).json({ status: false, message: "Username atau Password Salah" });
+
+        } catch (bcryptErr) {
+            console.error("❌ Bcrypt Error:", bcryptErr.message);
+            return res.status(500).json({ status: false, message: "Gagal memproses otentikasi" });
         }
     });
 });
