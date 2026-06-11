@@ -253,14 +253,19 @@ void SystemDiagnostics::runSimulation() {
         }
 
         // --- HITUNG VARIABEL SIMULASI ---
+        const int relay = 27;
         float simCurrent_mA = 0;
         float simVoltage_V = 0;
         int simHdop = random(1, 3);
         int simSat = random(8, 14);
 
+        pinMode(relay, OUTPUT);
+
         if (currentState == SAWAH_MODE) {
+
             simVoltage_V = 13.8 + (random(-2, 3) / 10.0); 
-            simCurrent_mA = 1500.0 + random(-100, 100); 
+            simCurrent_mA = 1500.0 + random(-100, 100);
+            digitalWrite(relay, HIGH);
 
             double noiseLat = random(-3, 4) * 0.000001;
             double noiseLng = random(-3, 4) * 0.000001;
@@ -278,6 +283,7 @@ void SystemDiagnostics::runSimulation() {
             }
         } 
         else {
+            digitalWrite(relay, LOW);
             simVoltage_V = 12.2 + (random(-1, 2) / 10.0);
             simCurrent_mA = 120.0 + random(-10, 10); 
             currentLat -= 0.000150; 

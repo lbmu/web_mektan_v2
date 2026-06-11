@@ -48,7 +48,7 @@
 // ==================================================
 
 // Misc
-// #define REPORT
+#define REPORT
 // #define PAPER
 
 // Instansiasi Objek Modul Baru
@@ -139,8 +139,8 @@ void TaskTelemetry(void *pvParameters) {
     unsigned long lastSaveTime = 0;
 
     // Manajemen Daya
-    const float ENGINE_ON_V = 4.0;
-    const float ENGINE_OFF_V = 3.5;
+    const float ENGINE_ON_V = 13.2;
+    const float ENGINE_OFF_V = 12.8;
 
     // yang ini interval ngirim data tergantung nyala mesin (5/60 detik)
     const unsigned long OFFLINE_SAVE_INTERVAL = 5000;
@@ -242,6 +242,8 @@ void TaskTelemetry(void *pvParameters) {
                 if (comm.publishMQTT(MQTT_TOPIC, currentJson)) {
                     lastPublishTime = millis();
                 }
+                // json yang terkirim
+                DEBUG_PRINTLN(currentJson);
                 
                 #ifdef PAPER
                 if (sampleCount < 500) {
@@ -306,6 +308,7 @@ void TaskGPS(void *pvParameters) {
 
 // Task 3: Sensor Monitor
 void TaskMonitor(void *pvParameters) {
+    pinMode(RELAY, OUTPUT);
     while (1) {
         // Baca data sensor melalui modul PowerMonitor
         PowerData pData = powerMonitor.read();
@@ -331,6 +334,15 @@ void TaskMonitor(void *pvParameters) {
             
             xSemaphoreGive(dataMutex);
         }
+        
+        if (pData.busVoltage_V > 12) {
+            digitalWrite(RELAY, HIGH);
+            DEBUG_PRINTLN("Relay Aktif");
+        }
+        else if (pData.busVoltage_V < 11.5) {
+            digitalWrite(RELAY, LOW);
+            DEBUG_PRINTLN("Relay Low");
+        }
 
         // --- PRINT DETAILED REPORT ---
         #ifdef REPORT
@@ -344,10 +356,8 @@ void TaskMonitor(void *pvParameters) {
         DEBUG_PRINTF("Sat        : %d\n", sat);
         DEBUG_PRINTF("HDOP       : %d\n", hdop);
 
-
         DEBUG_PRINTLN("---------------------------------------------------");
         #endif
-
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }
