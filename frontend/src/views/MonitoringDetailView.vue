@@ -417,7 +417,7 @@ onUnmounted(() => {
             <div v-if="activeTab === 'LIVE'" class="row g-2 flex-shrink-0">
               <div class="col-4"><div class="card border-0 shadow-sm bg-white h-100"><div class="card-body text-center p-2"><small class="text-muted d-block mb-1">Hour Meter</small><h5 class="fw-bold mb-0 text-dark">{{ totalHM }} <small>Jam</small></h5></div></div></div>
               <div class="col-4"><div class="card border-0 shadow-sm bg-white h-100"><div class="card-body text-center p-2"><small class="text-muted d-block mb-1">Voltase Aki</small><h5 class="fw-bold mb-0" :class="teganganAki < 11.5 ? 'text-danger' : 'text-success'">{{ teganganAki }} <small>V</small></h5></div></div></div>
-              <div class="col-4"><div class="card border-0 shadow-sm bg-white h-100"><div class="card-body text-center p-2"><small class="text-muted d-block mb-1">Arus Beban</small><h5 class="fw-bold mb-0 text-info">{{ arus }} <small>A</small></h5></div></div></div>
+              <div class="col-4"><div class="card border-0 shadow-sm bg-white h-100"><div class="card-body text-center p-2"><small class="text-muted d-block mb-1">Arus Beban</small><h5 class="fw-bold mb-0 text-info">{{ arus }} <small>mA</small></h5></div></div></div>
             </div>
 
             <div class="card border border-warning shadow-sm bg-warning bg-opacity-10 flex-shrink-0">

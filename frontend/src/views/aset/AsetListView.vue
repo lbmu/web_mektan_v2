@@ -237,7 +237,7 @@ onUnmounted(() => {
 
                     <td>
                     <small class="d-block"><i class="bi bi-battery-charging text-warning"></i> {{ item.tegangan_aki || '0' }} V</small>
-                    <small class="d-block"><i class="bi bi-lightning-charge-fill text-primary"></i> {{ item.arus || '0' }} A</small>
+                    <small class="d-block"><i class="bi bi-lightning-charge-fill text-primary"></i> {{ item.arus || '0' }} mA</small>
                     </td>
                     <td>
                     <span class="badge bg-light text-dark border">{{ item.status_operasional }}</span>

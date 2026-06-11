@@ -409,7 +409,7 @@ onUnmounted(() => {
                             <div class="col-6 text-center px-2">
                                 <small class="text-muted fw-bold d-block mb-2" style="font-size: 11px; letter-spacing: 1px;">ARUS BEBAN</small>
                                 <span class="fw-bolder text-info" style="font-size: 3rem; line-height: 1;">
-                                    {{ selectedAlat.arus }}<span class="fs-4 fw-normal ms-1 text-muted">A</span>
+                                    {{ selectedAlat.arus }}<span class="fs-4 fw-normal ms-1 text-muted">mA</span>
                                 </span>
                             </div>
                         </div>
