@@ -153,7 +153,7 @@ setInterval(() => {
             }
 
             if (!isDrift) {
-                const ALPHA = 0.4;
+                const ALPHA = 0.4; 
                 const finalLat = (ALPHA * point.lat) + ((1 - ALPHA) * buffer.lastValidLat);
                 const finalLong = (ALPHA * point.long) + ((1 - ALPHA) * buffer.lastValidLong);
 

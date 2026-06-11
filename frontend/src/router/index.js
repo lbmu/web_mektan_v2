@@ -85,7 +85,7 @@ router.beforeEach((to, from, next) => {
           const userData = JSON.parse(sessionString);
           if (userData && userData.id) {
               isAuthenticated = true;
-              userRole = userData.role || 'operator'; 
+              userRole = userData.role; 
           }
       } catch (e) {
           // Bersihkan sisa data jika ada kegagalan membaca JSON
