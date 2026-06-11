@@ -15,7 +15,7 @@ import './assets/main.css'
 
 axios.interceptors.request.use(
     (config) => {
-        // Ambil token dari brankas LocalStorage
+        // Ambil token dari brankas sessionStorage
         const token = sessionStorage.getItem('token');
         
         // Jika token ada, tempelkan di Header HTTP dengan format "Bearer <token>"

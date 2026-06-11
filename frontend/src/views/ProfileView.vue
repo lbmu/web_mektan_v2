@@ -23,7 +23,7 @@ const loading = ref(false);
 
 // Ambil ID dari storage
 const getSession = () => {
-    const session = localStorage.getItem('user');
+    const session = sessionStorage.getItem('user');
     if (session) return JSON.parse(session);
     return null;
 };
@@ -107,7 +107,7 @@ const handleUpdate = async () => {
         });
 
         if (response.data.status) {
-            // Update LocalStorage agar nama/foto di Sidebar ikut berubah
+            // Update sessionStorage agar nama/foto di Sidebar ikut berubah
             const newData = response.data.data;
             const newSession = {
                 ...session, // Pertahankan data sesi lain jika ada
@@ -117,7 +117,7 @@ const handleUpdate = async () => {
                 role: newData.role,
                 foto: newData.foto_profil     
             };
-            localStorage.setItem('user', JSON.stringify(newSession));
+            sessionStorage.setItem('user', JSON.stringify(newSession));
 
             Swal.fire('Berhasil', 'Profil berhasil diperbarui!', 'success').then(() => {
                 // Refresh halaman agar Sidebar membaca data baru
