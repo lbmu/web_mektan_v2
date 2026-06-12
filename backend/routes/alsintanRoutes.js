@@ -2,23 +2,24 @@ const express = require('express');
 const router = express.Router();
 const alsintanController = require('../controllers/alsintanController');
 const upload = require('../middleware/upload');
+const verifyToken = require('../middleware/authMiddleware');
 
 // Route untuk menambahkan data alsintan baru dengan upload gambar
-router.post('/', upload.single('gambar'), alsintanController.createAlsintan);
+router.post('/', verifyToken, upload.single('gambar'), alsintanController.createAlsintan);
 
 // Route untuk mengambil semua data alsintan
-router.get('/', alsintanController.getAllAlsintan);
+router.get('/', verifyToken, alsintanController.getAllAlsintan);
 
 // Route untuk mengambil data alsintan berdasarkan ID
-router.get('/:id', alsintanController.getAlsintanById);
+router.get('/:id', verifyToken, alsintanController.getAlsintanById);
 
-router.put('/:id', upload.single('gambar'), alsintanController.updateAlsintan);
+router.put('/:id', verifyToken, upload.single('gambar'), alsintanController.updateAlsintan);
 
-router.delete('/:id', alsintanController.deleteAlsintan);
+router.delete('/:id', verifyToken, alsintanController.deleteAlsintan);
 
-router.get('/:id/riwayat', alsintanController.getRiwayat);
+router.get('/:id/riwayat', verifyToken, alsintanController.getRiwayat);
 
-router.post('/:id/reset', alsintanController.resetArgo);
+router.post('/:id/reset', verifyToken, alsintanController.resetArgo);
 
 router.delete('/:id', (req, res) => {
     const db = require('../config/database');
