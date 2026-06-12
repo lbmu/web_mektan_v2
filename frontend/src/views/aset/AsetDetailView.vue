@@ -48,7 +48,7 @@ const deleteAset = async () => {
 
 onMounted(() => {
     // [BARU] Cek Siapa yang Login saat halaman dimuat
-    const session = JSON.parse(localStorage.getItem('user'));
+    const session = JSON.parse(sessionStorage.getItem('user'));
     if (session) {
         userRole.value = session.role;
     }

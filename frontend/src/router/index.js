@@ -74,7 +74,7 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const sessionString = sessionStorage.getItem('user');
-  const token = sessionStorage.getItem('token'); // 1. PERBAIKAN: Ambil token JWT dari brankas LocalStorage
+  const token = sessionStorage.getItem('token'); // 1. PERBAIKAN: Ambil token JWT dari brankas sessionStorage
   
   let isAuthenticated = false;
   let userRole = '';

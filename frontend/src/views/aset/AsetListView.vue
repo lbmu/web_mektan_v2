@@ -147,7 +147,7 @@ const goToDetail = (id) => router.push({ name: 'aset-detail', params: { id: id }
 const goToMonitoring = (id) => router.push({ name: 'monitoring-detail', params: { id: id } });
 
 onMounted(() => {
-    const session = JSON.parse(localStorage.getItem('user'));
+    const session = JSON.parse(sessionStorage.getItem('user'));
     if (session) {
         userRole.value = session.role;
     }

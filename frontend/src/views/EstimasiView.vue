@@ -69,7 +69,7 @@ const totalOmzetSemuaAlat = computed(() => {
 });
 
 onMounted(() => {
-    const session = JSON.parse(localStorage.getItem('user'));
+    const session = JSON.parse(sessionStorage.getItem('user'));
     if (session) userRole.value = session.role;
     fetchData();
     fetchTarif(); // Panggil fungsi tarik tarif saat halaman dimuat

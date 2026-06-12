@@ -302,7 +302,7 @@ watch(historyDate, () => {
 
 onMounted(() => {
     // 1. Tarik Sesi Akun
-    const session = JSON.parse(localStorage.getItem('user'));
+    const session = JSON.parse(sessionStorage.getItem('user'));
     if (session) userRole.value = session.role;
     
     // 2. Load Data Terpusat
