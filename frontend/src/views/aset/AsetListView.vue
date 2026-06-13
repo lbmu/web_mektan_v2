@@ -186,10 +186,10 @@ onUnmounted(() => {
                 <thead class="bg-light">
                 <tr>
                     <th class="ps-4">Alat & Kode</th>
-                    <th>Status (IoT & Mesin)</th>
+                    <th>Status</th>
                     <th>Telemetri</th>
-                    <th>Status Admin</th>
-                    <th class="text-end pe-4">Aksi</th>
+                    <th class="text-center pe-4">Status Admin</th>
+                    <th class="text-center pe-4">Aksi</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -239,11 +239,11 @@ onUnmounted(() => {
                     <small class="d-block"><i class="bi bi-battery-charging text-warning"></i> {{ item.tegangan_aki || '0' }} V</small>
                     <small class="d-block"><i class="bi bi-lightning-charge-fill text-primary"></i> {{ item.arus || '0' }} mA</small>
                     </td>
-                    <td>
+                    <td class="text-center pe-4">
                     <span class="badge bg-light text-dark border">{{ item.status_operasional }}</span>
                     </td>
                     
-                    <td class="text-end pe-4">
+                    <td class="text-center pe-4">
                     <div class="btn-group">
                         <button @click="goToDetail(item.alsintan_id)" class="btn btn-sm btn-outline-info" title="Detail Administrasi">
                         <i class="bi bi-info-circle"></i>

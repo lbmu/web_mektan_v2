@@ -152,9 +152,15 @@ const initMap = () => {
 
     const tractorIcon = L.divIcon({
         className: 'custom-div-icon',
-        html: "<div style='background-color:#0d6efd; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 0 5px rgba(0,0,0,0.5);'></div>",
-        iconSize: [16, 16],
-        iconAnchor: [8, 8]
+        html: `
+            <div class="d-flex justify-content-center align-items-center rounded-circle border border-2 border-primary bg-primary bg-opacity-10 shadow-sm position-relative" 
+                 style="width: 36px; height: 36px; background-color: white;">
+                 <img src="/ikon-traktor.png" style="width: 22px; height: 22px; object-fit: contain;">
+            </div>
+        `,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -20]
     });
 
     marker = L.marker(startPos, { icon: tractorIcon }).addTo(map).bindPopup(`<b>${infoAlat.value.nama_alat || 'Alat'}</b>`).openPopup();
@@ -410,7 +416,6 @@ onUnmounted(() => {
             </div>
 
             <div v-if="activeTab === 'LIVE'" class="d-flex justify-content-between px-2 small flex-shrink-0">
-                <span class="text-muted fw-bold"><i class="bi bi-satellite text-primary"></i> Satelit: {{ satelit }}</span>
                 <span class="text-muted fw-bold"><i class="bi bi-geo text-danger"></i> HDOP: <span :class="hdop > 250 ? 'text-danger' : 'text-success'">{{ (hdop / 100).toFixed(2) }}</span></span>
             </div>
 

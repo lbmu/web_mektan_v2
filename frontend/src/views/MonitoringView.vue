@@ -73,7 +73,6 @@ const initMap = () => {
 
 // HELPER FUNGSI: Pembuat Ikon Peta Dinamis
 const createIcon = (status_mesin, status_iot) => {
-    let color = 'text-danger';
     let border = 'border-danger';
     let bg = 'bg-danger bg-opacity-10';
     let isON = false;
@@ -81,13 +80,13 @@ const createIcon = (status_mesin, status_iot) => {
     // Logika Pewarnaan Ganda
     if (status_iot === 'ON') {
         if (status_mesin === 'ON') {
-            color = 'text-success'; border = 'border-success'; bg = 'bg-success bg-opacity-10'; isON = true;
+            border = 'border-success'; bg = 'bg-success bg-opacity-10'; isON = true;
         } else if (status_mesin === 'OFF') {
-            color = 'text-dark'; border = 'border-dark'; bg = 'bg-dark bg-opacity-10'; // Parkir
+            border = 'border-dark'; bg = 'bg-dark bg-opacity-10'; // Parkir
         }
     } else {
         // Jika status_iot mati/UNKNOWN
-        color = 'text-danger'; border = 'border-danger'; bg = 'bg-danger bg-opacity-10'; 
+        border = 'border-danger'; bg = 'bg-danger bg-opacity-10'; 
     }
     
     return L.divIcon({
@@ -95,7 +94,7 @@ const createIcon = (status_mesin, status_iot) => {
         html: `
             <div class="d-flex justify-content-center align-items-center rounded-circle border border-2 ${border} ${bg} shadow-sm position-relative" 
                  style="width: 36px; height: 36px; background-color: white;">
-                 <i class="bi bi-truck-front-fill ${color}" style="font-size: 18px;"></i>
+                 <img src="/ikon-traktor.png" style="width: 22px; height: 22px; object-fit: contain;">
                  ${isON ? '<div class="pulse-ring"></div>' : ''}
             </div>
         `,

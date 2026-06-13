@@ -166,9 +166,7 @@ const createMarker = (alat) => {
     const iconHtml = `
       <div class="d-flex justify-content-center align-items-center rounded-circle border border-2 ${borderClass} ${bgClass} shadow-sm" 
            style="width: 32px; height: 32px; background-color: white;">
-           <div class="${colorClass}" style="transform: scale(0.9);">
-             <i class="bi bi-truck-front-fill" style="font-size: 16px;"></i>
-           </div>
+           <img src="/ikon-traktor.png" style="width: 20px; height: 20px; object-fit: contain;">
       </div>
       ${alat.status_mesin === 'ON' ? '<div class="pulse-ring"></div>' : ''} 
     `;
@@ -203,9 +201,7 @@ const updateMarker = (id, lat, lng, status) => {
         const iconHtml = `
             <div class="d-flex justify-content-center align-items-center rounded-circle border border-2 ${borderClass} ${bgClass} shadow-sm" 
                 style="width: 32px; height: 32px; background-color: white;">
-                <div class="${colorClass}" style="transform: scale(0.9);">
-                    <i class="bi bi-truck-front-fill" style="font-size: 16px;"></i>
-                </div>
+                <img src="/ikon-traktor.png" style="width: 20px; height: 20px; object-fit: contain;">
             </div>
             ${status === 'ON' ? '<div class="pulse-ring"></div>' : ''}
         `;
@@ -294,12 +290,6 @@ onUnmounted(() => {
             </div>
 
             <div class="d-flex align-items-center gap-3 bg-light px-4 py-2 rounded-pill shadow-sm border">
-                <div class="d-flex align-items-center gap-2 border-end pe-3">
-                    <div class="spinner-grow text-success" style="width: 12px; height: 12px;" role="status">
-                        <span class="visually-hidden">Online</span>
-                    </div>
-                    <span class="fw-bold text-success" style="font-size: 0.8rem; letter-spacing: 1px;">SISTEM ONLINE</span>
-                </div>
                 <div class="text-end">
                     <div class="fw-bold text-dark" style="font-size: 1.1rem; line-height: 1.2;">
                         {{ currentTime }}
@@ -402,13 +392,13 @@ onUnmounted(() => {
                         <div class="row g-0">
                             <div class="col-6 border-end text-center px-2">
                                 <small class="text-muted fw-bold d-block mb-2" style="font-size: 11px; letter-spacing: 1px;">VOLTASE AKI</small>
-                                <span class="fw-bolder" :class="selectedAlat.tegangan_aki < 11.5 ? 'text-danger' : 'text-success'" style="font-size: 3rem; line-height: 1;">
+                                <span class="fw-bolder" :class="selectedAlat.tegangan_aki < 11.5 ? 'text-danger' : 'text-success'" style="font-size: 2rem; line-height: 1;">
                                     {{ selectedAlat.tegangan_aki }}<span class="fs-4 fw-normal ms-1 text-muted">V</span>
                                 </span>
                             </div>
                             <div class="col-6 text-center px-2">
                                 <small class="text-muted fw-bold d-block mb-2" style="font-size: 11px; letter-spacing: 1px;">ARUS BEBAN</small>
-                                <span class="fw-bolder text-info" style="font-size: 3rem; line-height: 1;">
+                                <span class="fw-bolder text-info" style="font-size: 2rem; line-height: 1;">
                                     {{ selectedAlat.arus }}<span class="fs-4 fw-normal ms-1 text-muted">mA</span>
                                 </span>
                             </div>
