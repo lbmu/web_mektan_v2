@@ -56,6 +56,19 @@ const formatRupiah = (angka) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
 };
 
+const formatHM = (decimalHours) => {
+    const hoursFloat = parseFloat(decimalHours) || 0;
+    if (hoursFloat === 0) return '0 Jam 0 Menit';
+
+    const h = Math.floor(hoursFloat);
+    const m = Math.floor((hoursFloat - h) * 60);
+    const s = Math.round((((hoursFloat - h) * 60) - m) * 60);
+
+    // Di tabel estimasi, tampilannya bisa dibuat sedikit lebih panjang
+    if (h > 0) return `${h} Jam ${m} Menit`;
+    return `${m} Menit ${s} Detik`; 
+};
+
 const hitungLuas = (jarakMeter) => {
     const m = parseFloat(jarakMeter) || 0;
     return m / 2500; // Konversi meter persegi ke hektar
@@ -147,9 +160,8 @@ onMounted(() => {
                                         </td>
                                         
                                         <td class="text-center">
-                                            <span class="fw-bold">{{ item.total_hour_meter || 0 }} <small class="text-muted fw-normal">Jam</small></span>
+                                            <span class="fw-bold text-dark">{{ formatHM(item.total_hour_meter) }}</span>
                                         </td>
-
                                         <td class="text-center">
                                             <div class="fw-bold text-primary">{{ hitungLuas(item.total_jarak_kerja).toFixed(3) }} Ha</div>
                                             <small class="text-muted" style="font-size: 10px;">

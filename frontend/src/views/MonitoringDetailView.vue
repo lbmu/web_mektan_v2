@@ -21,7 +21,7 @@ const id = route.params.id;
 const activeTab = ref('LIVE'); 
 const infoAlat = ref({});
 const lebarImplemen = ref(1.89); 
-const userRole = ref(''); // Penampung Hak Akses
+const userRole = ref(''); 
 
 const getTodayDate = () => {
     const d = new Date();
@@ -45,10 +45,11 @@ const jarakMentahSensor = ref(0);
 const jarakBersihValid = ref(0);  
 const historyCoordsLive = ref([]); 
 
-// State History Mode
+// State History Mode (Ditambah HM Harian)
 const historyDate = ref(getTodayDate()); 
 const historyCoordsPast = ref([]);
 const totalJarakPast = ref(0);
+const dailyHMPast = ref(0); // State untuk menyimpan Jam Kerja di hari spesifik
 
 // --- STATE TARIF DINAMIS ---
 const tarifPerHa = ref(1500000); 
@@ -84,7 +85,6 @@ const saveTarif = async () => {
     isSavingTarif.value = true;
     try {
         await axios.put(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`, { nilai: tarifPerHa.value });
-        // Gunakan efek "Toast" agar pop-up tidak menutupi tengah layar saat sedang fokus memonitoring
         Swal.fire({ 
             toast: true, 
             position: 'top-end', 
@@ -183,15 +183,39 @@ const renderPolyline = () => {
 const fetchHistoryByDate = async () => {
     try {
         const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}/riwayat?tanggal=${historyDate.value}`);
-        const dataCoords = response.data.map(h => [parseFloat(h.latitude), parseFloat(h.longitude)]);
+        const rawData = response.data;
+        
+        const dataCoords = rawData.map(h => [parseFloat(h.latitude), parseFloat(h.longitude)]);
         historyCoordsPast.value = dataCoords;
 
+        // Hitung Total Jarak
         totalJarakPast.value = 0;
         if (dataCoords.length > 1) {
             for (let i = 1; i < dataCoords.length; i++) {
                 totalJarakPast.value += map.distance(dataCoords[i-1], dataCoords[i]);
             }
         }
+
+        // =============================================================
+        // LOGIKA BARU: HITUNG HM HARIAN DARI JEJAK WAKTU (waktu_rekam)
+        // =============================================================
+        let dailyHM = 0;
+        if (rawData.length > 1) {
+            for (let i = 1; i < rawData.length; i++) {
+                const t1 = new Date(rawData[i-1].waktu_rekam).getTime();
+                const t2 = new Date(rawData[i].waktu_rekam).getTime();
+                const diffMs = t2 - t1;
+                
+                // Jika selisih antar titik masuk akal (kurang dari 15 Menit / 900.000 ms),
+                // maka dianggap mesin sedang hidup/bekerja terus menerus.
+                // Jika > 15 Menit, dianggap mesin parkir/dimatikan sementara (jeda).
+                if (diffMs > 0 && diffMs <= 900000) {
+                    dailyHM += diffMs / 3600000; // Konversi ms ke jam
+                }
+            }
+        }
+        dailyHMPast.value = dailyHM;
+
         renderPolyline();
     } catch (error) {}
 };
@@ -275,6 +299,18 @@ const luasHektar = computed(() => {
     return (jarak * lebarImplemen.value) / 10000;
 });
 
+// Konversi Desimal ke Jam, Menit, Detik
+const formatHM = (decimalHours) => {
+    const hoursFloat = parseFloat(decimalHours) || 0;
+    if (hoursFloat === 0) return '0j 0m 0d';
+
+    const h = Math.floor(hoursFloat);
+    const m = Math.floor((hoursFloat - h) * 60);
+    const s = Math.round((((hoursFloat - h) * 60) - m) * 60);
+
+    return `${h}j ${m}m ${s}d`;
+};
+
 const estimasiBiaya = computed(() => luasHektar.value * tarifPerHa.value);
 const selisihDrift = computed(() => Math.max(0, jarakMentahSensor.value - jarakBersihValid.value));
 
@@ -307,11 +343,9 @@ watch(historyDate, () => {
 });
 
 onMounted(() => {
-    // 1. Tarik Sesi Akun
     const session = JSON.parse(sessionStorage.getItem('user'));
     if (session) userRole.value = session.role;
     
-    // 2. Load Data Terpusat
     fetchTarif();
     fetchData();
     connectMqtt(); 
@@ -420,12 +454,52 @@ onUnmounted(() => {
             </div>
 
             <div v-if="activeTab === 'LIVE'" class="row g-2 flex-shrink-0">
-              <div class="col-4"><div class="card border-0 shadow-sm bg-white h-100"><div class="card-body text-center p-2"><small class="text-muted d-block mb-1">Hour Meter</small><h5 class="fw-bold mb-0 text-dark">{{ totalHM }} <small>Jam</small></h5></div></div></div>
-              <div class="col-4"><div class="card border-0 shadow-sm bg-white h-100"><div class="card-body text-center p-2"><small class="text-muted d-block mb-1">Voltase Aki</small><h5 class="fw-bold mb-0" :class="teganganAki < 11.5 ? 'text-danger' : 'text-success'">{{ teganganAki }} <small>V</small></h5></div></div></div>
-              <div class="col-4"><div class="card border-0 shadow-sm bg-white h-100"><div class="card-body text-center p-2"><small class="text-muted d-block mb-1">Arus Beban</small><h5 class="fw-bold mb-0 text-info">{{ arus }} <small>mA</small></h5></div></div></div>
+              <div class="col-4">
+                  <div class="card border-0 shadow-sm bg-white h-100">
+                      <div class="card-body text-center p-2">
+                          <small class="text-muted d-block mb-1">HM Total</small>
+                          <h5 class="fw-bold mb-0 text-dark" style="font-size: 1rem;">{{ formatHM(totalHM) }}</h5>
+                      </div>
+                  </div>
+              </div>
+              <div class="col-4">
+                  <div class="card border-0 shadow-sm bg-white h-100">
+                      <div class="card-body text-center p-2">
+                          <small class="text-muted d-block mb-1">Voltase Aki</small>
+                          <h5 class="fw-bold mb-0" :class="teganganAki < 11.5 ? 'text-danger' : 'text-success'">{{ teganganAki }} <small>V</small></h5>
+                      </div>
+                  </div>
+              </div>
+              <div class="col-4">
+                  <div class="card border-0 shadow-sm bg-white h-100">
+                      <div class="card-body text-center p-2">
+                          <small class="text-muted d-block mb-1">Arus Beban</small>
+                          <h5 class="fw-bold mb-0 text-info">{{ arus }} <small>mA</small></h5>
+                      </div>
+                  </div>
+              </div>
             </div>
 
-            <div class="card border border-warning shadow-sm bg-warning bg-opacity-10 flex-shrink-0">
+            <div v-if="activeTab === 'HISTORY'" class="row g-2 flex-shrink-0">
+              <div class="col-6">
+                  <div class="card border-0 shadow-sm bg-danger bg-opacity-10 border-danger h-100">
+                      <div class="card-body text-center p-2">
+                          <small class="text-danger fw-bold d-block mb-1">Kerja Harian (Efektif)</small>
+                          <h5 class="fw-bold mb-0 text-danger" style="font-size: 1rem;">{{ formatHM(dailyHMPast) }}</h5>
+                      </div>
+                  </div>
+              </div>
+              <div class="col-6">
+                  <div class="card border-0 shadow-sm bg-white h-100">
+                      <div class="card-body text-center p-2">
+                          <small class="text-muted d-block mb-1">Total HM Keseluruhan</small>
+                          <h5 class="fw-bold mb-0 text-dark" style="font-size: 1rem;">{{ formatHM(totalHM) }}</h5>
+                      </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="card border border-warning shadow-sm bg-warning bg-opacity-10 flex-shrink-0 mt-1">
               <div class="card-body">
                 <label class="small text-muted fw-bold d-block mb-1">Tarif Jasa per Hektar</label>
                 
@@ -449,7 +523,7 @@ onUnmounted(() => {
               </div>
             </div>
             
-            <button @click="resetArgo" class="btn btn-dark w-100 shadow-sm py-2 flex-shrink-0"><i class="bi bi-arrow-repeat"></i> Reset Argo</button>
+            <button v-if="activeTab === 'LIVE'" @click="resetArgo" class="btn btn-dark w-100 shadow-sm py-2 flex-shrink-0 mt-2"><i class="bi bi-arrow-repeat"></i> Reset Argo</button>
           </div>
         </div>
       </div>

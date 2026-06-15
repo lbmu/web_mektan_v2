@@ -26,12 +26,16 @@ const TOPIC = process.env.MQTT_TOPIC;
 const client = mqtt.connect(options);
 
 // ========================================================================
-// 🧠 MEMORI BUFFER UNTUK JALUR LAMBAT (SLIDING WINDOW)
+// 🧠 MEMORI BUFFER UNTUK JALUR LAMBAT (SLIDING WINDOW & HOUR METER)
 // ========================================================================
 const tractorBuffers = {};
 
+// TAMBAHAN: Memori khusus untuk menghitung detak stopwatch (Hour Meter)
+const hmAccumulator = {}; // Menyimpan total pecahan jam sebelum disetor ke DB
+const lastPingTime = {};  // Menyimpan waktu (timestamp) pesan MQTT terakhir
+
 client.on('connect', () => {
-    console.log(`✅ Backend Terhubung! (Arsitektur JALUR GANDA Aktif - Format JSON Baru)`);
+    console.log(`✅ Backend Terhubung! (Arsitektur JALUR GANDA & HOUR METER Aktif)`);
     client.subscribe(TOPIC);
 });
 
@@ -43,7 +47,6 @@ client.on('message', (topic, message) => {
     try {
         const rawData = JSON.parse(message.toString());
 
-        // 🛠️ TAHAP ADAPTER: DISESUAIKAN DENGAN FORMAT JSON TERBARU (Tanpa BBM)
         const data = {
             id: rawData.id, 
             lat: parseFloat(rawData.lat) || 0,
@@ -56,10 +59,9 @@ client.on('message', (topic, message) => {
             status_mesin: parseFloat(rawData.V) >= 11.5 ? 'ON' : 'OFF'
         };
 
-        // 🚀 JALUR CEPAT (LIVE UI MAP)
         console.log(`[LIVE MODE] ID:${data.id} | Koor: ${data.lat}, ${data.long} | Aki:${data.V}V | HDOP:${data.hdop}`);
 
-        // UPDATE: Menghapus kolom bbm dari kueri
+        // 1. Update Status Inti
         const queryUpdateLive = `
             UPDATE monitoring_status 
             SET status_mesin = $1, 
@@ -77,7 +79,7 @@ client.on('message', (topic, message) => {
         // 2. Update Lokasi Utama
         db.query(`UPDATE alsintan SET latitude = $1, longitude = $2 WHERE alsintan_id = $3`, [data.lat, data.long, data.id]);
 
-        // 3. Simpan Riwayat Telemetri (Tanpa BBM)
+        // 3. Simpan Riwayat Telemetri
         if (data.status_mesin === 'ON') {
             const queryTelemetri = `
                 INSERT INTO riwayat_telemetri (alsintan_id, tegangan_aki, arus, waktu_rekam) 
@@ -86,9 +88,31 @@ client.on('message', (topic, message) => {
             db.query(queryTelemetri, [data.id, data.V, data.I]);
         }
 
-// ----------------------------------------------------------------
-        // 📥 MASUKKAN KE BUFFER UNTUK JALUR LAMBAT (PENGHITUNGAN LAHAN)
-        // ----------------------------------------------------------------
+        // ================================================================
+        // ⏱️ LOGIKA PERHITUNGAN HOUR METER (NEW)
+        // ================================================================
+        if (data.status_mesin === 'ON') {
+            const now = Date.now();
+            
+            // Jika traktor ini sudah pernah mengirim pesan sebelumnya
+            if (lastPingTime[data.id]) {
+                const diffMs = now - lastPingTime[data.id]; // Hitung selisih waktu dalam milidetik
+                
+                // Safety Limit: Abaikan jika selisih waktu tidak wajar (misal internet mati 1 jam)
+                if (diffMs > 0 && diffMs < 300000) { // Max 5 menit
+                    const diffHours = diffMs / 3600000; // Konversi milidetik ke satuan Jam (Hour)
+                    hmAccumulator[data.id] = (hmAccumulator[data.id] || 0) + diffHours; // Masukkan ke celengan
+                }
+            }
+            lastPingTime[data.id] = now; // Perbarui catatan waktu terakhir
+        } else {
+            // Jika mesin mati, hapus catatan waktunya agar tidak melompat saat dinyalakan lagi
+            delete lastPingTime[data.id];
+        }
+
+        // ================================================================
+        // 📥 BUFFER JALUR LAMBAT (PENGHITUNGAN LAHAN)
+        // ================================================================
         if (data.status_mesin === 'ON') {
             if (!tractorBuffers[data.id]) {
                 tractorBuffers[data.id] = {
@@ -98,7 +122,6 @@ client.on('message', (topic, message) => {
                     queue: []
                 };
             }
-            // Simpan titik ke antrean beserta HDOP untuk filter
             tractorBuffers[data.id].queue.push({
                 lat: data.lat,
                 long: data.long,
@@ -106,23 +129,33 @@ client.on('message', (topic, message) => {
                 time: Date.now()
             });
         } else {
-            // [LOGIKA BARU - PENCEGAH TELEPORTASI BACKEND]
-            // Jika mesin OFF, hapus/buang memori titik koordinat terakhirnya!
-            // Agar saat mesin dinyalakan lagi di tempat lain, ia mulai menghitung dari 0 lagi.
             if (tractorBuffers[data.id]) {
                 delete tractorBuffers[data.id];
             }
         }
 
-    } catch (error) {
-        // console.error("Gagal parsing JSON MQTT:", error.message);
-    }
+    } catch (error) {}
 });
 
 // ========================================================================
-// ⚙️ BACKGROUND WORKER (SLIDING WINDOW & SENSOR FUSION)
+// ⚙️ BACKGROUND WORKER (SETORAN DB SETIAP 10 DETIK)
 // ========================================================================
 setInterval(() => {
+    
+    // --- 1. SETORAN HOUR METER ---
+    Object.keys(hmAccumulator).forEach(id_alat => {
+        const hoursToAdd = hmAccumulator[id_alat];
+        if (hoursToAdd > 0) {
+            // COALESCE digunakan untuk berjaga-jaga jika nilai di database adalah NULL, maka dianggap 0
+            const queryAddHM = `UPDATE monitoring_status SET total_hour_meter = COALESCE(total_hour_meter, 0) + $1 WHERE alsintan_id = $2`;
+            db.query(queryAddHM, [hoursToAdd, id_alat]);
+            
+            // Kosongkan celengan setelah disetor ke database
+            hmAccumulator[id_alat] = 0; 
+        }
+    });
+
+    // --- 2. SETORAN JARAK KERJA (GPS DRIFT) ---
     Object.keys(tractorBuffers).forEach(id_alat => {
         const buffer = tractorBuffers[id_alat];
 
@@ -134,21 +167,17 @@ setInterval(() => {
         buffer.queue.forEach(point => {
             const rawDist = calculateDistance(buffer.lastValidLat, buffer.lastValidLong, point.lat, point.long);
             
-            // Waktu dihitung dari TITIK VALID TERAKHIR
             let timeDiffSec = (point.time - buffer.lastTime) / 1000;
             if (timeDiffSec <= 0) timeDiffSec = 1;
             
             const speedKmh = (rawDist / timeDiffSec) * 3.6;
             let isDrift = false;
 
-            // 🛡️ Lapis Filter Sensor Fusion (Tanpa Speedometer, Menggunakan HDOP)
             if (speedKmh > 20) {
-                isDrift = true; // [Lapis 1] Anti-Spike Ekstrem (> 20 km/jam)
+                isDrift = true; 
             } else if (rawDist < 1.0) { 
-                isDrift = true; // [Lapis 2] Noise Parkir
+                isDrift = true; 
             } else if (point.hdop > 250 && rawDist > 3.0) {
-                // [Lapis 3 BARU] Memanfaatkan Parameter HDOP bawaan Ublox M8N
-                // Jika HDOP buruk (> 2.5) dan jaraknya melompat lebih dari 3 meter, itu pasti Multi-path!
                 isDrift = true; 
             }
 
@@ -162,19 +191,16 @@ setInterval(() => {
                 validDistanceToDB += smoothedDist;
                 validPointsToInsert.push({ lat: finalLat, long: finalLong });
 
-                // UPDATE REFERENSI MEMORI
                 buffer.lastValidLat = finalLat;
                 buffer.lastValidLong = finalLong;
                 buffer.lastTime = point.time; 
             } 
-            // Jika Drift, buffer.lastTime JANGAN DI-UPDATE agar stopwatch terus berjalan.
         });
 
         buffer.queue = [];
 
-        // 💾 BATCH INSERT KE DATABASE
         if (validPointsToInsert.length > 0) {
-            db.query(`UPDATE monitoring_status SET total_jarak_kerja = total_jarak_kerja + $1 WHERE alsintan_id = $2`,
+            db.query(`UPDATE monitoring_status SET total_jarak_kerja = COALESCE(total_jarak_kerja, 0) + $1 WHERE alsintan_id = $2`,
                     [validDistanceToDB, id_alat]);
 
             validPointsToInsert.forEach(vp => {
@@ -189,7 +215,6 @@ setInterval(() => {
 // 🧹 WATCHDOG SWEEPER (CEK TIMEOUT IOT MATI > 10 MENIT)
 // ========================================================================
 setInterval(() => {
-    // Kueri: Ubah IoT jadi OFF dan Mesin jadi UNKNOWN jika last_heartbeat lebih dari 10 menit yang lalu
     const queryTimeout = `
         UPDATE monitoring_status
         SET status_iot = 'OFF', status_mesin = 'UNKNOWN'

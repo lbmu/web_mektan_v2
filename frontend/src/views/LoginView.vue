@@ -118,7 +118,7 @@ const handleLogin = async () => {
                             <div class="badge bg-agri-green px-3 py-2 rounded-pill me-3 shadow-sm">
                                 <i class="bi bi-geo-alt-fill me-1"></i> Jawa Barat
                             </div>
-                            <span class="text-white-50 small fw-bold tracking-wide">SISTEM MONITORING ARMADA</span>
+                            <span class="text-white-50 small fw-bold tracking-wide">SISTEM MONITORING ALSINTAN</span>
                         </div>
                         <h2 class="fw-bold text-white mb-2">UPTD Balai Pengembangan Mekanisasi Pertanian</h2>
                         <p class="text-white-50 mb-0" style="line-height: 1.6;">
@@ -146,7 +146,7 @@ const handleLogin = async () => {
                         </div>
 
                         <h3 class="fw-bolder text-dark mb-1 tracking-tight">MyMektan</h3>
-                        <p class="text-muted small">Masukan kredensial Anda untuk melanjutkan</p>
+                        <p class="text-muted small">Masukan Akun MyMektan Anda</p>
                     </div>
 
                     <form @submit.prevent="handleLogin">
@@ -174,7 +174,7 @@ const handleLogin = async () => {
 
                     <div class="text-center mt-5">
                         <small class="text-muted d-block mb-1">Butuh bantuan akses?</small>
-                        <a href="#" class="text-agri-green text-decoration-none fw-bold small transition-link">Hubungi Super Admin</a>
+                        <a href="#" class="text-agri-green text-decoration-none fw-bold small transition-link">Hubungi Admin</a>
                     </div>
                 </div>
 
