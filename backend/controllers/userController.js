@@ -32,7 +32,7 @@ exports.loginUser = (req, res) => {
 
             // Cetak Token
             const token = jwt.sign(
-                { id: user.user_id, role: user.role }, // PERBAIKAN: ubah userId menjadi id agar seragam dengan authMiddleware
+                { id: user.user_id, role: user.role }, 
                 process.env.JWT_SECRET,
                 { expiresIn: '8h' }
             );
@@ -52,7 +52,7 @@ exports.loginUser = (req, res) => {
                         username: user.username,
                         nama: user.nama_lengkap,
                         role: user.role,
-                        foto: user.foto_profil
+                        foto: user.foto_profil // Jika sebelumnya sudah pakai Cloudinary, ini akan memuat URL
                     }
                 });
             });
@@ -90,9 +90,11 @@ exports.updateProfile = async (req, res) => {
     let params = [nama_lengkap, email, safeNip, safeHp];
     let paramCounter = 5; 
 
+    // KUNCI PERUBAHAN CLOUDINARY: Gunakan req.file.path untuk mengambil URL lengkap
     if (req.file) {
+        console.log("📸 Foto sukses diunggah ke Cloudinary:", req.file.path);
         query += `, foto_profil=$${paramCounter}`;
-        params.push(req.file.filename);
+        params.push(req.file.path); // Ini akan memasukkan https://res.cloudinary.com/... ke database
         paramCounter++;
     }
 

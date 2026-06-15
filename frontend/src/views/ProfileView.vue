@@ -62,7 +62,13 @@ onMounted(async () => {
         };
 
         if (user.foto_profil) {
-            previewFoto.value = `${IMAGE_BASE_URL}/profiles/${user.foto_profil}`;
+            // KUNCI CLOUDINARY: Cek apakah nama file diawali dengan 'http'
+            if (user.foto_profil.startsWith('http')) {
+                previewFoto.value = user.foto_profil; 
+            } else {
+                // Fallback untuk data profil lama yang masih lokal
+                previewFoto.value = `${IMAGE_BASE_URL}/profiles/${user.foto_profil}`;
+            }
         }
 
     } catch (error) {

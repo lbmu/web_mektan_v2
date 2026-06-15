@@ -196,7 +196,7 @@ onUnmounted(() => {
                 <tr v-for="item in items" :key="item.alsintan_id">
                     <td class="ps-4">
                     <div class="d-flex align-items-center">
-                        <img :src="`${IMAGE_BASE_URL}/${item.gambar}`" 
+                        <img :src="item.gambar && item.gambar.startsWith('http') ? item.gambar : `${IMAGE_BASE_URL}/${item.gambar}`" 
                             class="rounded border object-fit-cover me-3" 
                             width="50" height="50" 
                             @error="$event.target.src='https://via.placeholder.com/50?text=IMG'">

@@ -1,32 +1,29 @@
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
-const path = require('path');
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+// 1. Konfigurasi Kunci Cloudinary (Diambil dari file .env)
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// 2. Konfigurasi Brankas Penyimpanan Cloudinary
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'mymektan_assets', // Nama folder yang akan otomatis dibuat di akun Cloudinary Anda
+        allowed_formats: ['jpeg', 'jpg', 'png'], // Otomatis menyaring tipe file
+        // Fitur tambahan Cloudinary: Otomatis mengkompres ukuran agar website tidak berat
+        transformation: [{ width: 800, height: 800, crop: "limit" }] 
     }
 });
 
-const fileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-
-    if (extname && mimetype) {
-        return cb(null, true);
-    } else {
-        cb(new Error('Hanya file gambar yang diizinkan'));
-    }
-};
-
+// 3. Ekspor Multer
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024},
-    fileFilter: fileFilter
+    limits: { fileSize: 5 * 1024 * 1024 } // Batas ukuran file 5MB (Bisa disesuaikan jika perlu)
 });
 
 module.exports = upload;

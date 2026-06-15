@@ -94,7 +94,7 @@ onMounted(() => {
             
                         <div class="mb-4 position-relative d-inline-block">
                             <img 
-                                :src="`${IMAGE_BASE_URL}/${item.gambar}`" 
+                                :src="item.gambar && item.gambar.startsWith('http') ? item.gambar : `${IMAGE_BASE_URL}/${item.gambar}`" 
                                 class="img-fluid rounded shadow-sm"
                                 style="max-height: 300px; object-fit: cover;"
                                 alt="Foto Alat"

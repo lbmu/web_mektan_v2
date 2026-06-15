@@ -48,7 +48,7 @@ const fetchDetail = async () => {
         status_operasional: data.status_operasional,
         deskripsi: data.deskripsi,
         kapasitas_lahan: data.kapasitas_lahan,
-        lebar_implemen: data.lebar_implemen || 1.89 // Ambil dari DB atau fallback ke 1.89
+        lebar_implemen: data.lebar_implemen || 1.89
     };
     
     gambarLama.value = data.gambar;
@@ -219,7 +219,12 @@ onMounted(() => {
                 <div class="mt-3 text-center rounded p-3 position-relative" style="border: 2px dashed #dee2e6; background-color: #f8f9fa;">
                   <span class="badge bg-secondary position-absolute top-0 start-0 m-2">Preview Gambar</span>
                   <img v-if="previewGambar" :src="previewGambar" class="img-fluid rounded shadow-sm mt-3" style="max-height: 160px;">
-                  <img v-else-if="gambarLama" :src="`${IMAGE_BASE_URL}/${gambarLama}`" class="img-fluid rounded shadow-sm mt-3" style="max-height: 160px;" @error="$event.target.style.display='none'">
+                  
+                  <img v-else-if="gambarLama" 
+                       :src="gambarLama.startsWith('http') ? gambarLama : `${IMAGE_BASE_URL}/${gambarLama}`" 
+                       class="img-fluid rounded shadow-sm mt-3" style="max-height: 160px;" 
+                       @error="$event.target.style.display='none'">
+                       
                   <div v-else class="text-muted py-3 mt-3">
                       <i class="bi bi-camera fs-1 d-block mb-1 opacity-50"></i>
                       <small>Belum ada foto</small>

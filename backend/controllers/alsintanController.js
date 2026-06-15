@@ -1,6 +1,4 @@
 const db = require('../config/database');
-const fs = require('fs');
-const path = require('path');
 
 // 1. GET ALL (JOIN Data Profil + Data Sensor Live)
 exports.getAllAlsintan = (req, res) => {
@@ -48,19 +46,18 @@ exports.getAlsintanById = (req, res) => {
 
 // 3. CREATE
 exports.createAlsintan = (req, res) => {
-    // TAMBAHAN: Tangkap lebar_implemen dari request body
     const {
         kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri,
         status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen
     } = req.body;
 
-    const gambar = req.file ? req.file.filename : 'default.jpg';
+    // KUNCI CLOUDINARY: Gunakan req.file.path
+    const gambar = req.file ? req.file.path : 'default.jpg';
 
     if (!kode_perangkat || !nama_alat) {
         return res.status(400).json({ pesan: 'Kode perangkat dan nama alat harus diisi' });
     }
 
-    // TAMBAHAN: Masukkan lebar_implemen ke kueri INSERT ($11)
     const queryAlat = `
         INSERT INTO alsintan (
             kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
@@ -69,7 +66,6 @@ exports.createAlsintan = (req, res) => {
         RETURNING alsintan_id
     `;
 
-    // TAMBAHAN: Masukkan nilai ke array, berikan default 1.89 jika kosong
     const values = [
         kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri,
         status_sensor, status_operasional, deskripsi, kapasitas_lahan, 
@@ -103,22 +99,17 @@ exports.createAlsintan = (req, res) => {
     });
 };
 
-// 4. UPDATE (DENGAN SAPU OTOMATIS FILE LAMA)
+// 4. UPDATE 
 exports.updateAlsintan = (req, res) => {
     const id = req.params.id;
-    // TAMBAHAN: Tangkap lebar_implemen dari request body
     const {
         kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
         status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen
     } = req.body;
     
-    // INTIP GAMBAR LAMA DULU
     db.query(`SELECT gambar FROM alsintan WHERE alsintan_id = $1`, [id], (errCheck, rowsResult) => {
         if (errCheck) return res.status(500).json({ pesan: 'Gagal mengecek data lama', error: errCheck.message });
-        
-        const gambarLama = rowsResult.rows.length > 0 ? rowsResult.rows[0].gambar : null;
 
-        // TAMBAHAN: Tambahkan lebar_implemen = $10 pada kueri UPDATE
         let query = `
             UPDATE alsintan SET
                 kode_perangkat = $1, nama_alat = $2, kategori_alat = $3, merk_alat = $4,
@@ -126,29 +117,22 @@ exports.updateAlsintan = (req, res) => {
                 deskripsi = $8, kapasitas_lahan = $9, lebar_implemen = $10
         `;
 
-        // TAMBAHAN: Masukkan nilai ke array, berikan default 1.89 jika kosong
         let values = [
             kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
             status_sensor, status_operasional, deskripsi, kapasitas_lahan, 
             lebar_implemen || 1.89
         ]; 
         
-        // Sesuaikan paramCounter menjadi 11 karena field sebelumnya sudah sampai 10
         let paramCounter = 11;
 
+        // KUNCI CLOUDINARY: Gunakan req.file.path
         if (req.file) {
+            console.log("📸 Gambar Traktor sukses diunggah ke Cloudinary:", req.file.path);
             query += `, gambar = $${paramCounter} `;
-            values.push(req.file.filename);
+            values.push(req.file.path);
             paramCounter++;
-
-            // EKSEKUSI SAPU: Hapus gambar fisik yang lama jika ada gambar baru
-            if (gambarLama && gambarLama !== 'default.jpg') {
-                const filePath = path.join(__dirname, '../uploads', gambarLama);
-                if (fs.existsSync(filePath)) {
-                    fs.unlinkSync(filePath); // Hapus file dari folder uploads
-                    console.log(`🗑️ File sampah dibersihkan: ${gambarLama}`);
-                }
-            }
+            
+            // Catatan: Sapu otomatis lokal dihapus karena file sekarang berada di Cloudinary
         }   
 
         query += ` WHERE alsintan_id = $${paramCounter}`;
@@ -161,16 +145,13 @@ exports.updateAlsintan = (req, res) => {
     });
 };
 
-// 5. DELETE (FUNGSI BARU BESERTA SAPU OTOMATIS)
+// 5. DELETE 
 exports.deleteAlsintan = (req, res) => {
     const id = req.params.id;
 
-    // INTIP GAMBAR LAMA
     db.query(`SELECT gambar FROM alsintan WHERE alsintan_id = $1`, [id], (errCheck, rowsResult) => {
         if (errCheck) return res.status(500).json({ error: errCheck.message });
         if (rowsResult.rows.length === 0) return res.status(404).json({ pesan: 'Data tidak ditemukan' });
-
-        const gambarLama = rowsResult.rows[0].gambar;
 
         // HAPUS DATA DARI DATABASE (Tabel anak dihapus duluan agar tidak error Foreign Key)
         db.query(`DELETE FROM riwayat_perjalanan WHERE alsintan_id = $1`, [id], () => {
@@ -178,15 +159,8 @@ exports.deleteAlsintan = (req, res) => {
                 db.query(`DELETE FROM alsintan WHERE alsintan_id = $1`, [id], (errDel) => {
                     if (errDel) return res.status(500).json({ error: errDel.message });
 
-                    // EKSEKUSI SAPU: Hapus gambar fisiknya
-                    if (gambarLama && gambarLama !== 'default.jpg') {
-                        const filePath = path.join(__dirname, '../uploads', gambarLama);
-                        if (fs.existsSync(filePath)) {
-                            fs.unlinkSync(filePath);
-                            console.log(`🗑️ File traktor terhapus: ${gambarLama}`);
-                        }
-                    }
-                    res.status(200).json({ pesan: 'Data alsintan dan gambar berhasil dihapus permanen' });
+                    // Catatan: Sapu otomatis lokal dihapus karena file sekarang berada di Cloudinary
+                    res.status(200).json({ pesan: 'Data alsintan berhasil dihapus permanen dari sistem' });
                 });
             });
         });

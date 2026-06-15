@@ -16,8 +16,6 @@ const userName = ref('Admin');
 const userPhoto = ref(null);
 const userRole = ref('');
 
-
-
 onMounted(() => {
     const session = sessionStorage.getItem('user');
     if (session) {
@@ -29,7 +27,13 @@ onMounted(() => {
             const fotoFilename = userData.foto || userData.foto_profil;
 
             if (fotoFilename) {
-                userPhoto.value = `${IMAGE_BASE_URL}/profiles/${fotoFilename}`;
+                // KUNCI CLOUDINARY: Cek apakah nama file diawali dengan 'http' (berarti link Cloudinary)
+                if (fotoFilename.startsWith('http')) {
+                    userPhoto.value = fotoFilename; 
+                } else {
+                    // Fallback: Jika masih data lama (hanya nama file), gunakan URL lokal
+                    userPhoto.value = `${IMAGE_BASE_URL}/profiles/${fotoFilename}`;
+                }
             } else {
                 userPhoto.value = `https://ui-avatars.com/api/?name=${userName.value}&background=0D6EFD&color=fff`;
             }
@@ -40,12 +44,6 @@ onMounted(() => {
 });  
 
 const handleLogout = () => {
-    // 1. Hapus data user
-    sessionStorage.removeItem('user');
-    
-    // 2. Hapus token keamanan
-    sessionStorage.removeItem('token');
-
     Swal.fire({
         title: 'Konfirmasi Logout',
         text: 'Apakah Anda yakin ingin logout?',
@@ -55,15 +53,14 @@ const handleLogout = () => {
         cancelButtonColor: '#3085d6',
         confirmButtonText: 'Ya, Logout',
         cancelButtonText: 'Batal'
-    }) .then((result) => {
+    }).then((result) => {
         if (result.isConfirmed) {
+            // Hapus data pengguna dan lempar ke halaman login jika dikonfirmasi
             sessionStorage.removeItem('user');
             sessionStorage.removeItem('token');
             window.location.href = '/login';
         }
     });
-
-    router.push('/login');
 };
 
 watch(() => props.isClosed, (newVal) => {
