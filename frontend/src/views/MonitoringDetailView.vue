@@ -256,7 +256,7 @@ const connectMqtt = () => {
                 hdop.value = parseInt(data.hd) || 0;
                 satelit.value = parseInt(data.st) || 0;
 
-                const statusMesinBaru = teganganAki.value >= 11.5 ? 'ON' : 'OFF';
+                const statusMesinBaru = teganganAki.value >= 12.8 ? 'ON' : 'OFF';
                 statusMesin.value = statusMesinBaru;
 
                 const lat = parseFloat(data.lat);

@@ -56,7 +56,7 @@ client.on('message', (topic, message) => {
             hdop: parseInt(rawData.hd) || 0,
             satelit: parseInt(rawData.st) || 0,
             ts: rawData.ts || 0,
-            status_mesin: parseFloat(rawData.V) >= 11.5 ? 'ON' : 'OFF'
+            status_mesin: parseFloat(rawData.V) >= 12.8 ? 'ON' : 'OFF'
         };
 
         console.log(`[LIVE MODE] ID:${data.id} | Koor: ${data.lat}, ${data.long} | Aki:${data.V}V | HDOP:${data.hdop}`);

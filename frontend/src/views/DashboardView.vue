@@ -100,7 +100,7 @@ const connectMqtt = () => {
             
             if (index !== -1) {
                 const tegangan = parseFloat(data.V) || 0;
-                const statusMesinBaru = tegangan >= 11.5 ? 'ON' : 'OFF'; 
+                const statusMesinBaru = tegangan >= 12.8 ? 'ON' : 'OFF'; 
                 const lat = parseFloat(data.lat);
                 const long = parseFloat(data.long || data.lng);
 

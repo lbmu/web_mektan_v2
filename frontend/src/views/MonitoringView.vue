@@ -93,9 +93,9 @@ const createIcon = (status_mesin, status_iot) => {
         className: 'custom-tractor-icon',
         html: `
             <div class="d-flex justify-content-center align-items-center rounded-circle border border-2 ${border} ${bg} shadow-sm position-relative" 
-                 style="width: 36px; height: 36px; background-color: white;">
-                 <img src="/ikon-traktor.png" style="width: 22px; height: 22px; object-fit: contain;">
-                 ${isON ? '<div class="pulse-ring"></div>' : ''}
+                style="width: 36px; height: 36px; background-color: white;">
+                <img src="/ikon-traktor.png" style="width: 22px; height: 22px; object-fit: contain;">
+                ${isON ? '<div class="pulse-ring"></div>' : ''}
             </div>
         `,
         iconSize: [36, 36],
