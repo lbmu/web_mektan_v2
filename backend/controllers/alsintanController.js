@@ -51,7 +51,6 @@ exports.createAlsintan = (req, res) => {
         status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen
     } = req.body;
 
-    // KUNCI CLOUDINARY: Gunakan req.file.path
     const gambar = req.file ? req.file.path : 'default.jpg';
 
     if (!kode_perangkat || !nama_alat) {
@@ -125,14 +124,11 @@ exports.updateAlsintan = (req, res) => {
         
         let paramCounter = 11;
 
-        // KUNCI CLOUDINARY: Gunakan req.file.path
         if (req.file) {
             console.log("📸 Gambar Traktor sukses diunggah ke Cloudinary:", req.file.path);
             query += `, gambar = $${paramCounter} `;
             values.push(req.file.path);
             paramCounter++;
-            
-            // Catatan: Sapu otomatis lokal dihapus karena file sekarang berada di Cloudinary
         }   
 
         query += ` WHERE alsintan_id = $${paramCounter}`;
@@ -153,13 +149,10 @@ exports.deleteAlsintan = (req, res) => {
         if (errCheck) return res.status(500).json({ error: errCheck.message });
         if (rowsResult.rows.length === 0) return res.status(404).json({ pesan: 'Data tidak ditemukan' });
 
-        // HAPUS DATA DARI DATABASE (Tabel anak dihapus duluan agar tidak error Foreign Key)
         db.query(`DELETE FROM riwayat_perjalanan WHERE alsintan_id = $1`, [id], () => {
             db.query(`DELETE FROM monitoring_status WHERE alsintan_id = $1`, [id], () => {
                 db.query(`DELETE FROM alsintan WHERE alsintan_id = $1`, [id], (errDel) => {
                     if (errDel) return res.status(500).json({ error: errDel.message });
-
-                    // Catatan: Sapu otomatis lokal dihapus karena file sekarang berada di Cloudinary
                     res.status(200).json({ pesan: 'Data alsintan berhasil dihapus permanen dari sistem' });
                 });
             });
@@ -167,15 +160,14 @@ exports.deleteAlsintan = (req, res) => {
     });
 };
 
-// 6. GET RIWAYAT (DENGAN FILTER TANGGAL)
+// 6. GET RIWAYAT (DENGAN FILTER TANGGAL) - [BUG FIX: Penambahan status_mesin]
 exports.getRiwayat = (req, res) => {
     const id = req.params.id;
     const tanggal = req.query.tanggal;
 
     if (tanggal) {
-        // FILTER FAIL-SAFE: Mengambil data dari jam 00:00 hari ini, sampai 00:00 besok
         const queryHistory = `
-            SELECT latitude, longitude, waktu_rekam 
+            SELECT latitude, longitude, waktu_rekam, status_mesin 
             FROM riwayat_perjalanan 
             WHERE alsintan_id = $1 
             AND waktu_rekam >= $2::date
@@ -189,7 +181,6 @@ exports.getRiwayat = (req, res) => {
         return; 
     }
 
-    // LOGIKA RESET ARGO (LIVE MODE) - TETAP AMAN TIDAK DIUBAH
     const queryCheck = `SELECT waktu_reset FROM alsintan WHERE alsintan_id = $1`;
     db.query(queryCheck, [id], (err, rowsResult) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -198,10 +189,10 @@ exports.getRiwayat = (req, res) => {
         let params = [id];
 
         if (rowsResult.rows.length > 0 && rowsResult.rows[0].waktu_reset) {
-            queryHistory = `SELECT latitude, longitude, waktu_rekam FROM riwayat_perjalanan WHERE alsintan_id = $1 AND waktu_rekam >= $2 ORDER BY waktu_rekam ASC`;
+            queryHistory = `SELECT latitude, longitude, waktu_rekam, status_mesin FROM riwayat_perjalanan WHERE alsintan_id = $1 AND waktu_rekam >= $2 ORDER BY waktu_rekam ASC`;
             params.push(rowsResult.rows[0].waktu_reset);
         } else {
-            queryHistory = `SELECT latitude, longitude, waktu_rekam FROM riwayat_perjalanan WHERE alsintan_id = $1 ORDER BY waktu_rekam ASC`;
+            queryHistory = `SELECT latitude, longitude, waktu_rekam, status_mesin FROM riwayat_perjalanan WHERE alsintan_id = $1 ORDER BY waktu_rekam ASC`;
         }
 
         db.query(queryHistory, params, (errHist, results) => {
@@ -235,14 +226,12 @@ exports.registerIoT = async (req, res) => {
     }
 
     try {
-        // 1. Masukkan alat baru ke tabel alsintan
         const queryInsertAlat = `
             INSERT INTO alsintan (alsintan_id, latitude, longitude) 
             VALUES ($1, 0, 0) RETURNING alsintan_id
         `;
         await db.query(queryInsertAlat, [id_alat]);
         
-        // 2. Inisialisasi status awalnya
         const queryInitStatus = `
             INSERT INTO monitoring_status (alsintan_id, status_mesin, total_jarak_kerja)
             VALUES ($1, 'OFF', 0)

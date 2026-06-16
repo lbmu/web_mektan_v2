@@ -31,7 +31,6 @@ const getTodayDate = () => {
     return `${year}-${month}-${day}`;
 };
 
-// Telemetri Live & Status Ganda
 const statusIot = ref('OFF'); 
 const statusMesin = ref('UNKNOWN');
 const teganganAki = ref(0);
@@ -40,23 +39,20 @@ const hdop = ref(0);
 const satelit = ref(0);  
 const totalHM = ref(0); 
 
-// State Jarak
 const jarakMentahSensor = ref(0); 
 const jarakBersihValid = ref(0);  
-const historyCoordsLive = ref([]); 
+const historyCoordsLive = ref([]); // Kini menyimpan format objek: { lat, lng, status }
 
-// State History Mode (Ditambah HM Harian)
 const historyDate = ref(getTodayDate()); 
 const historyCoordsPast = ref([]);
 const totalJarakPast = ref(0);
-const dailyHMPast = ref(0); // State untuk menyimpan Jam Kerja di hari spesifik
+const dailyHMPast = ref(0); 
 
-// --- STATE TARIF DINAMIS ---
 const tarifPerHa = ref(1500000); 
 const isSavingTarif = ref(false);
 
 let map = null;
-let polyline = null; 
+let polylineLayer = null; // PERUBAHAN: Diganti menjadi LayerGroup untuk menampung multi-garis
 let marker = null;
 let mqttClient = null;
 let lastMesinStatus = 'UNKNOWN'; 
@@ -71,13 +67,12 @@ const getTractorClass = (status) => {
   return 'bg-secondary text-white'; 
 };
 
-// --- FUNGSI TARIF DINAMIS ---
 const fetchTarif = async () => {
     try {
         const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`);
         tarifPerHa.value = Number(res.data.nilai);
     } catch (e) {
-        console.error("Gagal meload tarif dari server");
+        console.error("Gagal meload tarif");
     }
 };
 
@@ -85,14 +80,7 @@ const saveTarif = async () => {
     isSavingTarif.value = true;
     try {
         await axios.put(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`, { nilai: tarifPerHa.value });
-        Swal.fire({ 
-            toast: true, 
-            position: 'top-end', 
-            icon: 'success', 
-            title: 'Tarif global diperbarui', 
-            showConfirmButton: false, 
-            timer: 2500 
-        });
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Tarif global diperbarui', showConfirmButton: false, timer: 2500 });
     } catch (e) {
         Swal.fire('Error', 'Gagal menyimpan tarif', 'error');
     } finally { 
@@ -120,7 +108,12 @@ const fetchData = async () => {
         
         if (historyCoordsLive.value.length === 0) {
             const resHistory = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}/riwayat`);
-            historyCoordsLive.value = resHistory.data.map(h => [parseFloat(h.latitude), parseFloat(h.longitude)]);
+            // PERUBAHAN: Menangkap status mesin dari database untuk digambar di peta
+            historyCoordsLive.value = resHistory.data.map(h => ({
+                lat: parseFloat(h.latitude), 
+                lng: parseFloat(h.longitude),
+                status: h.status_mesin || 'OFF'
+            }));
             initMap();
         }
     } catch (error) {
@@ -143,12 +136,15 @@ const initMap = () => {
     if (map) { map.remove(); map = null; }
 
     const startPos = historyCoordsLive.value.length > 0 
-        ? historyCoordsLive.value[historyCoordsLive.value.length - 1] 
+        ? [historyCoordsLive.value[historyCoordsLive.value.length - 1].lat, historyCoordsLive.value[historyCoordsLive.value.length - 1].lng] 
         : [-6.9175, 107.6191];
 
     map = L.map('monitor-map', { zoomControl: false }).setView(startPos, 17);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Inisialisasi wadah penampung multi-garis
+    polylineLayer = L.layerGroup().addTo(map);
 
     const tractorIcon = L.divIcon({
         className: 'custom-div-icon',
@@ -168,15 +164,66 @@ const initMap = () => {
     renderPolyline();
 };
 
-const renderPolyline = () => {
-    if (polyline) { map.removeLayer(polyline); polyline = null; }
-    
-    const coordsToDraw = activeTab.value === 'LIVE' ? historyCoordsLive.value : historyCoordsPast.value;
-    const lineColor = activeTab.value === 'LIVE' ? 'blue' : 'red';
+// ========================================================================
+// FUNGSI BARU: PENGGAMBAR MULTI-GARIS BERDASARKAN STATUS
+// ========================================================================
+const drawSegment = (latlngs, status) => {
+    let color = activeTab.value === 'LIVE' ? 'blue' : 'red';
+    let dashArray = null;
 
-    if (coordsToDraw.length > 0) {
-        polyline = L.polyline(coordsToDraw, { color: lineColor, weight: 4, opacity: 0.8 }).addTo(map);
-        map.fitBounds(polyline.getBounds(), { padding: [30, 30] });
+    // Jika Traktor Ditarik/Mesin Mati, ubah garis menjadi Abu-abu Putus-putus
+    if (status === 'OFF') {
+        color = '#6c757d'; // Gray
+        dashArray = '5, 10'; // Jarak putus-putus
+    }
+
+    const pl = L.polyline(latlngs, {
+        color: color,
+        weight: 4,
+        opacity: 0.8,
+        dashArray: dashArray
+    });
+    polylineLayer.addLayer(pl);
+};
+
+const renderPolyline = () => {
+    if (polylineLayer) {
+        polylineLayer.clearLayers(); // Bersihkan garis sebelumnya
+    }
+    
+    const dataToDraw = activeTab.value === 'LIVE' ? historyCoordsLive.value : historyCoordsPast.value;
+
+    if (dataToDraw.length > 1) {
+        let currentSegment = [];
+        let currentStatus = dataToDraw[0].status;
+
+        // Algoritma Pemotong Garis
+        for (let i = 0; i < dataToDraw.length; i++) {
+            const point = dataToDraw[i];
+
+            if (point.status !== currentStatus && currentSegment.length > 0) {
+                // Sambungkan titik transisi agar garis tidak putus di tengah jalan
+                currentSegment.push([point.lat, point.lng]);
+                drawSegment(currentSegment, currentStatus);
+
+                // Mulai segmen baru dengan status baru
+                currentSegment = [[point.lat, point.lng]];
+                currentStatus = point.status;
+            } else {
+                currentSegment.push([point.lat, point.lng]);
+            }
+        }
+
+        // Gambar sisa segmen terakhir
+        if (currentSegment.length > 1) {
+            drawSegment(currentSegment, currentStatus);
+        }
+
+        // Auto-Fokus Peta
+        const allLatLngs = dataToDraw.map(p => [p.lat, p.lng]);
+        if (allLatLngs.length > 0) {
+            map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] });
+        }
     }
 };
 
@@ -185,32 +232,37 @@ const fetchHistoryByDate = async () => {
         const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}/riwayat?tanggal=${historyDate.value}`);
         const rawData = response.data;
         
-        const dataCoords = rawData.map(h => [parseFloat(h.latitude), parseFloat(h.longitude)]);
-        historyCoordsPast.value = dataCoords;
+        historyCoordsPast.value = rawData.map(h => ({
+            lat: parseFloat(h.latitude), 
+            lng: parseFloat(h.longitude),
+            status: h.status_mesin || 'OFF'
+        }));
 
-        // Hitung Total Jarak
+        // PERUBAHAN LOGIKA: Hanya hitung jarak Harian jika status titiknya ON
         totalJarakPast.value = 0;
-        if (dataCoords.length > 1) {
-            for (let i = 1; i < dataCoords.length; i++) {
-                totalJarakPast.value += map.distance(dataCoords[i-1], dataCoords[i]);
+        if (historyCoordsPast.value.length > 1) {
+            for (let i = 1; i < historyCoordsPast.value.length; i++) {
+                if (historyCoordsPast.value[i].status === 'ON') {
+                    const p1 = [historyCoordsPast.value[i-1].lat, historyCoordsPast.value[i-1].lng];
+                    const p2 = [historyCoordsPast.value[i].lat, historyCoordsPast.value[i].lng];
+                    totalJarakPast.value += map.distance(p1, p2);
+                }
             }
         }
 
-        // =============================================================
-        // LOGIKA BARU: HITUNG HM HARIAN DARI JEJAK WAKTU (waktu_rekam)
-        // =============================================================
+        // Hitung HM Harian (Dari jejak waktu)
         let dailyHM = 0;
         if (rawData.length > 1) {
             for (let i = 1; i < rawData.length; i++) {
-                const t1 = new Date(rawData[i-1].waktu_rekam).getTime();
-                const t2 = new Date(rawData[i].waktu_rekam).getTime();
-                const diffMs = t2 - t1;
-                
-                // Jika selisih antar titik masuk akal (kurang dari 15 Menit / 900.000 ms),
-                // maka dianggap mesin sedang hidup/bekerja terus menerus.
-                // Jika > 15 Menit, dianggap mesin parkir/dimatikan sementara (jeda).
-                if (diffMs > 0 && diffMs <= 900000) {
-                    dailyHM += diffMs / 3600000; // Konversi ms ke jam
+                // Hanya hitung durasi jika mesin ON
+                if (rawData[i].status_mesin === 'ON') {
+                    const t1 = new Date(rawData[i-1].waktu_rekam).getTime();
+                    const t2 = new Date(rawData[i].waktu_rekam).getTime();
+                    const diffMs = t2 - t1;
+                    
+                    if (diffMs > 0 && diffMs <= 900000) {
+                        dailyHM += diffMs / 3600000; 
+                    }
                 }
             }
         }
@@ -221,21 +273,10 @@ const fetchHistoryByDate = async () => {
 };
 
 const connectMqtt = () => {
-    const options = {
-        host: MQTT_HOST,
-        port: MQTT_PORT,
-        protocol: 'wss',
-        path: '/mqtt',
-        username: MQTT_USERNAME,
-        password: MQTT_PASSWORD
-    };
-
+    const options = { host: MQTT_HOST, port: MQTT_PORT, protocol: 'wss', path: '/mqtt', username: MQTT_USERNAME, password: MQTT_PASSWORD };
     mqttClient = mqtt.connect(options);
     
-    mqttClient.on('connect', () => {
-        console.log("📡 Connected to MQTT (Detail View - Watchdog & Anti-Teleport Aktif)");
-        mqttClient.subscribe(MQTT_TOPIC);
-    });
+    mqttClient.on('connect', () => { mqttClient.subscribe(MQTT_TOPIC); });
 
     mqttClient.on('message', (topic, message) => {
         try {
@@ -246,17 +287,27 @@ const connectMqtt = () => {
                 statusIot.value = 'ON';
                 
                 offlineTimer = setTimeout(() => {
-                    console.warn(`⚠️ Traktor ID: ${id} kehilangan sinyal (>10 menit)!`);
-                    statusIot.value = 'OFF';
-                    statusMesin.value = 'UNKNOWN';
+                    statusIot.value = 'OFF'; statusMesin.value = 'UNKNOWN';
                 }, TIMEOUT_BATAS_MS);
 
-                teganganAki.value = parseFloat(data.V) || 0;
+                const vAki = parseFloat(data.V) || 0;
+                teganganAki.value = vAki;
                 arus.value = parseFloat(data.I) || 0;
                 hdop.value = parseInt(data.hd) || 0;
                 satelit.value = parseInt(data.st) || 0;
 
-                const statusMesinBaru = teganganAki.value >= 12.8 ? 'ON' : 'OFF';
+                // ===================================================================
+                // LOGIKA HISTERISIS FRONTEND (AKURASI UI MAP)
+                // ===================================================================
+                let statusMesinBaru = statusMesin.value; 
+                
+                if (vAki > 13.4) {
+                    statusMesinBaru = 'ON';
+                } else if (vAki < 13.0) {
+                    statusMesinBaru = 'OFF';
+                }
+                // Jika vAki antara 13.0 - 13.4, status tidak berubah (mengingat status sebelumnya)
+                
                 statusMesin.value = statusMesinBaru;
 
                 const lat = parseFloat(data.lat);
@@ -264,28 +315,28 @@ const connectMqtt = () => {
                 const isGpsValid = lat && long && !isNaN(lat) && !isNaN(long) && lat !== 0 && long !== 0;
                 
                 if (isGpsValid) {
-                    const newPoint = [lat, long];
+                    const newPoint = { lat: lat, lng: long, status: statusMesinBaru };
 
                     if (marker && activeTab.value === 'LIVE') {
-                        marker.setLatLng(newPoint);
-                        map.panTo(newPoint); 
+                        marker.setLatLng([lat, long]);
+                        map.panTo([lat, long]); 
                     }
 
-                    if (statusMesinBaru === 'ON') {
-                        if (activeTab.value === 'LIVE') {
-                            if (polyline) polyline.addLatLng(newPoint);
-                            else renderPolyline(); 
-                        }
-                        
-                        if (lastMesinStatus === 'ON' && historyCoordsLive.value.length > 0) {
-                            const lastPoint = historyCoordsLive.value[historyCoordsLive.value.length - 1];
-                            const dist = map.distance(lastPoint, newPoint);
-                            
-                            if (dist > 0.5 && dist < 50) { 
-                                jarakMentahSensor.value += dist; 
-                            }
-                        }
+                    if (activeTab.value === 'LIVE') {
                         historyCoordsLive.value.push(newPoint);
+                        renderPolyline(); // Refresh garis agar efek putus-putusnya tergambar langsung
+                    } else {
+                        historyCoordsLive.value.push(newPoint);
+                    }
+                    
+                    // Kalkulasi Mentah (Drift) di Frontend
+                    if (lastMesinStatus === 'ON' && statusMesinBaru === 'ON' && historyCoordsLive.value.length > 1) {
+                        const prevPoint = historyCoordsLive.value[historyCoordsLive.value.length - 2];
+                        const dist = map.distance([prevPoint.lat, prevPoint.lng], [lat, long]);
+                        
+                        if (dist > 0.5 && dist < 50) { 
+                            jarakMentahSensor.value += dist; 
+                        }
                     }
                     lastMesinStatus = statusMesinBaru;
                 }
@@ -299,15 +350,12 @@ const luasHektar = computed(() => {
     return (jarak * lebarImplemen.value) / 10000;
 });
 
-// Konversi Desimal ke Jam, Menit, Detik
 const formatHM = (decimalHours) => {
     const hoursFloat = parseFloat(decimalHours) || 0;
     if (hoursFloat === 0) return '0j 0m 0d';
-
     const h = Math.floor(hoursFloat);
     const m = Math.floor((hoursFloat - h) * 60);
     const s = Math.round((((hoursFloat - h) * 60) - m) * 60);
-
     return `${h}j ${m}m ${s}d`;
 };
 
@@ -315,18 +363,11 @@ const estimasiBiaya = computed(() => luasHektar.value * tarifPerHa.value);
 const selisihDrift = computed(() => Math.max(0, jarakMentahSensor.value - jarakBersihValid.value));
 
 const resetArgo = async () => {
-    const confirm = await Swal.fire({
-        title: 'Reset Argo?',
-        text: "Jarak kerja akan dikembalikan ke 0.",
-        icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Reset!'
-    });
-
+    const confirm = await Swal.fire({ title: 'Reset Argo?', text: "Jarak kerja akan dikembalikan ke 0.", icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Reset!' });
     if (confirm.isConfirmed) {
         try {
             await axios.post(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}/reset`);
-            jarakMentahSensor.value = 0;
-            jarakBersihValid.value = 0;
-            historyCoordsLive.value = [];
+            jarakMentahSensor.value = 0; jarakBersihValid.value = 0; historyCoordsLive.value = [];
             if (activeTab.value === 'LIVE') renderPolyline();
             Swal.fire('Sesi Baru Dimulai!', '', 'success');
         } catch (error) {}
@@ -346,9 +387,7 @@ onMounted(() => {
     const session = JSON.parse(sessionStorage.getItem('user'));
     if (session) userRole.value = session.role;
     
-    fetchTarif();
-    fetchData();
-    connectMqtt(); 
+    fetchTarif(); fetchData(); connectMqtt(); 
     syncTimer = setInterval(fetchCleanDataOnly, 10000);
 });
 
@@ -395,15 +434,17 @@ onUnmounted(() => {
                       @click="activeTab = 'HISTORY'"><i class="bi bi-clock-history"></i> Riwayat Lintasan</button>
           </div>
 
-          <div v-if="activeTab === 'LIVE' && statusMesin === 'OFF'" 
-               class="position-absolute bottom-0 start-0 w-100 bg-dark bg-opacity-75 text-white text-center p-2 z-3"
-               style="font-size: 12px;">
-               <i class="bi bi-info-circle text-warning"></i> Traktor sedang parkir (Mesin Mati). Argo jarak dihentikan sementara.
-          </div>
-          <div v-if="activeTab === 'LIVE' && statusMesin === 'UNKNOWN'" 
-               class="position-absolute bottom-0 start-0 w-100 bg-danger bg-opacity-75 text-white text-center p-2 z-3"
-               style="font-size: 12px;">
-               <i class="bi bi-exclamation-triangle-fill text-warning"></i> Kehilangan sinyal IoT (>10 Menit). Menunggu data masuk...
+          <div class="position-absolute bottom-0 start-0 m-3 z-3 bg-white p-2 rounded shadow-sm border" style="font-size: 11px;">
+              <div class="fw-bold mb-1 text-muted">Legenda Peta:</div>
+              <div class="d-flex align-items-center gap-2 mb-1">
+                  <div style="width: 20px; height: 4px; background-color: var(--bs-blue);" v-if="activeTab === 'LIVE'"></div>
+                  <div style="width: 20px; height: 4px; background-color: var(--bs-danger);" v-else></div>
+                  <span>Kerja (Mesin ON)</span>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                  <div style="width: 20px; height: 4px; border-bottom: 3px dashed #6c757d;"></div>
+                  <span class="text-muted">Ditarik/Parkir (Mesin OFF)</span>
+              </div>
           </div>
           
           <div id="monitor-map" style="height: 100%; width: 100%;"></div>
@@ -445,7 +486,7 @@ onUnmounted(() => {
                         <span class="text-danger fw-bold">{{ selisihDrift.toFixed(1) }} meter</span>
                     </div>
                 </div>
-                <small v-else class="text-muted border-top pt-2 d-block">Jarak Kerja Terpilih: {{ (totalJarakPast / 1000).toFixed(2) }} km</small>
+                <small v-else class="text-muted border-top pt-2 d-block">Jarak Kerja Aktif: {{ (totalJarakPast / 1000).toFixed(2) }} km</small>
               </div>
             </div>
 
@@ -541,7 +582,7 @@ onUnmounted(() => {
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 .z-3 { z-index: 1000 !important; }
 
-/* Kustomisasi Scrollbar jika layar terlalu kecil */
+/* Kustomisasi Scrollbar */
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #dee2e6; border-radius: 4px; }

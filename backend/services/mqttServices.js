@@ -1,7 +1,6 @@
 const mqtt = require('mqtt');
 const db = require('../config/database');
 
-// FUNGSI HITUNG JARAK (Haversine Formula) 
 function calculateDistance(lat1, lon1, lat2, lon2) {
     if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
     const R = 6371e3; 
@@ -25,17 +24,13 @@ const options = {
 const TOPIC = process.env.MQTT_TOPIC;
 const client = mqtt.connect(options);
 
-// ========================================================================
-// 🧠 MEMORI BUFFER UNTUK JALUR LAMBAT (SLIDING WINDOW & HOUR METER)
-// ========================================================================
 const tractorBuffers = {};
-
-// TAMBAHAN: Memori khusus untuk menghitung detak stopwatch (Hour Meter)
-const hmAccumulator = {}; // Menyimpan total pecahan jam sebelum disetor ke DB
-const lastPingTime = {};  // Menyimpan waktu (timestamp) pesan MQTT terakhir
+const hmAccumulator = {}; 
+const lastPingTime = {};  
+const tractorStatus = {}; 
 
 client.on('connect', () => {
-    console.log(`✅ Backend Terhubung! (Arsitektur JALUR GANDA & HOUR METER Aktif)`);
+    console.log(`✅ Backend Terhubung! (Filter Stationary & Precision Timestamp Aktif)`);
     client.subscribe(TOPIC);
 });
 
@@ -46,22 +41,33 @@ client.on('offline', () => console.log('⚠️ Terputus dari broker MQTT.'));
 client.on('message', (topic, message) => {
     try {
         const rawData = JSON.parse(message.toString());
+        const vAki = parseFloat(rawData.V) || 0;
+
+        // Safety Filter: Abaikan koordinat 0,0 (Null Island) yang merusak peta
+        if (!rawData.lat || !rawData.lng || rawData.lat === 0 || rawData.lng === 0) return;
+
+        let currentStatus = tractorStatus[rawData.id] || 'OFF'; 
+
+        if (vAki > 13.4) {
+            currentStatus = 'ON';
+        } else if (vAki < 13.0) {
+            currentStatus = 'OFF';
+        }
+
+        tractorStatus[rawData.id] = currentStatus;
 
         const data = {
             id: rawData.id, 
-            lat: parseFloat(rawData.lat) || 0,
-            long: parseFloat(rawData.lng) || 0, 
-            V: parseFloat(rawData.V) || 0,
+            lat: parseFloat(rawData.lat),
+            long: parseFloat(rawData.lng), 
+            V: vAki,
             I: parseFloat(rawData.I) || 0,
             hdop: parseInt(rawData.hd) || 0,
             satelit: parseInt(rawData.st) || 0,
             ts: rawData.ts || 0,
-            status_mesin: parseFloat(rawData.V) >= 12.8 ? 'ON' : 'OFF'
+            status_mesin: currentStatus 
         };
 
-        console.log(`[LIVE MODE] ID:${data.id} | Koor: ${data.lat}, ${data.long} | Aki:${data.V}V | HDOP:${data.hdop}`);
-
-        // 1. Update Status Inti
         const queryUpdateLive = `
             UPDATE monitoring_status 
             SET status_mesin = $1, 
@@ -76,86 +82,58 @@ client.on('message', (topic, message) => {
         `;
         db.query(queryUpdateLive, [data.status_mesin, data.id, data.V, data.lat, data.long, data.hdop, data.satelit]);
 
-        // 2. Update Lokasi Utama
         db.query(`UPDATE alsintan SET latitude = $1, longitude = $2 WHERE alsintan_id = $3`, [data.lat, data.long, data.id]);
 
-        // 3. Simpan Riwayat Telemetri
-        if (data.status_mesin === 'ON') {
-            const queryTelemetri = `
-                INSERT INTO riwayat_telemetri (alsintan_id, tegangan_aki, arus, waktu_rekam) 
-                VALUES ($1, $2, $3, NOW())
-            `;
-            db.query(queryTelemetri, [data.id, data.V, data.I]);
-        }
+        const queryTelemetri = `
+            INSERT INTO riwayat_telemetri (alsintan_id, tegangan_aki, arus, waktu_rekam) 
+            VALUES ($1, $2, $3, NOW())
+        `;
+        db.query(queryTelemetri, [data.id, data.V, data.I]);
 
-        // ================================================================
-        // ⏱️ LOGIKA PERHITUNGAN HOUR METER (NEW)
-        // ================================================================
         if (data.status_mesin === 'ON') {
             const now = Date.now();
-            
-            // Jika traktor ini sudah pernah mengirim pesan sebelumnya
             if (lastPingTime[data.id]) {
-                const diffMs = now - lastPingTime[data.id]; // Hitung selisih waktu dalam milidetik
-                
-                // Safety Limit: Abaikan jika selisih waktu tidak wajar (misal internet mati 1 jam)
-                if (diffMs > 0 && diffMs < 300000) { // Max 5 menit
-                    const diffHours = diffMs / 3600000; // Konversi milidetik ke satuan Jam (Hour)
-                    hmAccumulator[data.id] = (hmAccumulator[data.id] || 0) + diffHours; // Masukkan ke celengan
+                const diffMs = now - lastPingTime[data.id]; 
+                if (diffMs > 0 && diffMs < 300000) { 
+                    const diffHours = diffMs / 3600000; 
+                    hmAccumulator[data.id] = (hmAccumulator[data.id] || 0) + diffHours; 
                 }
             }
-            lastPingTime[data.id] = now; // Perbarui catatan waktu terakhir
+            lastPingTime[data.id] = now; 
         } else {
-            // Jika mesin mati, hapus catatan waktunya agar tidak melompat saat dinyalakan lagi
             delete lastPingTime[data.id];
         }
 
-        // ================================================================
-        // 📥 BUFFER JALUR LAMBAT (PENGHITUNGAN LAHAN)
-        // ================================================================
-        if (data.status_mesin === 'ON') {
-            if (!tractorBuffers[data.id]) {
-                tractorBuffers[data.id] = {
-                    lastValidLat: data.lat,
-                    lastValidLong: data.long,
-                    lastTime: Date.now(),
-                    queue: []
-                };
-            }
-            tractorBuffers[data.id].queue.push({
-                lat: data.lat,
-                long: data.long,
-                hdop: data.hdop,
-                time: Date.now()
-            });
-        } else {
-            if (tractorBuffers[data.id]) {
-                delete tractorBuffers[data.id];
-            }
+        if (!tractorBuffers[data.id]) {
+            tractorBuffers[data.id] = {
+                lastValidLat: data.lat,
+                lastValidLong: data.long,
+                lastTime: Date.now(),
+                queue: []
+            };
         }
+        
+        tractorBuffers[data.id].queue.push({
+            lat: data.lat,
+            long: data.long,
+            hdop: data.hdop,
+            time: Date.now(),
+            status: data.status_mesin
+        });
 
     } catch (error) {}
 });
 
-// ========================================================================
-// ⚙️ BACKGROUND WORKER (SETORAN DB SETIAP 10 DETIK)
-// ========================================================================
 setInterval(() => {
-    
-    // --- 1. SETORAN HOUR METER ---
     Object.keys(hmAccumulator).forEach(id_alat => {
         const hoursToAdd = hmAccumulator[id_alat];
         if (hoursToAdd > 0) {
-            // COALESCE digunakan untuk berjaga-jaga jika nilai di database adalah NULL, maka dianggap 0
             const queryAddHM = `UPDATE monitoring_status SET total_hour_meter = COALESCE(total_hour_meter, 0) + $1 WHERE alsintan_id = $2`;
             db.query(queryAddHM, [hoursToAdd, id_alat]);
-            
-            // Kosongkan celengan setelah disetor ke database
             hmAccumulator[id_alat] = 0; 
         }
     });
 
-    // --- 2. SETORAN JARAK KERJA (GPS DRIFT) ---
     Object.keys(tractorBuffers).forEach(id_alat => {
         const buffer = tractorBuffers[id_alat];
 
@@ -171,49 +149,66 @@ setInterval(() => {
             if (timeDiffSec <= 0) timeDiffSec = 1;
             
             const speedKmh = (rawDist / timeDiffSec) * 3.6;
-            let isDrift = false;
+
+            // [BUG FIX]: PEMISAHAN LOGIKA DRIFT (Spike) DAN PARKIR (Stationary)
+            let isSpike = false;
+            let isStationary = false;
 
             if (speedKmh > 20) {
-                isDrift = true; 
-            } else if (rawDist < 1.0) { 
-                isDrift = true; 
+                isSpike = true; 
             } else if (point.hdop > 250 && rawDist > 3.0) {
-                isDrift = true; 
+                isSpike = true; 
+            } else if (rawDist < 1.0) {
+                // Jarak kurang dari 1 meter berarti traktor sedang parkir/ditarik diam
+                isStationary = true; 
             }
 
-            if (!isDrift) {
-                const ALPHA = 0.4; 
-                const finalLat = (ALPHA * point.lat) + ((1 - ALPHA) * buffer.lastValidLat);
-                const finalLong = (ALPHA * point.long) + ((1 - ALPHA) * buffer.lastValidLong);
+            if (!isSpike) {
+                let finalLat = point.lat;
+                let finalLong = point.long;
+                let smoothedDist = 0;
 
-                const smoothedDist = calculateDistance(buffer.lastValidLat, buffer.lastValidLong, finalLat, finalLong);
+                if (!isStationary) {
+                    const ALPHA = 0.8; 
+                    finalLat = (ALPHA * point.lat) + ((1 - ALPHA) * buffer.lastValidLat);
+                    finalLong = (ALPHA * point.long) + ((1 - ALPHA) * buffer.lastValidLong);
+                    smoothedDist = calculateDistance(buffer.lastValidLat, buffer.lastValidLong, finalLat, finalLong);
+                    
+                    buffer.lastValidLat = finalLat;
+                    buffer.lastValidLong = finalLong;
+                } else {
+                    // Jika parkir, pastikan titiknya tertahan agar map UI tidak bergetar (Jitter)
+                    finalLat = buffer.lastValidLat;
+                    finalLong = buffer.lastValidLong;
+                }
 
-                validDistanceToDB += smoothedDist;
-                validPointsToInsert.push({ lat: finalLat, long: finalLong });
+                if (point.status === 'ON') {
+                    validDistanceToDB += smoothedDist;
+                }
 
-                buffer.lastValidLat = finalLat;
-                buffer.lastValidLong = finalLong;
+                // KUNCI PERBAIKAN TIMESTAMPS: Kita menyertakan point.time ke antrean DB
+                validPointsToInsert.push({ lat: finalLat, long: finalLong, status: point.status, time: point.time });
                 buffer.lastTime = point.time; 
             } 
         });
 
         buffer.queue = [];
 
-        if (validPointsToInsert.length > 0) {
+        if (validDistanceToDB > 0) {
             db.query(`UPDATE monitoring_status SET total_jarak_kerja = COALESCE(total_jarak_kerja, 0) + $1 WHERE alsintan_id = $2`,
                     [validDistanceToDB, id_alat]);
+        }
 
+        if (validPointsToInsert.length > 0) {
             validPointsToInsert.forEach(vp => {
-                db.query(`INSERT INTO riwayat_perjalanan (alsintan_id, latitude, longitude, waktu_rekam) VALUES ($1, $2, $3, NOW())`,
-                        [id_alat, vp.lat, vp.long]);
+                // KUNCI PERBAIKAN URUTAN (Race Condition): Menggunakan presisi milidetik dari Node.js (vp.time)
+                db.query(`INSERT INTO riwayat_perjalanan (alsintan_id, latitude, longitude, waktu_rekam, status_mesin) VALUES ($1, $2, $3, TO_TIMESTAMP($4 / 1000.0), $5)`,
+                        [id_alat, vp.lat, vp.long, vp.time, vp.status]);
             });
         }
     });
 }, 10000);
 
-// ========================================================================
-// 🧹 WATCHDOG SWEEPER (CEK TIMEOUT IOT MATI > 10 MENIT)
-// ========================================================================
 setInterval(() => {
     const queryTimeout = `
         UPDATE monitoring_status
@@ -226,7 +221,7 @@ setInterval(() => {
         if (err) {
             console.error("❌ Error Watchdog IoT:", err.message);
         } else if (result && result.rowCount > 0) {
-            console.log(`⚠️ [WATCHDOG] ${result.rowCount} traktor kehilangan sinyal (>10 menit). Status diubah ke IoT: OFF | Mesin: UNKNOWN.`);
+            console.log(`⚠️ [WATCHDOG] ${result.rowCount} traktor kehilangan sinyal (>10 menit).`);
         }
     });
 }, 60000);
