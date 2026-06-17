@@ -44,11 +44,12 @@ exports.getAlsintanById = (req, res) => {
     });
 };
 
-// 3. CREATE
+// 3. CREATE (DIPERBARUI: Menambah Tahun Penerimaan & Kondisi Fisik)
 exports.createAlsintan = (req, res) => {
     const {
         kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri,
-        status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen
+        status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen,
+        tahun_penerimaan, kondisi_fisik
     } = req.body;
 
     const gambar = req.file ? req.file.path : 'default.jpg';
@@ -60,15 +61,17 @@ exports.createAlsintan = (req, res) => {
     const queryAlat = `
         INSERT INTO alsintan (
             kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
-            status, status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen, gambar
-        ) VALUES ($1, $2, $3, $4, $5, 'OFF', $6, $7, $8, $9, $10, $11)
+            status, status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen, gambar,
+            tahun_penerimaan, kondisi_fisik
+        ) VALUES ($1, $2, $3, $4, $5, 'OFF', $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING alsintan_id
     `;
 
     const values = [
         kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri,
         status_sensor, status_operasional, deskripsi, kapasitas_lahan, 
-        lebar_implemen || 1.89, gambar
+        lebar_implemen || 1.89, gambar,
+        tahun_penerimaan || null, kondisi_fisik || 'Baik'
     ];
 
     db.query(queryAlat, values, (err, result) => {
@@ -98,12 +101,13 @@ exports.createAlsintan = (req, res) => {
     });
 };
 
-// 4. UPDATE 
+// 4. UPDATE (DIPERBARUI: Menambah Tahun Penerimaan & Kondisi Fisik)
 exports.updateAlsintan = (req, res) => {
     const id = req.params.id;
     const {
         kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
-        status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen
+        status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen,
+        tahun_penerimaan, kondisi_fisik
     } = req.body;
     
     db.query(`SELECT gambar FROM alsintan WHERE alsintan_id = $1`, [id], (errCheck, rowsResult) => {
@@ -113,16 +117,17 @@ exports.updateAlsintan = (req, res) => {
             UPDATE alsintan SET
                 kode_perangkat = $1, nama_alat = $2, kategori_alat = $3, merk_alat = $4,
                 nomor_seri = $5, status_sensor = $6, status_operasional = $7,
-                deskripsi = $8, kapasitas_lahan = $9, lebar_implemen = $10
+                deskripsi = $8, kapasitas_lahan = $9, lebar_implemen = $10,
+                tahun_penerimaan = $11, kondisi_fisik = $12
         `;
 
         let values = [
             kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
             status_sensor, status_operasional, deskripsi, kapasitas_lahan, 
-            lebar_implemen || 1.89
+            lebar_implemen || 1.89, tahun_penerimaan || null, kondisi_fisik || 'Baik'
         ]; 
         
-        let paramCounter = 11;
+        let paramCounter = 13;
 
         if (req.file) {
             console.log("📸 Gambar Traktor sukses diunggah ke Cloudinary:", req.file.path);
@@ -160,7 +165,7 @@ exports.deleteAlsintan = (req, res) => {
     });
 };
 
-// 6. GET RIWAYAT (DENGAN FILTER TANGGAL) - [BUG FIX: Penambahan status_mesin]
+// 6. GET RIWAYAT 
 exports.getRiwayat = (req, res) => {
     const id = req.params.id;
     const tanggal = req.query.tanggal;

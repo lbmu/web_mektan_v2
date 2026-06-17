@@ -122,3 +122,37 @@ exports.updateProfile = async (req, res) => {
         });
     });
 };
+
+// =========================================================
+// 4. FUNGSI REGISTRASI (KELOMPOK TANI / USER UMUM)
+// =========================================================
+
+exports.registerUser = (req, res) => {
+    const { username, email, nama_lengkap, no_hp, password } = req.body; 
+
+    if (!username || !email || !password || !nama_lengkap) {
+        return res.status(400).json({ status: false, message: "Semua kolom wajib diisi!" });
+    }
+
+    // Cek apakah username atau email sudah ada
+    const queryCheck = "SELECT * FROM users WHERE username = $1 OR email = $2";
+    db.query(queryCheck, [username, email], async (err, result) => {
+        if (err) return res.status(500).json({ status: false, message: "Database server error" });
+        if (result.rows.length > 0) return res.status(400).json({ status: false, message: "Username atau Email sudah terdaftar!" });
+
+        try {
+            // Enkripsi Password demi keamanan
+            const hashedPassword = await bcrypt.hash(password, 10);
+            
+            // Masukkan ke database dengan role default 'kelompok_tani'
+            const queryInsert = "INSERT INTO users (username, email, nama_lengkap, no_hp, password, role) VALUES ($1, $2, $3, $4, $5, 'kelompok_tani')";
+            
+            db.query(queryInsert, [username, email, nama_lengkap, no_hp, hashedPassword], (errInsert) => {
+                if (errInsert) return res.status(500).json({ status: false, message: "Gagal menyimpan akun ke database" });
+                return res.status(201).json({ status: true, message: "Registrasi Kelompok Tani berhasil!" });
+            });
+        } catch (hashError) {
+            return res.status(500).json({ status: false, message: "Gagal memproses enkripsi keamanan" });
+        }
+    });
+};

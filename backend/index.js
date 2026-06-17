@@ -9,6 +9,8 @@ const monitoringRoutes = require('./routes/monitoringRoutes');
 const alsintanRoutes = require('./routes/alsintanRoutes');
 const userRoutes = require('./routes/userRoutes');
 const settingRoutes = require('./routes/settingRoutes');
+const peminjamanRoutes = require('./routes/peminjamanRoutes');
+const pengajuanRoutes = require('./routes/pengajuanRoutes');
 
 require('./services/mqttServices');
 
@@ -28,9 +30,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api/monitoring', monitoringRoutes);
-app.use('/api/alsintan', verifyToken, alsintanRoutes);
+app.use('/api/alsintan', alsintanRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/settings', settingRoutes);
+app.use('/api/peminjaman', peminjamanRoutes);
+app.use('/api/pengajuan', pengajuanRoutes);
 
 app.get('/', (req, res) => {
     res.send('Server Backend Alsintan Berjalan');

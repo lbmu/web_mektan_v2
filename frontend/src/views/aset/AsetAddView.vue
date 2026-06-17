@@ -11,12 +11,14 @@ const form = ref({
     nama_alat: '',
     kategori_alat: '',
     merk_alat: '',
-    nomor_seri: '',          
+    nomor_seri: '',
+    tahun_penerimaan: '', // [BARU]
     status_sensor: 'Normal',
     status_operasional: 'Siap Digunakan',
+    kondisi_fisik: 'Baik', // [BARU]
     deskripsi: '',
     kapasitas_lahan: '',
-    lebar_implemen: 1.89 // Nilai bawaan (default) sesuai spesifikasi rotavator
+    lebar_implemen: 1.89
 });
 
 const fileGambar = ref(null);
@@ -39,7 +41,6 @@ const handleFileUpload = (event) => {
 const submitForm = async () => {
     isSubmitting.value = true;
 
-    // Animasi Loading SweetAlert
     Swal.fire({
         title: 'Menyimpan Aset...',
         text: 'Mohon tunggu sistem sedang mengunggah data.',
@@ -54,6 +55,8 @@ const submitForm = async () => {
         formData.append('kategori_alat', form.value.kategori_alat);
         formData.append('merk_alat', form.value.merk_alat);
         formData.append('nomor_seri', form.value.nomor_seri);
+        formData.append('tahun_penerimaan', form.value.tahun_penerimaan); // [BARU]
+        formData.append('kondisi_fisik', form.value.kondisi_fisik); // [BARU]
         formData.append('status_sensor', form.value.status_sensor);
         formData.append('status_operasional', form.value.status_operasional);
         formData.append('deskripsi', form.value.deskripsi);
@@ -68,7 +71,6 @@ const submitForm = async () => {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
 
-        // Animasi Sukses
         Swal.fire({
             icon: 'success',
             title: 'Berhasil!',
@@ -111,7 +113,7 @@ const submitForm = async () => {
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Kode Perangkat (ID IoT) <span class="text-danger">*</span></label>
                                 <input v-model="form.kode_perangkat" @input="formatKodePerangkat" type="text" class="form-control bg-light text-primary fw-bold" placeholder="Contoh: IOT-TR-01" required>
-                                <div class="form-text small">Hanya huruf, angka, dan strip (-). Spasi akan dihapus otomatis.</div>
+                                <div class="form-text small">Hanya huruf, angka, dan strip (-). Spasi dihapus otomatis.</div>
                             </div>
 
                             <div class="mb-3">
@@ -124,36 +126,54 @@ const submitForm = async () => {
                                     <label class="form-label">Kategori</label>
                                     <select v-model="form.kategori_alat" class="form-select">
                                         <option value="">Pilih Kategori...</option>
-                                        <option value="Traktor">Traktor</option>
+                                        <option value="Traktor Roda 4">Traktor Roda 4</option>
+                                        <option value="Traktor Roda 2">Traktor Roda 2</option>
                                         <option value="Combine Harvester">Combine Harvester</option>
-                                        <option value="Transplanter">Transplanter</option>
+                                        <option value="Excavator">Excavator</option>
+                                        <option value="Rotavator">Rotavator</option>
+                                        <option value="Cultivator">Cultivator</option>
                                         <option value="Pompa Air">Pompa Air</option>
                                         <option value="Drone">Drone Pertanian</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Merk / Brand</label>
-                                    <input v-model="form.merk_alat" type="text" class="form-control" placeholder="Contoh: Kubota">
+                                    <label class="form-label">Merk / Type</label>
+                                    <input v-model="form.merk_alat" type="text" class="form-control" placeholder="Contoh: KIOTI DK 4510">
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Nomor Seri</label>
-                                <input v-model="form.nomor_seri" type="text" class="form-control" placeholder="No. Seri Mesin/Rangka">
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label">Nomor Seri Mesin/Rangka</label>
+                                    <input v-model="form.nomor_seri" type="text" class="form-control" placeholder="Contoh: UV3400254">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-bold text-primary">Tahun Terima</label>
+                                    <input v-model="form.tahun_penerimaan" type="number" class="form-control border-primary" placeholder="Misal: 2025" min="1990" max="2100">
+                                </div>
                             </div>
                         </div>
 
                         <div class="col-md-6 ps-md-4">
                             <h5 class="text-primary mb-3 fw-bold"><i class="bi bi-sliders me-2"></i>Status & Detail</h5>
 
-                            <div class="mb-3">
-                                <label class="form-label">Status Operasional (Fisik)</label>
-                                <select v-model="form.status_operasional" class="form-select bg-light fw-bold text-dark">
-                                    <option value="Siap Digunakan">🟢 Siap Digunakan</option>
-                                    <option value="Sedang Beroperasi">🔵 Sedang Beroperasi</option>
-                                    <option value="Maintenance">🟠 Maintenance</option>
-                                    <option value="Rusak">🔴 Rusak</option>
-                                </select>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Status Penugasan</label>
+                                    <select v-model="form.status_operasional" class="form-select bg-light fw-bold text-dark">
+                                        <option value="Siap Digunakan">🟢 Siap Digunakan</option>
+                                        <option value="Sedang Beroperasi">🔵 Sedang Beroperasi</option>
+                                        <option value="Maintenance">🟠 Maintenance</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-danger fw-bold">Kondisi Fisik Alat</label>
+                                    <select v-model="form.kondisi_fisik" class="form-select border-danger">
+                                        <option value="Baik">👍 Kondisi Baik</option>
+                                        <option value="Rusak Ringan">⚠️ Rusak Ringan</option>
+                                        <option value="Rusak Berat">🛠️ Rusak Berat</option>
+                                    </select>
+                                </div>
                             </div>
 
                             <div class="row">
@@ -161,7 +181,7 @@ const submitForm = async () => {
                                     <label class="form-label text-muted small fw-bold">Kapasitas Cakupan Lahan</label>
                                     <div class="input-group">
                                         <input v-model="form.kapasitas_lahan" type="number" step="0.1" class="form-control" placeholder="Misal: 5">
-                                        <span class="input-group-text bg-light text-muted">Ha / Hari</span>
+                                        <span class="input-group-text bg-light text-muted">Ha/Hari</span>
                                     </div>
                                 </div>
 
@@ -171,7 +191,6 @@ const submitForm = async () => {
                                         <input v-model="form.lebar_implemen" type="number" step="0.01" class="form-control border-primary" placeholder="Misal: 1.89">
                                         <span class="input-group-text bg-primary text-white border-primary">Meter</span>
                                     </div>
-                                    <div class="form-text small" style="font-size: 10px;">*Untuk kalkulasi argo GPS</div>
                                 </div>
                             </div>
 
@@ -189,7 +208,7 @@ const submitForm = async () => {
 
                             <div class="mb-3">
                                 <label class="form-label">Deskripsi Tambahan</label>
-                                <textarea v-model="form.deskripsi" class="form-control" rows="2" placeholder="Keterangan kondisi alat..."></textarea>
+                                <textarea v-model="form.deskripsi" class="form-control" rows="2" placeholder="Keterangan lain..."></textarea>
                             </div>
                         </div>
                     </div>

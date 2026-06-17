@@ -8,5 +8,6 @@ const verifyToken = require('../middleware/authMiddleware');
 router.post('/login', userController.loginUser);
 router.get('/profile/:id', verifyToken, userController.getProfile);
 router.put('/update/:id', verifyToken, upload.single('foto'), userController.updateProfile);
+router.post('/register', userController.registerUser);
 
 module.exports = router;

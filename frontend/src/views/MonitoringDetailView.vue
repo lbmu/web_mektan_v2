@@ -41,7 +41,7 @@ const totalHM = ref(0);
 
 const jarakMentahSensor = ref(0); 
 const jarakBersihValid = ref(0);  
-const historyCoordsLive = ref([]); // Kini menyimpan format objek: { lat, lng, status }
+const historyCoordsLive = ref([]); 
 
 const historyDate = ref(getTodayDate()); 
 const historyCoordsPast = ref([]);
@@ -52,7 +52,7 @@ const tarifPerHa = ref(1500000);
 const isSavingTarif = ref(false);
 
 let map = null;
-let polylineLayer = null; // PERUBAHAN: Diganti menjadi LayerGroup untuk menampung multi-garis
+let polylineLayer = null; 
 let marker = null;
 let mqttClient = null;
 let lastMesinStatus = 'UNKNOWN'; 
@@ -67,13 +67,39 @@ const getTractorClass = (status) => {
   return 'bg-secondary text-white'; 
 };
 
+// ===================================================================
+// FUNGSI BARU: MEMORI LOKASI (Mencegah Peta Loncat ke Bandung)
+// ===================================================================
+const saveLastKnownLocation = (lat, lng) => {
+    if (Math.abs(lat) > 1 && Math.abs(lng) > 1) {
+        sessionStorage.setItem(`last_loc_alsintan_${id}`, JSON.stringify({ lat, lng }));
+    }
+};
+
+const getLastKnownLocation = () => {
+    // Prioritas 1: Memori Lokal di Browser
+    const saved = sessionStorage.getItem(`last_loc_alsintan_${id}`);
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (parsed.lat && parsed.lng) return [parsed.lat, parsed.lng];
+        } catch (e) {}
+    }
+    
+    // Prioritas 2: Dari Database (Jika MQTT worker sempat update tabel alsintan)
+    if (infoAlat.value && infoAlat.value.latitude && Math.abs(infoAlat.value.latitude) > 1) {
+        return [parseFloat(infoAlat.value.latitude), parseFloat(infoAlat.value.longitude)];
+    }
+    
+    // Prioritas 3: Titik Default Balai Mekanisasi Jabar (Hanya jika alat baru pertama kali dinyalakan)
+    return [-6.9175, 107.6191];
+};
+
 const fetchTarif = async () => {
     try {
         const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`);
         tarifPerHa.value = Number(res.data.nilai);
-    } catch (e) {
-        console.error("Gagal meload tarif");
-    }
+    } catch (e) {}
 };
 
 const saveTarif = async () => {
@@ -108,17 +134,24 @@ const fetchData = async () => {
         
         if (historyCoordsLive.value.length === 0) {
             const resHistory = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}/riwayat`);
-            // PERUBAHAN: Menangkap status mesin dari database untuk digambar di peta
-            historyCoordsLive.value = resHistory.data.map(h => ({
-                lat: parseFloat(h.latitude), 
-                lng: parseFloat(h.longitude),
-                status: h.status_mesin || 'OFF'
-            }));
+            
+            historyCoordsLive.value = resHistory.data
+                .filter(h => Math.abs(parseFloat(h.latitude)) > 1 && Math.abs(parseFloat(h.longitude)) > 1) 
+                .map(h => ({
+                    lat: parseFloat(h.latitude), 
+                    lng: parseFloat(h.longitude),
+                    status: h.status_mesin || 'OFF'
+                }));
+                
+            // Simpan posisi ke memori jika data riwayat tersedia
+            if (historyCoordsLive.value.length > 0) {
+                const last = historyCoordsLive.value[historyCoordsLive.value.length - 1];
+                saveLastKnownLocation(last.lat, last.lng);
+            }
+
             initMap();
         }
-    } catch (error) {
-        console.error("Error load data:", error);
-    }
+    } catch (error) {}
 };
 
 const fetchCleanDataOnly = async () => {
@@ -135,15 +168,15 @@ const initMap = () => {
     if (!container) return;
     if (map) { map.remove(); map = null; }
 
+    // PERBAIKAN: Gunakan fungsi memori jika array riwayat kosong
     const startPos = historyCoordsLive.value.length > 0 
         ? [historyCoordsLive.value[historyCoordsLive.value.length - 1].lat, historyCoordsLive.value[historyCoordsLive.value.length - 1].lng] 
-        : [-6.9175, 107.6191];
+        : getLastKnownLocation();
 
     map = L.map('monitor-map', { zoomControl: false }).setView(startPos, 17);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Inisialisasi wadah penampung multi-garis
     polylineLayer = L.layerGroup().addTo(map);
 
     const tractorIcon = L.divIcon({
@@ -164,17 +197,13 @@ const initMap = () => {
     renderPolyline();
 };
 
-// ========================================================================
-// FUNGSI BARU: PENGGAMBAR MULTI-GARIS BERDASARKAN STATUS
-// ========================================================================
 const drawSegment = (latlngs, status) => {
     let color = activeTab.value === 'LIVE' ? 'blue' : 'red';
     let dashArray = null;
 
-    // Jika Traktor Ditarik/Mesin Mati, ubah garis menjadi Abu-abu Putus-putus
     if (status === 'OFF') {
-        color = '#6c757d'; // Gray
-        dashArray = '5, 10'; // Jarak putus-putus
+        color = '#6c757d'; 
+        dashArray = '5, 10'; 
     }
 
     const pl = L.polyline(latlngs, {
@@ -188,7 +217,7 @@ const drawSegment = (latlngs, status) => {
 
 const renderPolyline = () => {
     if (polylineLayer) {
-        polylineLayer.clearLayers(); // Bersihkan garis sebelumnya
+        polylineLayer.clearLayers(); 
     }
     
     const dataToDraw = activeTab.value === 'LIVE' ? historyCoordsLive.value : historyCoordsPast.value;
@@ -197,16 +226,13 @@ const renderPolyline = () => {
         let currentSegment = [];
         let currentStatus = dataToDraw[0].status;
 
-        // Algoritma Pemotong Garis
         for (let i = 0; i < dataToDraw.length; i++) {
             const point = dataToDraw[i];
 
             if (point.status !== currentStatus && currentSegment.length > 0) {
-                // Sambungkan titik transisi agar garis tidak putus di tengah jalan
                 currentSegment.push([point.lat, point.lng]);
                 drawSegment(currentSegment, currentStatus);
 
-                // Mulai segmen baru dengan status baru
                 currentSegment = [[point.lat, point.lng]];
                 currentStatus = point.status;
             } else {
@@ -214,12 +240,10 @@ const renderPolyline = () => {
             }
         }
 
-        // Gambar sisa segmen terakhir
         if (currentSegment.length > 1) {
             drawSegment(currentSegment, currentStatus);
         }
 
-        // Auto-Fokus Peta
         const allLatLngs = dataToDraw.map(p => [p.lat, p.lng]);
         if (allLatLngs.length > 0) {
             map.fitBounds(L.latLngBounds(allLatLngs), { padding: [30, 30] });
@@ -232,13 +256,14 @@ const fetchHistoryByDate = async () => {
         const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}/riwayat?tanggal=${historyDate.value}`);
         const rawData = response.data;
         
-        historyCoordsPast.value = rawData.map(h => ({
-            lat: parseFloat(h.latitude), 
-            lng: parseFloat(h.longitude),
-            status: h.status_mesin || 'OFF'
-        }));
+        historyCoordsPast.value = rawData
+            .filter(h => Math.abs(parseFloat(h.latitude)) > 1 && Math.abs(parseFloat(h.longitude)) > 1)
+            .map(h => ({
+                lat: parseFloat(h.latitude), 
+                lng: parseFloat(h.longitude),
+                status: h.status_mesin || 'OFF'
+            }));
 
-        // PERUBAHAN LOGIKA: Hanya hitung jarak Harian jika status titiknya ON
         totalJarakPast.value = 0;
         if (historyCoordsPast.value.length > 1) {
             for (let i = 1; i < historyCoordsPast.value.length; i++) {
@@ -250,11 +275,9 @@ const fetchHistoryByDate = async () => {
             }
         }
 
-        // Hitung HM Harian (Dari jejak waktu)
         let dailyHM = 0;
         if (rawData.length > 1) {
             for (let i = 1; i < rawData.length; i++) {
-                // Hanya hitung durasi jika mesin ON
                 if (rawData[i].status_mesin === 'ON') {
                     const t1 = new Date(rawData[i-1].waktu_rekam).getTime();
                     const t2 = new Date(rawData[i].waktu_rekam).getTime();
@@ -296,9 +319,6 @@ const connectMqtt = () => {
                 hdop.value = parseInt(data.hd) || 0;
                 satelit.value = parseInt(data.st) || 0;
 
-                // ===================================================================
-                // LOGIKA HISTERISIS FRONTEND (AKURASI UI MAP)
-                // ===================================================================
                 let statusMesinBaru = statusMesin.value; 
                 
                 if (vAki > 13.4) {
@@ -306,15 +326,17 @@ const connectMqtt = () => {
                 } else if (vAki < 13.0) {
                     statusMesinBaru = 'OFF';
                 }
-                // Jika vAki antara 13.0 - 13.4, status tidak berubah (mengingat status sebelumnya)
                 
                 statusMesin.value = statusMesinBaru;
 
                 const lat = parseFloat(data.lat);
                 const long = parseFloat(data.lng); 
-                const isGpsValid = lat && long && !isNaN(lat) && !isNaN(long) && lat !== 0 && long !== 0;
+                
+                const isGpsValid = lat && long && !isNaN(lat) && !isNaN(long) && Math.abs(lat) > 1 && Math.abs(long) > 1;
                 
                 if (isGpsValid) {
+                    saveLastKnownLocation(lat, long); // Perekaman memori GPS
+
                     const newPoint = { lat: lat, lng: long, status: statusMesinBaru };
 
                     if (marker && activeTab.value === 'LIVE') {
@@ -324,12 +346,11 @@ const connectMqtt = () => {
 
                     if (activeTab.value === 'LIVE') {
                         historyCoordsLive.value.push(newPoint);
-                        renderPolyline(); // Refresh garis agar efek putus-putusnya tergambar langsung
+                        renderPolyline(); 
                     } else {
                         historyCoordsLive.value.push(newPoint);
                     }
                     
-                    // Kalkulasi Mentah (Drift) di Frontend
                     if (lastMesinStatus === 'ON' && statusMesinBaru === 'ON' && historyCoordsLive.value.length > 1) {
                         const prevPoint = historyCoordsLive.value[historyCoordsLive.value.length - 2];
                         const dist = map.distance([prevPoint.lat, prevPoint.lng], [lat, long]);
@@ -367,7 +388,15 @@ const resetArgo = async () => {
     if (confirm.isConfirmed) {
         try {
             await axios.post(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}/reset`);
-            jarakMentahSensor.value = 0; jarakBersihValid.value = 0; historyCoordsLive.value = [];
+            jarakMentahSensor.value = 0; 
+            jarakBersihValid.value = 0; 
+            
+            // PERBAIKAN: Jika ditekan, jangan hapus semua! Sisakan 1 titik terakhir sebagai penahan peta
+            if (historyCoordsLive.value.length > 0) {
+                const titikTerakhir = historyCoordsLive.value[historyCoordsLive.value.length - 1];
+                historyCoordsLive.value = [titikTerakhir]; 
+            }
+            
             if (activeTab.value === 'LIVE') renderPolyline();
             Swal.fire('Sesi Baru Dimulai!', '', 'success');
         } catch (error) {}

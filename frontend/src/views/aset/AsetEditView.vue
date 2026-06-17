@@ -15,8 +15,10 @@ const form = ref({
   kategori_alat: '',
   merk_alat: '',
   nomor_seri: '',
+  tahun_penerimaan: '', // [BARU]
   status_sensor: 'Normal',
   status_operasional: 'Siap Digunakan',
+  kondisi_fisik: 'Baik', // [BARU]
   deskripsi: '',
   kapasitas_lahan: '',
   lebar_implemen: 0
@@ -28,7 +30,6 @@ const gambarLama = ref('');
 const isSubmitting = ref(false);
 const isLoading = ref(true);
 
-// SMART REGEX
 const formatKodePerangkat = () => {
     form.value.kode_perangkat = form.value.kode_perangkat.toUpperCase().replace(/[^A-Z0-9-]/g, '');
 };
@@ -44,6 +45,8 @@ const fetchDetail = async () => {
         kategori_alat: data.kategori_alat,
         merk_alat: data.merk_alat,
         nomor_seri: data.nomor_seri,
+        tahun_penerimaan: data.tahun_penerimaan || '', // [BARU]
+        kondisi_fisik: data.kondisi_fisik || 'Baik', // [BARU]
         status_sensor: data.status_sensor,
         status_operasional: data.status_operasional,
         deskripsi: data.deskripsi,
@@ -71,7 +74,6 @@ const handleFileUpload = (event) => {
 const submitForm = async () => {
   isSubmitting.value = true;
   
-  // Animasi Loading SweetAlert
   Swal.fire({
       title: 'Memperbarui Aset...',
       text: 'Menyinkronkan data ke server.',
@@ -86,6 +88,8 @@ const submitForm = async () => {
     formData.append('kategori_alat', form.value.kategori_alat);
     formData.append('merk_alat', form.value.merk_alat);
     formData.append('nomor_seri', form.value.nomor_seri);
+    formData.append('tahun_penerimaan', form.value.tahun_penerimaan); // [BARU]
+    formData.append('kondisi_fisik', form.value.kondisi_fisik); // [BARU]
     formData.append('status_sensor', form.value.status_sensor);
     formData.append('status_operasional', form.value.status_operasional);
     formData.append('deskripsi', form.value.deskripsi);
@@ -100,7 +104,6 @@ const submitForm = async () => {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
 
-    // Animasi Sukses
     Swal.fire({
         icon: 'success',
         title: 'Diperbarui!',
@@ -161,36 +164,54 @@ onMounted(() => {
                 <div class="col-md-6 mb-3">
                   <label class="form-label">Kategori</label>
                   <select v-model="form.kategori_alat" class="form-select">
-                    <option value="Traktor">Traktor</option>
-                    <option value="Combine Harvester">Combine Harvester</option>
-                    <option value="Transplanter">Transplanter</option>
-                    <option value="Pompa Air">Pompa Air</option>
-                    <option value="Drone">Drone Pertanian</option>
+                        <option value="Traktor Roda 4">Traktor Roda 4</option>
+                        <option value="Traktor Roda 2">Traktor Roda 2</option>
+                        <option value="Combine Harvester">Combine Harvester</option>
+                        <option value="Excavator">Excavator</option>
+                        <option value="Rotavator">Rotavator</option>
+                        <option value="Cultivator">Cultivator</option>
+                        <option value="Pompa Air">Pompa Air</option>
+                        <option value="Drone">Drone Pertanian</option>
                   </select>
                 </div>
                 <div class="col-md-6 mb-3">
-                  <label class="form-label">Merk</label>
+                  <label class="form-label">Merk / Type</label>
                   <input v-model="form.merk_alat" type="text" class="form-control">
                 </div>
               </div>
 
-              <div class="mb-3">
-                <label class="form-label">Nomor Seri</label>
-                <input v-model="form.nomor_seri" type="text" class="form-control">
+              <div class="row">
+                  <div class="col-md-8 mb-3">
+                      <label class="form-label">Nomor Seri Mesin/Rangka</label>
+                      <input v-model="form.nomor_seri" type="text" class="form-control">
+                  </div>
+                  <div class="col-md-4 mb-3">
+                      <label class="form-label fw-bold text-primary">Tahun Terima</label>
+                      <input v-model="form.tahun_penerimaan" type="number" class="form-control border-primary" min="1990" max="2100">
+                  </div>
               </div>
             </div>
 
             <div class="col-md-6 ps-md-4">
               <h5 class="text-primary mb-3 fw-bold"><i class="bi bi-sliders me-2"></i>Status & Konfigurasi</h5>
 
-              <div class="mb-3">
-                  <label class="form-label">Status Operasional (Fisik)</label>
-                  <select v-model="form.status_operasional" class="form-select fw-bold bg-light text-dark">
-                    <option value="Siap Digunakan">🟢 Siap Digunakan</option>
-                    <option value="Sedang Beroperasi">🔵 Sedang Beroperasi</option>
-                    <option value="Maintenance">🟠 Maintenance</option>
-                    <option value="Rusak">🔴 Rusak</option>
-                  </select>
+              <div class="row">
+                  <div class="col-md-6 mb-3">
+                      <label class="form-label">Status Penugasan</label>
+                      <select v-model="form.status_operasional" class="form-select fw-bold bg-light text-dark">
+                        <option value="Siap Digunakan">🟢 Siap Digunakan</option>
+                        <option value="Sedang Beroperasi">🔵 Sedang Beroperasi</option>
+                        <option value="Maintenance">🟠 Maintenance</option>
+                      </select>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                      <label class="form-label text-danger fw-bold">Kondisi Fisik Alat</label>
+                      <select v-model="form.kondisi_fisik" class="form-select border-danger">
+                          <option value="Baik">👍 Kondisi Baik</option>
+                          <option value="Rusak Ringan">⚠️ Rusak Ringan</option>
+                          <option value="Rusak Berat">🛠️ Rusak Berat</option>
+                      </select>
+                  </div>
               </div>
 
               <div class="row">
@@ -208,12 +229,11 @@ onMounted(() => {
                           <input v-model="form.lebar_implemen" type="number" step="0.01" class="form-control border-primary">
                           <span class="input-group-text bg-primary text-white border-primary">Meter</span>
                       </div>
-                      <div class="form-text small" style="font-size: 10px;">*Untuk kalkulasi argo GPS</div>
                   </div>
               </div>
 
               <div class="mb-3">
-                <label class="form-label">Foto Alat <span class="text-muted small fw-normal">(Biarkan kosong jika tidak diganti)</span></label>
+                <label class="form-label">Foto Alat <span class="text-muted small fw-normal">(Biarkan kosong jika tak diganti)</span></label>
                 <input @change="handleFileUpload" type="file" class="form-control" accept="image/*">
                 
                 <div class="mt-3 text-center rounded p-3 position-relative" style="border: 2px dashed #dee2e6; background-color: #f8f9fa;">

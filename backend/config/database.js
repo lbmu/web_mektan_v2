@@ -9,6 +9,7 @@ const db = new Pool({
     }
 });
 
+
 db.connect((err, client, release) => {
     if (err) {
         console.error('❌ Gagal koneksi ke database PostgreSQL:', err.stack);

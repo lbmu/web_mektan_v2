@@ -33,12 +33,11 @@ onUnmounted(() => {
 // --- LOGIKA LOGIN & SWEETALERT CUSTOM ANIMATION ---
 const handleLogin = async () => {
     if (!identifier.value || !password.value) {
-        // Swal Peringatan Custom
         Swal.fire({
             title: 'Ups, Ada yang Kosong!',
             text: 'Mohon isi Username/Email dan Password Anda.',
             icon: 'warning',
-            confirmButtonColor: '#10b981', // Agri-Tech Green
+            confirmButtonColor: '#10b981', 
             showClass: { popup: 'animate__animated animate__headShake' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' }
         });
@@ -56,17 +55,15 @@ const handleLogin = async () => {
         if (response.data.status) {
             const userData = response.data.data;
             sessionStorage.setItem('user', JSON.stringify(userData));
-
             sessionStorage.setItem('token', response.data.token);
 
-            // Swal Berhasil Custom dengan Animate.css
             Swal.fire({
                 icon: 'success',
                 title: 'Autentikasi Berhasil',
                 text: `Selamat datang kembali, ${userData.nama || userData.username || 'Admin Mektan'}!`,
                 timer: 2000,
                 showConfirmButton: false,
-                backdrop: `rgba(15, 23, 42, 0.8)`, // Latar belakang gelap elegan (Dark Slate)
+                backdrop: `rgba(15, 23, 42, 0.8)`, 
                 color: '#1e293b',
                 customClass: {
                     popup: 'rounded-4 shadow-lg border-0',
@@ -77,8 +74,6 @@ const handleLogin = async () => {
             }).then(() => {
                 window.location.href = '/';
             });
-
-            router.push('/');
         }
     } catch (error) {
         const pesan = error.response?.data?.message || 'Terjadi kesalahan saat login.';
@@ -100,6 +95,7 @@ const handleLogin = async () => {
     <div class="container-fluid p-0 login-wrapper">
         <div class="row g-0 vh-100">
             
+            <!-- BAGIAN KIRI: CAROUSEL BACKGROUND -->
             <div class="col-lg-7 col-md-6 d-none d-md-block position-relative overflow-hidden bg-dark">
                 
                 <transition-group name="fade" tag="div">
@@ -128,11 +124,17 @@ const handleLogin = async () => {
                 </div>
             </div>
 
+            <!-- BAGIAN KANAN: FORMULIR LOGIN -->
             <div class="col-lg-5 col-md-6 d-flex flex-column align-items-center justify-content-center bg-white position-relative">
                 
+                <!-- TOMBOL KEMBALI KE BERANDA (DITAMBAHKAN DI SINI) -->
+                <RouterLink to="/" class="position-absolute top-0 start-0 m-4 text-decoration-none text-muted transition-link d-flex align-items-center fw-bold" style="z-index: 10;">
+                    <i class="bi bi-arrow-left me-2"></i> Beranda
+                </RouterLink>
+
                 <div class="w-100 px-4 px-lg-5" style="max-width: 450px;">
                     
-                    <div class="text-center mb-4">
+                    <div class="text-center mb-4 mt-3">
                         
                         <div class="lottie-container mx-auto mb-2" :class="{ 'is-loading': loading }">
                             <lottie-player 
@@ -172,10 +174,13 @@ const handleLogin = async () => {
                         </button>
                     </form>
 
-                    <div class="text-center mt-5">
-                        <small class="text-muted d-block mb-1">Butuh bantuan akses?</small>
-                        <a href="#" class="text-agri-green text-decoration-none fw-bold small transition-link">Hubungi Admin</a>
+                    <div class="text-center mt-4 pt-4 border-top">
+                        <small class="text-muted d-block mb-2" style="font-size: 0.9rem;">
+                            Belum punya akun? 
+                            <RouterLink to="/register" class="text-agri-green fw-bold text-decoration-none transition-link">Registrasi</RouterLink>
+                        </small>
                     </div>
+
                 </div>
 
             </div>
@@ -193,7 +198,7 @@ const handleLogin = async () => {
     color: white; 
 }
 .btn-agri-green:hover:not(:disabled) { 
-    background-color: #059669; /* Sedikit lebih gelap saat di-hover */
+    background-color: #059669; 
     border-color: #059669; 
     transform: translateY(-2px); 
     box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3) !important; 
@@ -233,11 +238,8 @@ const handleLogin = async () => {
     height: 60px; 
     border: 2px solid #e2e8f0;
     border-radius: 12px;
-    
-    /* KUNCI PERBAIKAN: Gunakan !important untuk memaksa Bootstrap minggir */
-    padding-left: 3rem !important;  /* Jarak kiri untuk ikon orang/kunci */
-    padding-right: 3rem !important; /* Jarak kanan untuk ikon mata (password) */
-    
+    padding-left: 3rem !important;  
+    padding-right: 3rem !important; 
     font-size: 1.05rem;
     font-weight: 600;
     color: #1e293b;
@@ -250,13 +252,11 @@ const handleLogin = async () => {
     background-color: #fff;
 }
 
-/* Mengatur warna teks bayangan (placeholder) */
 .custom-input::placeholder {
     color: #94a3b8;
     font-weight: 500;
 }
 
-/* Mengatur posisi ikon di dalam input box agar pas di tengah */
 .input-icon {
     left: 1.2rem;
     top: 50%;

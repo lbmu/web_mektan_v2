@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Swal from 'sweetalert2'
 
-
 import DashboardView from '../views/DashboardView.vue'
 import MonitoringView from '../views/MonitoringView.vue'
 import AsetListView from '../views/aset/AsetListView.vue'
@@ -11,18 +10,43 @@ import ProfileView from '../views/ProfileView.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    {
-      path: '/login',
-      name: 'login',
-      component: LoginView,
-      meta: { requiresAuth: false }
-    },
+    // ==========================================
+    // 🔓 AREA GUEST / PUBLIK (TIDAK PERLU LOGIN)
+    // ==========================================
     {
       path: '/',
       name: 'home',
       component: DashboardView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: false } // [DIBUKA] Dashboard kini publik
     },
+    {
+      path: '/aset',
+      name: 'aset-list',
+      component: AsetListView,
+      meta: { requiresAuth: false } // [DIBUKA] Daftar Aset kini publik
+    },
+    {
+      path: '/aset/:id',
+      name: 'aset-detail',
+      component: () => import('../views/aset/AsetDetailView.vue'),
+      meta: { requiresAuth: false } // [DIBUKA] Detail Aset kini publik
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginView,
+      meta: { requiresAuth: false, isPublicLayout: true } // isPublicLayout agar sidebar hilang di hal login
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: () => import('../views/RegisterView.vue'),
+      meta: { requiresAuth: false, isPublicLayout: true } 
+    },
+
+    // ==========================================
+    // 🔒 AREA PRIVATE (WAJIB LOGIN)
+    // ==========================================
     {
       path: '/profile',
       name: 'profile',
@@ -32,36 +56,33 @@ const router = createRouter({
     {
       path: '/monitoring',
       name: 'monitoring',
-      component: MonitoringView
+      component: MonitoringView,
+      meta: { requiresAuth: true }
     },
     {
       path: '/monitoring/:id', 
       name: 'monitoring-detail',
-      component: () => import('../views/MonitoringDetailView.vue')
+      component: () => import('../views/MonitoringDetailView.vue'),
+      meta: { requiresAuth: true }
     },
     {
       path: '/estimasi',
       name: 'estimasi',
-      component: () => import('../views/EstimasiView.vue')
-    },
-    // --- SEGMENTED ROLES --- //
-    {
-      path: '/aset',
-      name: 'aset-list',
-      component: AsetListView,
+      component: () => import('../views/EstimasiView.vue'),
       meta: { requiresAuth: true }
     },
+    {
+      path: '/antrean',
+      name: 'antrean',
+      component: () => import('../views/aset/AntreanView.vue'), // Sesuaikan jalurnya jika diletakkan di luar folder aset
+      meta: { requiresAuth: true } // Hanya Admin yang boleh masuk
+    },
+    // --- SEGMENTED ROLES (Hanya Super Admin) --- //
     {
       path: '/aset/tambah',
       name: 'aset-add',
       component: () => import('../views/aset/AsetAddView.vue'),
       meta: { requiresAuth: true, allowedRoles: ['super_admin'] }
-    },
-    {
-      path: '/aset/:id',
-      name: 'aset-detail',
-      component: () => import('../views/aset/AsetDetailView.vue'),
-      meta: { requiresAuth: true }
     },
     {
       path: '/aset/edit/:id',
@@ -74,12 +95,11 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const sessionString = sessionStorage.getItem('user');
-  const token = sessionStorage.getItem('token'); // 1. PERBAIKAN: Ambil token JWT dari brankas sessionStorage
+  const token = sessionStorage.getItem('token'); 
   
   let isAuthenticated = false;
   let userRole = '';
 
-  // 2. PERBAIKAN: User dinyatakan sah login jika data user DAN token JWT tersedia
   if (sessionString && token) {
       try {
           const userData = JSON.parse(sessionString);
@@ -88,7 +108,6 @@ router.beforeEach((to, from, next) => {
               userRole = userData.role; 
           }
       } catch (e) {
-          // Bersihkan sisa data jika ada kegagalan membaca JSON
           sessionStorage.removeItem('user'); 
           sessionStorage.removeItem('token'); 
       }
@@ -96,13 +115,22 @@ router.beforeEach((to, from, next) => {
 
   // 1. Cek Kewajiban Login
   if (to.meta.requiresAuth && !isAuthenticated) {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Akses Terbatas',
+        text: 'Fitur ini hanya untuk pengguna terdaftar. Silakan login terlebih dahulu.',
+        toast: true,
+        position: 'top-end',
+        timer: 3000,
+        showConfirmButton: false
+    });
     next({ name: 'login' });
     return;
   } 
   
-  // 2. Cegah orang yang sudah login masuk ke halaman login lagi
-  if (to.name === 'login' && isAuthenticated) {
-    next({ name: 'home' });
+  // 2. Cegah orang yang sudah login masuk ke halaman login/register lagi
+  if ((to.name === 'login' || to.name === 'register') && isAuthenticated) {
+    next({ name: 'home' }); 
     return;
   }
 
@@ -114,12 +142,11 @@ router.beforeEach((to, from, next) => {
               title: 'Akses Ditolak!',
               text: 'Anda tidak memiliki izin untuk membuka halaman ini.',
           });
-          next(from.path); // Kembalikan ke halaman sebelumnya
+          next(from.path); 
           return;
       }
   }
 
-  // Lolos semua pemeriksaan keamanan
   next();
 });
 

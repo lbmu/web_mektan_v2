@@ -6,7 +6,7 @@ const route = useRoute();
 </script>
 
 <template>
-    <div v-if="route.name === 'login'" class="w-100">
+    <div v-if="route.meta.isPublicLayout" class="w-100">
         <RouterView />
     </div>
     

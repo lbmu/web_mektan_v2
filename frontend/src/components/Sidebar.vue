@@ -1,9 +1,10 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
 const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL;
+const router = useRouter();
 
 const props = defineProps({
     isClosed: Boolean
@@ -15,23 +16,25 @@ const activeMenu = ref(null);
 const userName = ref('Admin');
 const userPhoto = ref(null);
 const userRole = ref('');
+const isLoggedIn = ref(false); // [BARU] Indikator status login
 
 onMounted(() => {
     const session = sessionStorage.getItem('user');
-    if (session) {
+    const token = sessionStorage.getItem('token');
+
+    if (session && token) {
         try {
             const userData = JSON.parse(session);
             userName.value = userData.nama || 'Admin';
             userRole.value = userData.role || 'admin';
+            isLoggedIn.value = true; // Set status login menjadi true
 
             const fotoFilename = userData.foto || userData.foto_profil;
 
             if (fotoFilename) {
-                // KUNCI CLOUDINARY: Cek apakah nama file diawali dengan 'http' (berarti link Cloudinary)
                 if (fotoFilename.startsWith('http')) {
                     userPhoto.value = fotoFilename; 
                 } else {
-                    // Fallback: Jika masih data lama (hanya nama file), gunakan URL lokal
                     userPhoto.value = `${IMAGE_BASE_URL}/profiles/${fotoFilename}`;
                 }
             } else {
@@ -55,10 +58,9 @@ const handleLogout = () => {
         cancelButtonText: 'Batal'
     }).then((result) => {
         if (result.isConfirmed) {
-            // Hapus data pengguna dan lempar ke halaman login jika dikonfirmasi
             sessionStorage.removeItem('user');
             sessionStorage.removeItem('token');
-            window.location.href = '/login';
+            window.location.href = '/';
         }
     });
 };
@@ -77,7 +79,7 @@ watch(() => props.isClosed, (newVal) => {
                 to="/" 
                 class="d-flex align-items-center text-white text-decoration-none me-auto fade-in custom-brand-hover">
                 
-                <img src="/logo-mektan.png" alt="Logo Kementan" width="36" height="36" class="rounded-circle border border-2 border-white me-2 shadow-sm" style="object-fit: cover;">
+                <img src="/logo-mektan.jpeg" alt="Logo Kementan" width="36" height="36" class="rounded-circle border border-2 border-white me-2 shadow-sm" style="object-fit: cover;">
                 <span class="fs-4 fw-bold text-nowrap tracking-wide">MyMektan</span>
             </RouterLink>
 
@@ -93,11 +95,10 @@ watch(() => props.isClosed, (newVal) => {
         <hr class="text-white-50 mx-2 mt-3"> 
         
         <ul class="nav nav-pills flex-column mb-auto px-0 w-100">
-            
             <li class="nav-item">
                 <RouterLink to="/" class="nav-link custom-nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
                     <i class="bi bi-bar-chart-fill fs-5 flex-shrink-0"></i>
-                    <span v-if="!isClosed" class="ms-3 fade-in text-nowrap">Home</span>
+                    <span v-if="!isClosed" class="ms-3 fade-in text-nowrap">Beranda</span>
                 </RouterLink>
             </li>
             
@@ -108,25 +109,24 @@ watch(() => props.isClosed, (newVal) => {
                 </RouterLink>
             </li>
             
-            <li class="nav-item">
+            <li v-if="isLoggedIn" class="nav-item">
                 <RouterLink to="/monitoring" class="nav-link custom-nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
                     <i class="bi bi-globe-americas fs-5 flex-shrink-0"></i>
                     <span v-if="!isClosed" class="ms-3 fade-in text-nowrap">Monitoring Peta</span>
                 </RouterLink>
             </li>
             
-            <li class="nav-item">
+            <li v-if="isLoggedIn" class="nav-item">
                 <RouterLink to="/estimasi" class="nav-link custom-nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
                     <i class="bi bi-calculator fs-5 flex-shrink-0"></i>
                     <span v-if="!isClosed" class="ms-3 fade-in text-nowrap">Estimasi Lahan</span>
                 </RouterLink>
             </li>
-
         </ul>
     
         <hr class="text-white-50 mx-2">
     
-        <div class="dropdown mx-2" :class="{ 'text-center': isClosed, 'dropend': isClosed }">
+        <div v-if="isLoggedIn" class="dropdown mx-2" :class="{ 'text-center': isClosed, 'dropend': isClosed }">
             <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" 
                 :class="{ 'justify-content-center': isClosed }"
                 id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
@@ -141,6 +141,18 @@ watch(() => props.isClosed, (newVal) => {
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="#" @click.prevent="handleLogout">Logout</a></li>
             </ul>
+        </div>
+
+        <div v-else class="d-flex flex-column gap-2 px-2" :class="{ 'align-items-center': isClosed }">
+            <RouterLink to="/login" class="btn btn-primary btn-sm fw-bold w-100 d-flex align-items-center justify-content-center">
+                <i class="bi bi-box-arrow-in-right" :class="{ 'fs-5': isClosed }"></i>
+                <span v-if="!isClosed" class="ms-2">Masuk Akun</span>
+            </RouterLink>
+            
+            <RouterLink to="/register" class="btn btn-outline-light btn-sm fw-bold w-100 d-flex align-items-center justify-content-center">
+                <i class="bi bi-person-plus-fill" :class="{ 'fs-5': isClosed }"></i>
+                <span v-if="!isClosed" class="ms-2">Daftar</span>
+            </RouterLink>
         </div>
 
     </div>
@@ -196,7 +208,6 @@ watch(() => props.isClosed, (newVal) => {
 
 .text-nowrap { white-space: nowrap; }
 
-/* Efek Hover untuk Area Logo & Brand */
 .custom-brand-hover {
     transition: opacity 0.2s ease-in-out;
 }
