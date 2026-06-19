@@ -196,3 +196,7 @@ unsigned long CommHandler::getNetworkTimestamp() {
     }
     return 0;
 }
+
+float CommHandler::getTemp() {
+    return _modem->getTemperature();
+}

@@ -1,34 +1,32 @@
+/* CATATAN INTERNAL untuk NEXT TIME
+ * 1. Pin Relay ga jadi dipake, tapi kalo next time mau coba pake, logika kasar nya kaya gitu
+ * 2. Kalau monitor lewat serial, masih ada bug output yang kalo sistem esp gak ada file buffer (kesimpen di memori non-volatile esp)
+ * 3. Timestamp GPS (UTC+0) belom sinkron sama timestamp SIM (UTC+7)
+ * 4. Mekanisme shared variabel masih pake MUTEX. Coba ganti ke metode lain yang lebih sophisticated
+ * 5. Modul OTA full vibe-coded, jadi sori kalo ada perilaku abnormal
+ * 6. ESP_SSL antara kepake atau gak kepake, soalnya dulu susah brute-force HiveMQ yg TLS PORT 8883 pake AT-Command manual. Coba di-cek, soalnya dulu banget tiba-tiba bisa
+ * 7. Mabutrace baru diimplementasi H~30 sidang, jadi kurang eksplor dan mungkin kurang detail
+ * 8. Bikin file header secrets.h kalo ada garis merah waktu pertama kali git clone. Template ada di repo
+ * 9. Sisa nya cek GitHub aja (https://github.com/lbmu/web_mektan_v2)
+ */
+
+
 // Modul untuk PlatformIO
 #include <Arduino.h>
 
-// Modul untuk OTA
-
-#include "espOTA.h"
-
-/* @brief
- * semua data sensitif meliputi SSID, PASS, OTA PASS
- * didefinisikan di file 'secrets.h'
- * agar mudah diatur tanpa mengubah kode utama
- * dan menghindari upload data sensitif ke repo publik 
- * brief ini di-generate sama CoPilot VS Code btw
- * makanya bahasa nya semi baku
- */
+// Modul monitoring
+#include <mabutrace.h>
 
 // Modul untuk sistem
+#include "espOTA.h"
 #include "secrets.h"
-#include "GpsHandler.h"
-#include "PowerMonitor.h"
+#include "pinout.h"
 #include "CommHandler.h"
+#include "PowerMonitor.h"
+#include "GpsHandler.h"
+
 #include "SystemDiagnostics.h"
 #include "DataHandler.h"
-
-/* @brief
- * pinout juga sama 
- * disimpen di pinout.h
- * biar kalo ngulik-ngulik gausah buka main.cpp (bosen)
- */
-
-#include "pinout.h"
 
 // ==================================================
 // KONFIGURASI MODE OPERASI (PILIH SALAH SATU)
@@ -41,9 +39,9 @@
 // SAFETY CHECK: Mencegah Multiple Define
 // ==================================================
 #if (defined(RUN_TASK) + defined(RUN_DIAGNOSTICS) + defined(RUN_SIMULATION)) > 1
-    #error "💥 KESALAHAN KOMPILASI: Bentrok Mode Terdeteksi! Pastikan hanya SATU mode (#define) yang aktif."
+#error "💥 KESALAHAN KOMPILASI: Bentrok Mode Terdeteksi! Pastikan hanya SATU mode (#define) yang aktif."
 #elif (defined(RUN_TASK) + defined(RUN_DIAGNOSTICS) + defined(RUN_SIMULATION)) == 0
-    #warning "⚠️ PERINGATAN: Tidak ada mode operasi yang diaktifkan. Mikrokontroler hanya akan booting lalu idle."
+#warning "⚠️ PERINGATAN: Tidak ada mode operasi yang diaktifkan. Mikrokontroler hanya akan booting lalu idle."
 #endif
 // ==================================================
 
@@ -138,21 +136,20 @@ void TaskTelemetry(void *pvParameters) {
     unsigned long lastPublishTime = 0;
     unsigned long lastSaveTime = 0;
 
-    // Manajemen Daya
-    const float ENGINE_ON_V = 13.2;
-    const float ENGINE_OFF_V = 12.8;
+    // Manajemen Daya (Ambang batas prototyping dengan trimpot)
+    const float ENGINE_ON_V = 13.4;
+    const float ENGINE_OFF_V = 13.0;
 
-    // yang ini interval ngirim data tergantung nyala mesin (5/60 detik)
-    const unsigned long OFFLINE_SAVE_INTERVAL = 5000;
+    // Interval pengiriman data (milidetik)
     const unsigned long ACTIVE_INTERVAL = 5000;
     const unsigned long HEARTBEAT_INTERVAL = 60000;
 
     unsigned long currentPublishInterval = ACTIVE_INTERVAL;
     bool isEngineOn = true;
 
-    // --- TAMBAHAN UNTUK INISIALISASI NON-BLOCKING ---
+    // --- INISIALISASI NON-BLOCKING ---
     bool isColdBoot = (esp_reset_reason() == ESP_RST_POWERON);
-    // Jika cold boot, tunggu 60 detik. Jika restart biasa (warm boot), cukup 10 detik.
+    // Jika cold boot, tunggu 30 detik. Jika restart biasa (warm boot), cukup 10 detik.
     const unsigned long WARMUP_DURATION = isColdBoot ? 30000 : 10000;
     unsigned long taskStartTime = millis();
     bool isSimReady = false;
@@ -166,25 +163,22 @@ void TaskTelemetry(void *pvParameters) {
 
         // 1. Cek Koneksi Jaringan & Inisialisasi Modul
         if (millis() - taskStartTime < WARMUP_DURATION) {
-            // Selama fase inisialisasi, status SELALU offline.
-            // skip comm.maintainConnection() agar terhindar dari freeze/blocking.
             isOnline = false;
         } else {
             if (!isSimReady) {
                 DEBUG_PRINTLN("\n✅ [TELEMETRY] Waktu pemanasan SIM selesai. Mulai menghubungkan...");
                 isSimReady = true;
             }
-            // 2. JAGA KONEKSI (Baru dilakukan setelah modul siap)
+            // 2. Jaga Koneksi
             isOnline = comm.maintainConnection();
         }
 
-        // 4. Protokol Publish / Save Data
+        // 3. Ambil Data dengan Sinkronisasi Mutex
         bufferedData currentData;
         static int sampleCount = 0;
         unsigned long latency = 0;
         unsigned long startTime = micros();
 
-        // Sinkronisasi Mutex
         if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
             latency = micros() - startTime;
             currentData.lat = latestData.lat;
@@ -194,19 +188,31 @@ void TaskTelemetry(void *pvParameters) {
             currentData.voltage_V = latestData.voltage_V;
             currentData.current_mA = latestData.current_mA;
             currentData.fuel_R = latestData.fuel_R;
-        
             xSemaphoreGive(dataMutex);
         }
 
-        // Ambil timestamp (jika SIM mati, fungsi ini akan coba pakai data M8N atau fallback)
         currentData.timestamp = getCurrentTimestamp();
 
-        ////////////////////////////
-        // Logika Pengiriman Data //
-        ////////////////////////////
+        // ---------------------------------------------------------
+        // 4. Logika Penentuan Interval Berdasarkan Tegangan
+        // ---------------------------------------------------------
+        // Menggunakan currentData yang sudah aman dari thread lain
+        if (currentData.voltage_V >= ENGINE_ON_V) {
+            currentPublishInterval = ACTIVE_INTERVAL;
+            isEngineOn = true;
+        } else if (currentData.voltage_V <= ENGINE_OFF_V) {
+            currentPublishInterval = HEARTBEAT_INTERVAL;
+            isEngineOn = false;
+        }
+        // Catatan: Jika tegangan berada di antara 8.0V - 10.0V (Hysteresis state), 
+        // currentPublishInterval akan tetap menggunakan nilai terakhirnya.
+        // Hal ini mencegah interval loncat-loncat jika sensor tidak stabil.
 
+        // ---------------------------------------------------------
+        // 5. Protokol Publish / Save Data
+        // ---------------------------------------------------------
         if (isOnline) {
-            // Cek data buffer di LittleFS
+            // A. Cek data buffer di LittleFS (Kirim backlog data)
             if (dataHandler.hasData()) {
                 File file = dataHandler.openForRead();
                 if (file) {
@@ -218,7 +224,8 @@ void TaskTelemetry(void *pvParameters) {
 
                         if (comm.publishMQTT(MQTT_TOPIC, oldJson)) {
                             DEBUG_PRINT("📦");
-                            vTaskDelay(200 / portTICK_PERIOD_MS);
+                            // Jeda ringan agar tidak men-trigger Task Watchdog Timer (TWDT)
+                            vTaskDelay(200 / portTICK_PERIOD_MS); 
                         } else {
                             DEBUG_PRINTLN("⚠️");
                             allSent = false;
@@ -234,32 +241,32 @@ void TaskTelemetry(void *pvParameters) {
                 }
             }
             
-            // Kalau gak ada buffer, kirim data aktual (real-time)
-            if (millis() - lastPublishTime >= ACTIVE_INTERVAL) {
+            // B. Kirim data aktual (real-time) sesuai interval dinamis
+            if (millis() - lastPublishTime >= currentPublishInterval) {
                 String currentJson = dataHandler.buildJson(currentData, String(DEVICE_ID));
 
-                // Kirim data (real-time)
                 if (comm.publishMQTT(MQTT_TOPIC, currentJson)) {
                     lastPublishTime = millis();
+                    DEBUG_PRINTF("%d | ", sampleCount);
+                    DEBUG_PRINTLN(currentJson);
+                    sampleCount++;
                 }
-                // json yang terkirim
-                DEBUG_PRINTLN(currentJson);
                 
                 #ifdef PAPER
-                if (sampleCount < 500) {
+                if (isEngineOn && sampleCount < 720) {
                     sampleCount++;
                     DEBUG_PRINT(sampleCount);
                     DEBUG_PRINT(";");
-                    DEBUG_PRINT(latency);
-                    DEBUG_PRINT(";");
+                    // DEBUG_PRINT(latency);
+                    // DEBUG_PRINT(";");
                     DEBUG_PRINTLN(currentJson);
                 }
                 #endif
-            }                
+            }
         }
-        
-        // Modul komunikasi belum ter-inisialisasi (warmup) ATAU sedang offline
         else {
+            // Modul komunikasi belum siap (warmup) atau sedang offline
+            // Simpan ke LittleFS menggunakan interval dinamis yang sama
             if (millis() - lastSaveTime >= currentPublishInterval) {
                 if (dataHandler.saveData(currentData)) {
                     DEBUG_PRINT("💾");
@@ -270,12 +277,10 @@ void TaskTelemetry(void *pvParameters) {
             }
         }
         
-        // Jeda ringan agar RTOS tidak monopoli Core
+        // Jeda ringan agar RTOS tidak monopoli Core 
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
-}
-
-// Task 2: GPS Reading
+}// Task 2: GPS Reading
 void TaskGPS(void *pvParameters) {
     while (1) {
         // Panggil method update() dari modul GpsHandler
@@ -308,11 +313,22 @@ void TaskGPS(void *pvParameters) {
 
 // Task 3: Sensor Monitor
 void TaskMonitor(void *pvParameters) {
-    pinMode(RELAY, OUTPUT);
+    // 1. Inisialisasi Pin Relay
+    pinMode(RELAY_PIN, OUTPUT);
+    // Pastikan relay mati (Low) saat pertama kali boot (Active High logic)
+    digitalWrite(RELAY_PIN, LOW); 
+    
+    // Variabel pelacak status untuk mencegah eksekusi berulang
+    bool isRelayOn = false;
+    bool tempAvailable = false;
+
+    // Ambang batas Hysteresis
+    const float RELAY_ON_VOLTAGE = 13.4;
+    const float RELAY_OFF_VOLTAGE = 13.0;
+
     while (1) {
         // Baca data sensor melalui modul PowerMonitor
         PowerData pData = powerMonitor.read();
-        // float fuel = 0;
 
         // --- UPDATE SHARED DATA ---
         double currentLat = 0.0;
@@ -320,7 +336,10 @@ void TaskMonitor(void *pvParameters) {
         int hdop;
         int sat;
         bool validGPS = false;
+        // float  espcelc = esptemp.getTemp();
+        // float simcelc = comm.getTemp();
 
+        // Amankan proses pembaruan data dengan Mutex
         if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
             currentLat = latestData.lat;
             currentLng = latestData.lng;
@@ -335,29 +354,39 @@ void TaskMonitor(void *pvParameters) {
             xSemaphoreGive(dataMutex);
         }
         
-        if (pData.busVoltage_V > 12) {
-            digitalWrite(RELAY, HIGH);
-            DEBUG_PRINTLN("Relay Aktif");
+        // --- LOGIKA RELAY DENGAN HYSTERESIS & STATE TRACKING ---
+        // Switch ke HIGH hanya jika tegangan melebihi batas atas DAN relay sedang mati
+        if (pData.busVoltage_V >= RELAY_ON_VOLTAGE && !isRelayOn) {
+            digitalWrite(RELAY_PIN, HIGH);
+            isRelayOn = true;
+            DEBUG_PRINTLN("🔌 [MONITOR] Tegangan di atas 12V. Relay AKTIF.");
         }
-        else if (pData.busVoltage_V < 11.5) {
-            digitalWrite(RELAY, LOW);
-            DEBUG_PRINTLN("Relay Low");
+        // Switch ke LOW hanya jika tegangan turun di bawah batas bawah DAN relay sedang menyala
+        else if (pData.busVoltage_V <= RELAY_OFF_VOLTAGE && isRelayOn) {
+            digitalWrite(RELAY_PIN, LOW);
+            isRelayOn = false;
+            DEBUG_PRINTLN("🔌 [MONITOR] Tegangan di bawah 11.5V. Relay MATI.");
         }
+        // *Jika tegangan di antara 11.5V dan 12.0V, state terakhir akan dipertahankan.
 
         // --- PRINT DETAILED REPORT ---
         #ifdef REPORT
         DEBUG_PRINTLN("\n--- [TASK] Power & Location Report ---");
-        DEBUG_PRINT("Bus Voltage : "); DEBUG_PRINT(pData.busVoltage_V); DEBUG_PRINTLN(" V");
-        DEBUG_PRINT("Shunt Volt  : "); DEBUG_PRINT(pData.shuntVoltage_mV); DEBUG_PRINTLN(" mV");
-        DEBUG_PRINT("Load Voltage: "); DEBUG_PRINT(pData.loadVoltage_V); DEBUG_PRINTLN(" V");
-        DEBUG_PRINT("Current     : "); DEBUG_PRINT(pData.current_mA); DEBUG_PRINTLN(" mA");
-        DEBUG_PRINT("Power       : "); DEBUG_PRINT(pData.power_mW); DEBUG_PRINTLN(" mW");
-        DEBUG_PRINTF("GPS        : %.6f, %.6f\n", currentLat, currentLng);
-        DEBUG_PRINTF("Sat        : %d\n", sat);
-        DEBUG_PRINTF("HDOP       : %d\n", hdop);
-
+        DEBUG_PRINT("Bus Voltage    : "); DEBUG_PRINT(pData.busVoltage_V); DEBUG_PRINTLN(" V");
+        DEBUG_PRINT("Shunt Volt     : "); DEBUG_PRINT(pData.shuntVoltage_mV); DEBUG_PRINTLN(" mV");
+        DEBUG_PRINT("Load Voltage   : "); DEBUG_PRINT(pData.loadVoltage_V); DEBUG_PRINTLN(" V");
+        DEBUG_PRINT("Current        : "); DEBUG_PRINT(pData.current_mA); DEBUG_PRINTLN(" mA");
+        DEBUG_PRINT("Power          : "); DEBUG_PRINT(pData.power_mW); DEBUG_PRINTLN(" mW");
+        DEBUG_PRINTF("GPS            : %.6f, %.6f\n", currentLat, currentLng);
+        DEBUG_PRINTF("Sat            : %d\n", sat);
+        DEBUG_PRINTF("HDOP           : %d\n", hdop);
+        DEBUG_PRINT("Relay State    : "); DEBUG_PRINTLN(isRelayOn ? "ON" : "OFF");
+        // DEBUG_PRINTLN("ESP Temperature  : "); DEBUG_PRINTLN(tempAvailable ? espcelc : NAN);
+        // DEBUG_PRINTF("SIM Temp       : %.1f C\n", simcelc);
         DEBUG_PRINTLN("---------------------------------------------------");
         #endif
+        
+        // Jeda 2 detik (Aman untuk Task Watchdog Timer)
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }
@@ -369,21 +398,16 @@ void setup() {
     Serial.println("================[ BOOTING SYSTEM ]================");
     Serial.println("==================================================");
     Serial.println("");
-
-    // Setup OTA
-    Serial.println("===============[ Initializing OTA ]===============");
-    Ota.begin(WIFI_SSID, WIFI_PASS, OTA_PASS);
+    
+    // init ESP Feature
+    Serial.println("===============[ Initializing ESP ]===============");
+    Serial.println(ESP.getChipModel());         // Fetch chipModel
+    Ota.begin(WIFI_SSID, WIFI_PASS, OTA_PASS);  // OTA
     delay(500);
-
-    // buka port 23
-
+    
     DEBUG_BEGIN();
-    DEBUG_PRINTLN("==================================================");
-    DEBUG_PRINTLN("");
-
-    // init littleFS
-    Serial.println("=======[ Initializing Fail-Safe Mechanism]=======");
-    dataHandler.begin();
+    // esptemp.tempAvailable();              
+    dataHandler.begin();    // Data Structure
     DEBUG_PRINTLN("==================================================");
     DEBUG_PRINTLN("");
     

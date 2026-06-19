@@ -21,4 +21,4 @@
  */
 
 //  Pin Relay
-#define RELAY 27
+#define RELAY_PIN 27

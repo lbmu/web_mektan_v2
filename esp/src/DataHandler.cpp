@@ -32,6 +32,7 @@ bool DataHandler::hasData() {
 }
 
 File DataHandler::openForRead() {
+    // if (LittleFS.exists(_filename)) return File();
     return LittleFS.open(_filename, FILE_READ);
 }
 
