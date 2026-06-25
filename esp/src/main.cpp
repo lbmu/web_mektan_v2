@@ -2,10 +2,10 @@
  * 1. Pin Relay ga jadi dipake, tapi kalo next time mau coba pake, logika kasar nya kaya gitu
  * 2. Kalau monitor lewat serial, masih ada bug output yang kalo sistem esp gak ada file buffer (kesimpen di memori non-volatile esp)
  * 3. Timestamp GPS (UTC+0) belom sinkron sama timestamp SIM (UTC+7)
- * 4. Mekanisme shared variabel masih pake MUTEX. Coba ganti ke metode lain yang lebih sophisticated
+ * 4. Mekanisme proteksi data masih pake MUTEX. Coba ganti ke metode lain yang lebih sophisticated
  * 5. Modul OTA full vibe-coded, jadi sori kalo ada perilaku abnormal
  * 6. ESP_SSL antara kepake atau gak kepake, soalnya dulu susah brute-force HiveMQ yg TLS PORT 8883 pake AT-Command manual. Coba di-cek, soalnya dulu banget tiba-tiba bisa
- * 7. Mabutrace baru diimplementasi H~30 sidang, jadi kurang eksplor dan mungkin kurang detail
+ * 7. Mabutrace baru diimplementasi H~30 sidang, jadi kurang eksplor dan mungkin kurang detail. (Update: kayaknya mending jangan dipake, ESP nya kena DDoS)
  * 8. Bikin file header secrets.h kalo ada garis merah waktu pertama kali git clone. Template ada di repo
  * 9. Sisa nya cek GitHub aja (https://github.com/lbmu/web_mektan_v2)
  */
@@ -13,9 +13,6 @@
 
 // Modul untuk PlatformIO
 #include <Arduino.h>
-
-// Modul monitoring
-#include <mabutrace.h>
 
 // Modul untuk sistem
 #include "espOTA.h"
@@ -123,6 +120,7 @@ void TaskTelnet(void *pvParameters) {
     });
 
     while (1) {
+        diagnostics.trace(TASK_TELNET);
         DEBUG_HANDLE(); // Menjalankan telnet.loop()
         vTaskDelay(20 / portTICK_PERIOD_MS); // Polling setiap 20ms
     }
@@ -159,6 +157,7 @@ void TaskTelemetry(void *pvParameters) {
     }
 
     while (1) {
+        diagnostics.trace(TASK_TELEMETRY);
         bool isOnline = false;
 
         // 1. Cek Koneksi Jaringan & Inisialisasi Modul
@@ -178,7 +177,6 @@ void TaskTelemetry(void *pvParameters) {
         static int sampleCount = 0;
         unsigned long latency = 0;
         unsigned long startTime = micros();
-
         if (xSemaphoreTake(dataMutex, (TickType_t) 10) == pdTRUE) {
             latency = micros() - startTime;
             currentData.lat = latestData.lat;
@@ -283,6 +281,7 @@ void TaskTelemetry(void *pvParameters) {
 }// Task 2: GPS Reading
 void TaskGPS(void *pvParameters) {
     while (1) {
+        diagnostics.trace(TASK_GPS);
         // Panggil method update() dari modul GpsHandler
         if (gpsHandler.update()) {
             
@@ -327,6 +326,7 @@ void TaskMonitor(void *pvParameters) {
     const float RELAY_OFF_VOLTAGE = 13.0;
 
     while (1) {
+        diagnostics.trace(TASK_INA);
         // Baca data sensor melalui modul PowerMonitor
         PowerData pData = powerMonitor.read();
 
@@ -359,13 +359,13 @@ void TaskMonitor(void *pvParameters) {
         if (pData.busVoltage_V >= RELAY_ON_VOLTAGE && !isRelayOn) {
             digitalWrite(RELAY_PIN, HIGH);
             isRelayOn = true;
-            DEBUG_PRINTLN("🔌 [MONITOR] Tegangan di atas 12V. Relay AKTIF.");
+            DEBUG_PRINTLN("🔌 Relay AKTIF.");
         }
         // Switch ke LOW hanya jika tegangan turun di bawah batas bawah DAN relay sedang menyala
         else if (pData.busVoltage_V <= RELAY_OFF_VOLTAGE && isRelayOn) {
             digitalWrite(RELAY_PIN, LOW);
             isRelayOn = false;
-            DEBUG_PRINTLN("🔌 [MONITOR] Tegangan di bawah 11.5V. Relay MATI.");
+            DEBUG_PRINTLN("🔌 Relay MATI.");
         }
         // *Jika tegangan di antara 11.5V dan 12.0V, state terakhir akan dipertahankan.
 
@@ -406,6 +406,7 @@ void setup() {
     delay(500);
     
     DEBUG_BEGIN();
+    // diagnostics.mabu_init();
     // esptemp.tempAvailable();              
     dataHandler.begin();    // Data Structure
     DEBUG_PRINTLN("==================================================");
@@ -484,4 +485,4 @@ void loop() {
     vTaskDelete(NULL);
 }
 
-// Ini kalau udah nyampe 500 baris [ternyata sudah] , mikro nya LANGSUNG FREEZE FEATURE. padahal kode udah modular jir, tapi kayanya ga ngaruh :v [masih spaghetti code juga]
+// padahal kode udah modular jir, tapi kayanya ga ngaruh :v [masih spaghetti code juga, probably]

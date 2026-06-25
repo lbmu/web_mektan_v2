@@ -20,17 +20,47 @@ SystemDiagnostics::SystemDiagnostics(PowerMonitor* pwr, GpsHandler* gps, CommHan
     _cell = cell;
 }
 
+void SystemDiagnostics::mabu_init() {
+    mabu_init();
+    mabutrace_start_server(81);
+}
+
 void SystemDiagnostics::run(DiagnosticMode mode) {
     DEBUG_PRINTLN("\n=== SYSTEM DIAGNOSTICS ===");
     
-    if (mode == TEST_NMEA_PASSTHROUGH) runLabTest();
+    switch(mode) {
+        case TEST_NMEA_PASSTHROUGH: runLabTest(); break;
+        case TEST_SIM_PASSTHROUGH: runSimTest(); break;
+        case TEST_PERFORMANCE_MONITOR: runPerformanceMonitor(); break;
+        case TEST_STORAGE_MONITOR: runStorageMonitor(); break;
+        case TEST_SIMULATION: runSimulation(); break;
+        // ... mode lain bisa ditambahkan nanti ...
+        default: break;
+    }
     
-    else if (mode == TEST_SIM_PASSTHROUGH) runSimTest();
-    else if (mode == TEST_PERFORMANCE_MONITOR) runPerformanceMonitor();
-    else if (mode == TEST_STORAGE_MONITOR) runStorageMonitor();
-    else if (mode == TEST_SIMULATION) runSimulation();
-    // ... mode lain bisa ditambahkan nanti ...
-    
+}
+
+void SystemDiagnostics::trace(TaskTrace task) {
+    switch (task) {
+        case TASK_TELNET: {
+            TRACE_SCOPE("TASK_TELNET", COLOR_GREEN);
+            break;
+        }
+        case TASK_TELEMETRY: {
+            TRACE_SCOPE("TASK_TELEMETRY", COLOR_BLACK);
+            break;
+        }
+        case TASK_GPS: {
+            TRACE_SCOPE("TASK_GPS", COLOR_DARK_ORANGE); 
+            break;
+        }
+        case TASK_INA: {
+            TRACE_SCOPE("TASK_INA", COLOR_DARK_RED); 
+            break;
+        }
+        default: 
+            break;
+    }
 }
 
 void SystemDiagnostics::runLabTest() {
@@ -121,7 +151,9 @@ void SystemDiagnostics::runPerformanceMonitor() {
         else if (reason == ESP_RST_UNKNOWN) {
             DEBUG_PRINTLN("reason can not be determined");}
         else {DEBUG_PRINTLN("nguwawor");}
+
         // Memantau Memori RAM (Heap) Keseluruhan
+        // TRACE_COUNTER("Free Heap", ESP.getFreeHeap());
         DEBUG_PRINTF("Free Heap       : %d bytes\n", ESP.getFreeHeap());
         DEBUG_PRINTF("Max Alloc Heap  : %d bytes (Blok memori terbesar yg bisa dialokasi)\n", ESP.getMaxAllocHeap());
         DEBUG_PRINTF("Min Free Heap   : %d bytes (Sisa RAM paling sedikit yg pernah terjadi)\n", ESP.getMinFreeHeap());
@@ -133,30 +165,36 @@ void SystemDiagnostics::runPerformanceMonitor() {
         // High Water Mark (HWM) menunjukkan SISA memori terendah yang pernah dicapai task ini.
         // Jika nilainya mendekati 0, artinya task hampir mengalami Stack Overflow!
         UBaseType_t hwm = uxTaskGetStackHighWaterMark(NULL);
+        // TRACE_COUNTER("HWM", hwm);
         DEBUG_PRINTF("Monitor Task HWM: %u bytes (Sisa ruang aman)\n\n", hwm);
 
         if (otaTaskHandle != NULL) {
         UBaseType_t hwmOta = uxTaskGetStackHighWaterMark(otaTaskHandle);
+        // TRACE_COUNTER("Stack OTA", hwmOta);
         DEBUG_PRINTF("OTA HWM   : %u bytes\n", hwmOta);
         }
 
         if (telnetTaskHandle != NULL) {
         UBaseType_t hwmTelnet = uxTaskGetStackHighWaterMark(telnetTaskHandle);
+        // TRACE_COUNTER("Stack Telnet", hwmTelnet);
         DEBUG_PRINTF("Telnet HWM   : %u bytes\n", hwmTelnet);
         }
 
         if (telemetryTaskHandle != NULL) {
         UBaseType_t hwmTele = uxTaskGetStackHighWaterMark(telemetryTaskHandle);
+        // TRACE_COUNTER("Stack Telemetry", hwmTele);
         DEBUG_PRINTF("Telemetry HWM   : %u bytes\n", hwmTele);
         }
 
         if (gpsTaskHandle != NULL) {
         UBaseType_t hwmGps = uxTaskGetStackHighWaterMark(gpsTaskHandle);
+        // TRACE_COUNTER("Stack GPS", hwmGps);
         DEBUG_PRINTF("GPS HWM   : %u bytes\n", hwmGps);
         }
 
         if (monitorHandle != NULL) {
         UBaseType_t hwmMonitor = uxTaskGetStackHighWaterMark(monitorHandle);
+        // TRACE_COUNTER("Stack INA", hwmMonitor);
         DEBUG_PRINTF("Power HWM   : %u bytes\n", hwmMonitor);
         }
 
