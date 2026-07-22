@@ -130,7 +130,7 @@ onMounted(() => {
                         </div>
                         
                         <div v-if="!['super_admin'].includes(userRole)" class="alert alert-warning py-2 small mb-0">
-                            <i class="bi bi-lock-fill"></i> Hanya <b>Super Admin</b> yang dapat mengubah acuan tarif dasar.
+                            <i class="bi bi-lock-fill"></i> Hanya <b>BP Mektan Jabar</b> yang dapat mengubah acuan tarif dasar.
                         </div>
                         <small v-else class="text-muted" style="font-size:11px;">
                             <i class="bi bi-info-circle"></i> Perubahan tarif akan langsung tersimpan ke server dan berlaku global.
