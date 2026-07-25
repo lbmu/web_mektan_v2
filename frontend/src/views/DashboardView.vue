@@ -62,7 +62,7 @@ const totalLuasLahanGlobal = computed(() => {
     const totalJarakMeter = items.value.reduce((sum, item) => {
         return sum + (parseFloat(item.total_jarak_kerja) || 0);
     }, 0);
-    return (totalJarakMeter / 2500).toFixed(3); 
+    return (totalJarakMeter / 10000).toFixed(3); 
 });
 
 const warningList = computed(() => {
@@ -304,7 +304,7 @@ onUnmounted(() => {
         <div v-if="!loading" class="row g-3 mb-3">
             <div class="col-md-3">
                 <div class="card border-0 shadow-sm bg-primary text-white h-100">
-                    <div class="card-body py-2">
+                    <div class="card-body py-2 ">
                         <h6 class="text-white-50 mb-1">Total Armada</h6>
                         <h3 class="fw-bold mb-0">{{ totalAset }} <small class="fs-6">Unit</small></h3>
                     </div>

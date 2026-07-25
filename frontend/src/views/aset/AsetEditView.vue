@@ -15,10 +15,10 @@ const form = ref({
   kategori_alat: '',
   merk_alat: '',
   nomor_seri: '',
-  tahun_penerimaan: '', // [BARU]
+  tahun_penerimaan: '', 
   status_sensor: 'Normal',
   status_operasional: 'Siap Digunakan',
-  kondisi_fisik: 'Baik', // [BARU]
+  kondisi_fisik: 'Baik', 
   deskripsi: '',
   kapasitas_lahan: '',
   lebar_implemen: 0
@@ -29,6 +29,9 @@ const previewGambar = ref(null);
 const gambarLama = ref(''); 
 const isSubmitting = ref(false);
 const isLoading = ref(true);
+
+// [BARU] Referensi untuk input file agar bisa di-reset
+const fileInputRef = ref(null);
 
 const formatKodePerangkat = () => {
     form.value.kode_perangkat = form.value.kode_perangkat.toUpperCase().replace(/[^A-Z0-9-]/g, '');
@@ -45,8 +48,8 @@ const fetchDetail = async () => {
         kategori_alat: data.kategori_alat,
         merk_alat: data.merk_alat,
         nomor_seri: data.nomor_seri,
-        tahun_penerimaan: data.tahun_penerimaan || '', // [BARU]
-        kondisi_fisik: data.kondisi_fisik || 'Baik', // [BARU]
+        tahun_penerimaan: data.tahun_penerimaan || '', 
+        kondisi_fisik: data.kondisi_fisik || 'Baik', 
         status_sensor: data.status_sensor,
         status_operasional: data.status_operasional,
         deskripsi: data.deskripsi,
@@ -71,6 +74,15 @@ const handleFileUpload = (event) => {
   }
 };
 
+// [BARU] Fungsi untuk membatalkan pilihan foto baru
+const hapusFoto = () => {
+    fileGambar.value = null;
+    previewGambar.value = null;
+    if (fileInputRef.value) {
+        fileInputRef.value.value = ''; // Me-reset input form
+    }
+};
+
 const submitForm = async () => {
   isSubmitting.value = true;
   
@@ -88,8 +100,8 @@ const submitForm = async () => {
     formData.append('kategori_alat', form.value.kategori_alat);
     formData.append('merk_alat', form.value.merk_alat);
     formData.append('nomor_seri', form.value.nomor_seri);
-    formData.append('tahun_penerimaan', form.value.tahun_penerimaan); // [BARU]
-    formData.append('kondisi_fisik', form.value.kondisi_fisik); // [BARU]
+    formData.append('tahun_penerimaan', form.value.tahun_penerimaan); 
+    formData.append('kondisi_fisik', form.value.kondisi_fisik); 
     formData.append('status_sensor', form.value.status_sensor);
     formData.append('status_operasional', form.value.status_operasional);
     formData.append('deskripsi', form.value.deskripsi);
@@ -110,7 +122,8 @@ const submitForm = async () => {
         text: 'Data aset berhasil diperbarui.',
         confirmButtonColor: '#198754'
     }).then(() => {
-        router.push(`/aset/${id}`); 
+        // [DIPERBARUI] Menggunakan replace agar history tidak menumpuk
+        router.replace(`/aset/${id}`); 
     });
 
   } catch (error) {
@@ -234,12 +247,24 @@ onMounted(() => {
 
               <div class="mb-3">
                 <label class="form-label">Foto Alat <span class="text-muted small fw-normal">(Biarkan kosong jika tak diganti)</span></label>
-                <input @change="handleFileUpload" type="file" class="form-control" accept="image/*">
+                <!-- [DIPERBARUI] Tambahkan ref ke input file -->
+                <input ref="fileInputRef" @change="handleFileUpload" type="file" class="form-control" accept="image/*">
                 
                 <div class="mt-3 text-center rounded p-3 position-relative" style="border: 2px dashed #dee2e6; background-color: #f8f9fa;">
                   <span class="badge bg-secondary position-absolute top-0 start-0 m-2">Preview Gambar</span>
-                  <img v-if="previewGambar" :src="previewGambar" class="img-fluid rounded shadow-sm mt-3" style="max-height: 160px;">
                   
+                  <!-- [DIPERBARUI] Layout preview gambar baru dengan tombol X -->
+                  <div v-if="previewGambar" class="position-relative d-inline-block mt-3">
+                      <img :src="previewGambar" class="img-fluid rounded shadow-sm" style="max-height: 160px;">
+                      <button @click="hapusFoto" type="button" 
+                              class="btn btn-danger position-absolute top-0 end-0 m-2 rounded-circle shadow d-flex justify-content-center align-items-center" 
+                              style="width: 32px; height: 32px; padding: 0;" 
+                              title="Batal ubah foto">
+                          <i class="bi bi-x-lg" style="font-size: 14px;"></i>
+                      </button>
+                  </div>
+                  
+                  <!-- [DIPERBARUI] Gambar lama dari database -->
                   <img v-else-if="gambarLama" 
                        :src="gambarLama.startsWith('http') ? gambarLama : `${IMAGE_BASE_URL}/${gambarLama}`" 
                        class="img-fluid rounded shadow-sm mt-3" style="max-height: 160px;" 

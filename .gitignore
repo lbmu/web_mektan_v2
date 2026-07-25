@@ -24,4 +24,8 @@ backend/.env
 backend/simulator.js
 backend/simulator1.js
 backend/simulatorv2.js
+backend/simulator8.js
+backend/simulator9.js
+backend/simulator11.js
+
 backend/config/database.js.example

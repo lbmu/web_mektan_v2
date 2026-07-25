@@ -251,7 +251,7 @@ onUnmounted(() => {
             
             <div class="p-3 border-bottom bg-light flex-shrink-0">
                 <h5 class="fw-bold mb-0 text-primary">
-                    <i class="bi bi-geo-alt-fill me-1"></i> Lokasi Traktor
+                    <i class="bi bi-geo-alt-fill me-1"></i> Lokasi Alsintan
                 </h5>
             </div>
 

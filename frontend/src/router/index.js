@@ -120,9 +120,22 @@ router.beforeEach((to, from, next) => {
         title: 'Akses Terbatas',
         text: 'Fitur ini hanya untuk pengguna terdaftar. Silakan login terlebih dahulu.',
         toast: true,
-        position: 'top-end',
+        position: 'top',
         timer: 3000,
-        showConfirmButton: false
+        showConfirmButton: false,
+        customClass: {
+                popup: 'shadow-sm border border-success border-opacity-25 rounded-4' // Integrasi dengan class Bootstrap
+        },
+        showClass: { popup: `
+        animate__animated
+        animate__fadeIn 
+        animate__faster
+        ` },
+        hideClass: { popup: `
+        animate__animated
+        animate__fadeOut
+        animate__faster
+        ` }
     });
     next({ name: 'login' });
     return;

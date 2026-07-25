@@ -51,6 +51,17 @@ const dailyHMPast = ref(0);
 const tarifPerHa = ref(1500000); 
 const isSavingTarif = ref(false);
 
+const displayTarif = computed({
+    get: () => {
+        if (!tarifPerHa.value) return '0';
+        return Number(tarifPerHa.value).toLocaleString('id-ID');
+    },
+    set: (val) => {
+        const numericString = val.replace(/\D/g, '');
+        tarifPerHa.value = Number(numericString);
+    }
+});
+
 let map = null;
 let polylineLayer = null; 
 let marker = null;
@@ -106,7 +117,34 @@ const saveTarif = async () => {
     isSavingTarif.value = true;
     try {
         await axios.put(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`, { nilai: tarifPerHa.value });
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Tarif global diperbarui', showConfirmButton: false, timer: 2500 });
+        
+        // [DIPERBARUI] Konfigurasi Notifikasi Toast yang Compact & Elegan
+        Swal.fire({ 
+            toast: true, 
+            position: 'top', 
+            icon: 'success', 
+            title: 'Tarif global diperbarui!', 
+            showConfirmButton: false, 
+            timer: 2500,
+            timerProgressBar: true,       
+            width: 'auto',                
+            padding: '0.6em 1.2em',       
+            color: '#198754',             
+            customClass: {
+                popup: 'shadow-sm border border-success border-opacity-25 rounded-4' // Integrasi dengan class Bootstrap
+            },
+            showClass: { popup: `
+            animate__animated
+            animate__fadeIn 
+            animate__faster
+            ` },
+            hideClass: { popup: `
+            animate__animated
+            animate__fadeOut
+            animate__faster
+            ` }
+        });
+        
     } catch (e) {
         Swal.fire('Error', 'Gagal menyimpan tarif', 'error');
     } finally { 
@@ -267,7 +305,7 @@ const fetchHistoryByDate = async () => {
         totalJarakPast.value = 0;
         if (historyCoordsPast.value.length > 1) {
             for (let i = 1; i < historyCoordsPast.value.length; i++) {
-                if (historyCoordsPast.value[i].status === 'ON') {
+                if (historyCoordsPast.value[i-1].status === 'ON') {
                     const p1 = [historyCoordsPast.value[i-1].lat, historyCoordsPast.value[i-1].lng];
                     const p2 = [historyCoordsPast.value[i].lat, historyCoordsPast.value[i].lng];
                     totalJarakPast.value += map.distance(p1, p2);
@@ -278,12 +316,12 @@ const fetchHistoryByDate = async () => {
         let dailyHM = 0;
         if (rawData.length > 1) {
             for (let i = 1; i < rawData.length; i++) {
-                if (rawData[i].status_mesin === 'ON') {
+                if (rawData[i-1].status_mesin === 'ON') {
                     const t1 = new Date(rawData[i-1].waktu_rekam).getTime();
                     const t2 = new Date(rawData[i].waktu_rekam).getTime();
                     const diffMs = t2 - t1;
                     
-                    if (diffMs > 0 && diffMs <= 900000) {
+                    if (diffMs > 0) {
                         dailyHM += diffMs / 3600000; 
                     }
                 }
@@ -554,7 +592,7 @@ onUnmounted(() => {
               <div class="col-6">
                   <div class="card border-0 shadow-sm bg-danger bg-opacity-10 border-danger h-100">
                       <div class="card-body text-center p-2">
-                          <small class="text-danger fw-bold d-block mb-1">Kerja Harian (Efektif)</small>
+                          <small class="text-danger fw-bold d-block mb-1">Jam Kerja Harian</small>
                           <h5 class="fw-bold mb-0 text-danger" style="font-size: 1rem;">{{ formatHM(dailyHMPast) }}</h5>
                       </div>
                   </div>
@@ -569,28 +607,32 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="card border border-warning shadow-sm bg-warning bg-opacity-10 flex-shrink-0 mt-1">
-              <div class="card-body">
-                <label class="small text-muted fw-bold d-block mb-1">Tarif Jasa per Hektar</label>
+<div class="card border border-warning shadow-sm bg-warning bg-opacity-10 flex-shrink-0 mt-1">
+                <div class="card-body">
+                    <label class="small text-muted fw-bold d-block mb-1">Tarif Jasa per Hektar</label>
                 
-                <div class="input-group input-group-sm mb-3 shadow-sm">
-                    <span class="input-group-text bg-white">Rp</span>
-                    <input type="number" v-model="tarifPerHa" class="form-control fw-bold border-start-0"
-                           :disabled="!['super_admin'].includes(userRole)">
-                    
-                    <button v-if="['super_admin'].includes(userRole)" @click="saveTarif" 
-                            class="btn btn-warning fw-bold px-2 border-warning z-0" 
-                            :disabled="isSavingTarif" title="Simpan Tarif Global">
-                        <span v-if="isSavingTarif" class="spinner-border spinner-border-sm"></span>
-                        <i v-else class="bi bi-check-lg"></i>
-                    </button>
-                </div>
+                    <!-- [DIPERBARUI] Input Group Menyatu & Transparan -->
+                    <div class="input-group input-group-sm mb-3 shadow-sm rounded overflow-hidden bg-white">
+                        <span class="input-group-text bg-transparent border-0 text-muted fw-bold ps-2 pe-1">Rp</span>
+                        
+                        <input type="text" v-model="displayTarif" 
+                            class="form-control fw-bold border-0 text-dark bg-transparent"
+                            style="box-shadow: none;"
+                            :disabled="!['super_admin'].includes(userRole)">
+                        
+                        <button v-if="['super_admin'].includes(userRole)" @click="saveTarif" 
+                                class="btn btn-warning fw-bold px-3 border-0 z-0" 
+                                :disabled="isSavingTarif" title="Simpan Tarif Global">
+                            <span v-if="isSavingTarif" class="spinner-border spinner-border-sm text-dark"></span>
+                            <i v-else class="bi bi-check-lg text-dark"></i>
+                        </button>
+                    </div>
                 
-                <div class="d-flex justify-content-between align-items-center border-top border-warning pt-2">
-                  <span class="fw-bold text-warning-emphasis">Total Tagihan</span>
-                  <span class="h5 mb-0 fw-bold text-dark">Rp {{ Math.round(estimasiBiaya).toLocaleString('id-ID') }}</span>
+                    <div class="d-flex justify-content-between align-items-center border-top border-warning pt-2">
+                        <span class="fw-bold text-warning-emphasis">Total Tagihan</span>
+                        <span class="h5 mb-0 fw-bold text-dark">Rp {{ Math.round(estimasiBiaya).toLocaleString('id-ID') }}</span>
+                    </div>
                 </div>
-              </div>
             </div>
             
             <button v-if="activeTab === 'LIVE'" @click="resetArgo" class="btn btn-dark w-100 shadow-sm py-2 flex-shrink-0 mt-2"><i class="bi bi-arrow-repeat"></i> Reset Argo</button>

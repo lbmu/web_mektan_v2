@@ -12,10 +12,10 @@ const form = ref({
     kategori_alat: '',
     merk_alat: '',
     nomor_seri: '',
-    tahun_penerimaan: '', // [BARU]
+    tahun_penerimaan: '', 
     status_sensor: 'Normal',
     status_operasional: 'Siap Digunakan',
-    kondisi_fisik: 'Baik', // [BARU]
+    kondisi_fisik: 'Baik', 
     deskripsi: '',
     kapasitas_lahan: '',
     lebar_implemen: 1.89
@@ -25,7 +25,9 @@ const fileGambar = ref(null);
 const previewGambar = ref(null);
 const isSubmitting = ref(false);
 
-// SMART REGEX: Paksa Kode Perangkat jadi Kapital & Tanpa Spasi
+// [BARU] Referensi input file
+const fileInputRef = ref(null);
+
 const formatKodePerangkat = () => {
     form.value.kode_perangkat = form.value.kode_perangkat.toUpperCase().replace(/[^A-Z0-9-]/g, '');
 };
@@ -35,6 +37,15 @@ const handleFileUpload = (event) => {
     if (file) {
         fileGambar.value = file;
         previewGambar.value = URL.createObjectURL(file);
+    }
+};
+
+// [BARU] Fungsi menghapus foto yang dipilih
+const hapusFoto = () => {
+    fileGambar.value = null;
+    previewGambar.value = null;
+    if (fileInputRef.value) {
+        fileInputRef.value.value = ''; 
     }
 };
 
@@ -55,8 +66,8 @@ const submitForm = async () => {
         formData.append('kategori_alat', form.value.kategori_alat);
         formData.append('merk_alat', form.value.merk_alat);
         formData.append('nomor_seri', form.value.nomor_seri);
-        formData.append('tahun_penerimaan', form.value.tahun_penerimaan); // [BARU]
-        formData.append('kondisi_fisik', form.value.kondisi_fisik); // [BARU]
+        formData.append('tahun_penerimaan', form.value.tahun_penerimaan); 
+        formData.append('kondisi_fisik', form.value.kondisi_fisik); 
         formData.append('status_sensor', form.value.status_sensor);
         formData.append('status_operasional', form.value.status_operasional);
         formData.append('deskripsi', form.value.deskripsi);
@@ -196,9 +207,17 @@ const submitForm = async () => {
 
                             <div class="mb-3">
                                 <label class="form-label">Foto Alat</label>
-                                <input @change="handleFileUpload" type="file" class="form-control" accept="image/*">
+                                <!-- [DIPERBARUI] Tambahkan ref ke input file -->
+                                <input ref="fileInputRef" @change="handleFileUpload" type="file" class="form-control" accept="image/*">
+                                
                                 <div class="mt-3 text-center rounded p-3" style="border: 2px dashed #dee2e6; background-color: #f8f9fa;">
-                                    <img v-if="previewGambar" :src="previewGambar" alt="Preview" class="img-fluid rounded shadow-sm" style="max-height: 180px;">
+                                    <!-- [DIPERBARUI] Tombol hapus pada preview -->
+                                    <div v-if="previewGambar" class="position-relative d-inline-block">
+                                        <img :src="previewGambar" alt="Preview" class="img-fluid rounded shadow-sm" style="max-height: 180px;">
+                                        <button @click="hapusFoto" type="button" class="btn btn-sm btn-danger position-absolute top-0 start-100 translate-middle rounded-circle shadow" style="width: 28px; height: 28px; padding: 0;" title="Hapus foto">
+                                            <i class="bi bi-x-lg" style="font-size: 12px;"></i>
+                                        </button>
+                                    </div>
                                     <div v-else class="text-muted py-3">
                                         <i class="bi bi-camera fs-1 d-block mb-1 opacity-50"></i>
                                         <small>Belum ada foto yang dipilih</small>

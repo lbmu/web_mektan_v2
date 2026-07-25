@@ -1,22 +1,190 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import mqtt from 'mqtt';
+
+const MQTT_HOST = import.meta.env.VITE_MQTT_HOST;
+const MQTT_PORT = Number(import.meta.env.VITE_MQTT_PORT);
+const MQTT_TOPIC = import.meta.env.VITE_MQTT_TOPIC;
+const MQTT_USERNAME = import.meta.env.VITE_MQTT_USERNAME;
+const MQTT_PASSWORD = import.meta.env.VITE_MQTT_PASSWORD;
 
 const items = ref([]);
 const loading = ref(true);
+const isCalculating = ref(false); 
 const userRole = ref('');
 
-// State untuk memantau proses loading saat menyimpan
 const isSavingTarif = ref(false); 
+const tarifPerHa = ref(1500000);
 
-// Tarif default (Akan ditimpa oleh data dari database)
-const tarifPerHa = ref(1500000); 
+const displayTarif = computed({
+    get: () => {
+        // Tampilkan dengan format titik (id-ID)
+        if (!tarifPerHa.value) return '0';
+        return Number(tarifPerHa.value).toLocaleString('id-ID');
+    },
+    set: (val) => {
+        // Hapus semua karakter selain angka (titik otomatis hilang saat disimpan)
+        const numericString = val.replace(/\D/g, '');
+        tarifPerHa.value = Number(numericString);
+    }
+});
+
+const dailyStats = ref({});
+const lastMqttData = ref({}); // [BARU] Menyimpan titik terakhir untuk hitung selisih
+let mqttClient = null;
+
+const getTodayDate = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const selectedDate = ref(getTodayDate());
+
+// --- ALGORITMA HAVERSINE (PENGGANTI LEAFLET) ---
+const hitungJarakHaversine = (lat1, lon1, lat2, lon2) => {
+    const toRad = (value) => (value * Math.PI) / 180;
+    const R = 6371000; 
+    
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; 
+};
+
+// --- FUNGSI UTAMA: MENGHITUNG HM & JARAK DARI DATABASE ---
+const fetchAndCalculateHistory = async (item) => {
+    try {
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${item.alsintan_id}/riwayat?tanggal=${selectedDate.value}`);
+        const rawData = response.data;
+
+        let dailyHM = 0;
+        let dailyDistance = 0;
+
+        if (rawData.length > 1) {
+            for (let i = 1; i < rawData.length; i++) {
+                if (rawData[i-1].status_mesin === 'ON') {
+                    const t1 = new Date(rawData[i-1].waktu_rekam).getTime();
+                    const t2 = new Date(rawData[i].waktu_rekam).getTime();
+                    const diffMs = t2 - t1;
+                    if (diffMs > 0) dailyHM += diffMs / 3600000; 
+                }
+            }
+        }
+
+        const validCoords = rawData.filter(h => Math.abs(parseFloat(h.latitude)) > 1 && Math.abs(parseFloat(h.longitude)) > 1);
+
+        if (validCoords.length > 1) {
+            for (let i = 1; i < validCoords.length; i++) {
+                if (validCoords[i-1].status_mesin === 'ON') {
+                    const lat1 = parseFloat(validCoords[i-1].latitude);
+                    const lon1 = parseFloat(validCoords[i-1].longitude);
+                    const lat2 = parseFloat(validCoords[i].latitude);
+                    const lon2 = parseFloat(validCoords[i].longitude);
+                    dailyDistance += hitungJarakHaversine(lat1, lon1, lat2, lon2);
+                }
+            }
+        }
+
+        dailyStats.value[item.alsintan_id] = { hm: dailyHM, distance: dailyDistance };
+
+    } catch (error) {
+        dailyStats.value[item.alsintan_id] = { hm: 0, distance: 0 };
+    }
+};
+
+const calculateAllEstimations = async () => {
+    isCalculating.value = true;
+    try {
+        await Promise.all(items.value.map(item => fetchAndCalculateHistory(item)));
+    } catch (error) {
+        console.error("Gagal menghitung estimasi massal:", error);
+    } finally {
+        isCalculating.value = false;
+    }
+};
+
+// =====================================================================
+// [BARU] FUNGSI KENDALI ARGO REAL-TIME MELALUI MQTT
+// =====================================================================
+const connectMqtt = () => {
+    const options = { host: MQTT_HOST, port: MQTT_PORT, protocol: 'wss', path: '/mqtt', username: MQTT_USERNAME, password: MQTT_PASSWORD };
+    mqttClient = mqtt.connect(options);
+    
+    mqttClient.on('connect', () => { mqttClient.subscribe(MQTT_TOPIC); });
+
+    mqttClient.on('message', (topic, message) => {
+        // PERATURAN MUTLAK: Argo hanya berjalan jika kalender di-set ke Hari Ini!
+        if (selectedDate.value !== getTodayDate()) return;
+
+        try {
+            const data = JSON.parse(message.toString());
+            const id = data.id;
+            
+            // Pastikan alat ada di dalam tabel dailyStats
+            if (!dailyStats.value[id]) return;
+
+            const vAki = parseFloat(data.V) || 0;
+            const lat = parseFloat(data.lat);
+            const lng = parseFloat(data.lng);
+            const currentTime = Date.now();
+            
+            const isMesinOn = vAki > 13.4;
+            const isGpsValid = lat && lng && !isNaN(lat) && !isNaN(lng) && Math.abs(lat) > 1 && Math.abs(lng) > 1;
+
+            // Jika ini titik pertama, jadikan patokan (baseline) lalu keluar
+            if (!lastMqttData.value[id]) {
+                lastMqttData.value[id] = { time: currentTime, lat: lat, lng: lng, status: isMesinOn ? 'ON' : 'OFF' };
+                return; 
+            }
+
+            const prev = lastMqttData.value[id];
+
+            // 1. INJEKSI PENAMBAHAN ARGO JIKA SEBELUMNYA MESIN MENYALA
+            if (prev.status === 'ON') {
+                // Tambah Jam Kerja (HM)
+                const diffMs = currentTime - prev.time;
+                if (diffMs > 0 && diffMs <= 60000) { // Toleransi wajar 1 menit per tick
+                    dailyStats.value[id].hm += (diffMs / 3600000);
+                }
+
+                // Tambah Jarak Tempuh
+                if (isGpsValid && prev.lat && prev.lng) {
+                    const dist = hitungJarakHaversine(prev.lat, prev.lng, lat, lng);
+                    // Filter drift satelit (0.5m hingga 50m per tick wajar)
+                    if (dist > 0.5 && dist < 50) {
+                        dailyStats.value[id].distance += dist;
+                    }
+                }
+            }
+
+            // 2. PERBARUI MEMORI TITIK TERAKHIR
+            lastMqttData.value[id] = {
+                time: currentTime,
+                lat: isGpsValid ? lat : prev.lat, // Tahan kordinat lama jika GPS blank spot
+                lng: isGpsValid ? lng : prev.lng,
+                status: isMesinOn ? 'ON' : 'OFF'
+            };
+
+        } catch (err) {}
+    });
+};
 
 const fetchData = async () => {
+    loading.value = true;
     try {
         const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan`);
         items.value = response.data;
+        await calculateAllEstimations(); 
     } catch (error) {
         console.error("Gagal ambil data armada:", error);
     } finally {
@@ -24,27 +192,18 @@ const fetchData = async () => {
     }
 };
 
-// --- FUNGSI BARU: MENGAMBIL TARIF DARI DATABASE ---
 const fetchTarif = async () => {
     try {
         const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`);
         tarifPerHa.value = Number(res.data.nilai);
-    } catch (e) {
-        console.error("Gagal meload tarif dari server");
-    }
+    } catch (e) {}
 };
 
-// --- FUNGSI BARU: MENYIMPAN TARIF KE DATABASE (Hanya Super Admin) ---
 const saveTarif = async () => {
     isSavingTarif.value = true;
     try {
         await axios.put(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`, { nilai: tarifPerHa.value });
-        Swal.fire({
-            icon: 'success',
-            title: 'Berhasil!',
-            text: 'Tarif dasar telah dikunci untuk seluruh sistem.',
-            confirmButtonColor: '#198754'
-        });
+        Swal.fire({ icon: 'success', title: 'Berhasil!', text: 'Tarif dasar telah dikunci untuk seluruh sistem.', confirmButtonColor: '#198754' });
     } catch (e) {
         Swal.fire('Error', 'Gagal menyimpan perubahan tarif', 'error');
     } finally {
@@ -64,28 +223,44 @@ const formatHM = (decimalHours) => {
     const m = Math.floor((hoursFloat - h) * 60);
     const s = Math.round((((hoursFloat - h) * 60) - m) * 60);
 
-    // Di tabel estimasi, tampilannya bisa dibuat sedikit lebih panjang
     if (h > 0) return `${h} Jam ${m} Menit`;
     return `${m} Menit ${s} Detik`; 
 };
 
-const hitungLuas = (jarakMeter) => {
-    const m = parseFloat(jarakMeter) || 0;
-    return m / 2500; // Konversi meter persegi ke hektar
+const hitungLuas = (item) => {
+    const stats = dailyStats.value[item.alsintan_id];
+    if (!stats) return 0;
+    
+    const jarakMeter = parseFloat(stats.distance) || 0;
+    const lebar = parseFloat(item.lebar_implemen) || 1.89; 
+    
+    return (jarakMeter * lebar) / 10000; 
 };
 
 const totalOmzetSemuaAlat = computed(() => {
     return items.value.reduce((total, item) => {
-        const luas = hitungLuas(item.total_jarak_kerja);
+        const luas = hitungLuas(item);
         return total + (luas * tarifPerHa.value);
     }, 0);
+});
+
+watch(selectedDate, () => {
+    if (items.value.length > 0) {
+        lastMqttData.value = {}; // Hapus memori titik sebelumnya agar tak loncat
+        calculateAllEstimations();
+    }
 });
 
 onMounted(() => {
     const session = JSON.parse(sessionStorage.getItem('user'));
     if (session) userRole.value = session.role;
+    fetchTarif(); 
     fetchData();
-    fetchTarif(); // Panggil fungsi tarik tarif saat halaman dimuat
+    connectMqtt(); // Mengaktifkan listener real-time
+});
+
+onUnmounted(() => {
+    if (mqttClient) mqttClient.end(); // Mematikan koneksi saat pindah halaman
 });
 </script>
 
@@ -94,17 +269,24 @@ onMounted(() => {
     
     <div class="flex-grow-1">
         <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h3 class="fw-bold text-dark mb-0">📘 Buku Besar & Estimasi</h3>
-            <p class="text-muted small">Rekapitulasi total pendapatan seluruh armada untuk sesi aktif saat ini.</p>
-        </div>
-        
-        <div class="card bg-success text-white border-0 shadow-sm" style="min-width: 250px;">
-            <div class="card-body py-2 px-3 text-end">
-                <small class="d-block text-white-50 text-uppercase fw-bold">Total Akumulasi Global</small>
-                <h3 class="fw-bold mb-0">{{ formatRupiah(totalOmzetSemuaAlat) }}</h3>
+            <div>
+                <h3 class="fw-bold text-dark mb-1">📘 Buku Besar & Estimasi Biaya</h3>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small">Filter Rekapitulasi Tanggal: </span>
+                    <input type="date" v-model="selectedDate" class="form-control form-control-sm border-primary text-primary fw-bold" style="width: auto;">
+                    
+                </div>
             </div>
-        </div>
+            
+            <div class="card bg-success text-white border-0 shadow-sm" style="min-width: 250px;">
+                <div class="card-body py-2 px-3 text-end">
+                    <small class="d-block text-white-50 text-uppercase fw-bold">Total Akumulasi Harian</small>
+                    <h3 class="fw-bold mb-0">
+                        <span v-if="isCalculating" class="spinner-border spinner-border-sm me-2"></span>
+                        {{ formatRupiah(totalOmzetSemuaAlat) }}
+                    </h3>
+                </div>
+            </div>
         </div>
 
         <div class="row g-4">
@@ -114,23 +296,30 @@ onMounted(() => {
                         <h6 class="fw-bold">⚙️ Pengaturan Tarif</h6>
                     </div>
                     <div class="card-body">
-                        <label class="form-label text-muted small">Harga Jasa per Hektar (Acuan)</label>
+                        <label class="form-label text-muted small">Harga Jasa per Hektar</label>
                         
-                        <div class="input-group mb-3 shadow-sm">
-                            <span class="input-group-text bg-light border-end-0">Rp</span>
-                            <input v-model="tarifPerHa" type="number" 
-                                class="form-control fw-bold border-start-0 text-end"
+                        <div class="input-group mb-3 shadow-sm rounded overflow-hidden" style="border: 1px solid #ced4da;">
+                            
+                            <!-- Bagian Rp -->
+                            <span class="input-group-text bg-white border-0 text-muted fw-bold pe-2">Rp</span>
+                            
+                            <!-- Bagian Input -->
+                            <input v-model="displayTarif" type="text" 
+                                class="form-control fw-bold border-0 text-end text-primary"
+                                style="font-size: 1.15rem; box-shadow: none;"
                                 :disabled="!['super_admin'].includes(userRole)">
                                 
+                            <!-- Bagian Tombol -->
                             <button v-if="['super_admin'].includes(userRole)" @click="saveTarif" 
-                                    class="btn btn-primary fw-bold px-3 border-primary z-0" :disabled="isSavingTarif">
+                                    class="btn btn-primary fw-bold px-4 border-0 z-0" :disabled="isSavingTarif">
                                 <span v-if="isSavingTarif" class="spinner-border spinner-border-sm me-1"></span>
                                 <i v-else class="bi bi-floppy-fill me-1"></i> Simpan
                             </button>
+                            
                         </div>
                         
                         <div v-if="!['super_admin'].includes(userRole)" class="alert alert-warning py-2 small mb-0">
-                            <i class="bi bi-lock-fill"></i> Hanya <b>BP Mektan Jabar</b> yang dapat mengubah acuan tarif dasar.
+                            <i class="bi bi-lock-fill"></i> Hanya <b>BP Mektan Jabar</b> yang dapat mengubah harga tarif
                         </div>
                         <small v-else class="text-muted" style="font-size:11px;">
                             <i class="bi bi-info-circle"></i> Perubahan tarif akan langsung tersimpan ke server dan berlaku global.
@@ -140,16 +329,24 @@ onMounted(() => {
             </div>
 
             <div class="col-md-8">
-                <div class="card border-0 shadow-sm h-100">
+                <div class="card border-0 shadow-sm h-100 position-relative overflow-hidden">
+                    
+                    <div v-if="isCalculating" class="position-absolute w-100 h-100 bg-white bg-opacity-75 d-flex justify-content-center align-items-center" style="z-index: 10;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary mb-2" role="status"></div>
+                            <h6 class="text-primary fw-bold">Menghitung Data Riwayat...</h6>
+                        </div>
+                    </div>
+
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="bg-light">
                                     <tr>
-                                        <th class="ps-4">Nama Armada</th>
-                                        <th class="text-center">Jam Kerja (HM)</th>
+                                        <th class="ps-4">Nama Aset Alsintan</th>
+                                        <th class="text-center">Jam Kerja</th>
                                         <th class="text-center">Luas Tergarap</th>
-                                        <th class="text-end pe-4">Estimasi Pendapatan</th>
+                                        <th class="text-end pe-4">Biaya Sewa Alsintan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -160,17 +357,22 @@ onMounted(() => {
                                         </td>
                                         
                                         <td class="text-center">
-                                            <span class="fw-bold text-dark">{{ formatHM(item.total_hour_meter) }}</span>
+                                            <span class="fw-bold text-dark">
+                                                {{ formatHM(dailyStats[item.alsintan_id]?.hm || 0) }}
+                                            </span>
                                         </td>
-                                        <td class="text-center">
-                                            <div class="fw-bold text-primary">{{ hitungLuas(item.total_jarak_kerja).toFixed(3) }} Ha</div>
-                                            <small class="text-muted" style="font-size: 10px;">
-                                                ({{ (item.total_jarak_kerja || 0).toFixed(0) }} meter)
+                                        
+                                        <td class="text-center align-middle">
+                                            <div class="fw-bold text-primary" style="font-size: 18px; line-height: 1; margin-bottom: 4px;">
+                                                {{ hitungLuas(item).toFixed(3) }} Ha
+                                            </div>
+                                            <small class="text-muted d-block" style="font-size: 11px; line-height: 1;">
+                                                ({{ (dailyStats[item.alsintan_id]?.distance || 0).toFixed(0) }} meter)
                                             </small>
                                         </td>
 
                                         <td class="text-end pe-4 fw-bold text-success fs-6">
-                                            {{ formatRupiah(hitungLuas(item.total_jarak_kerja) * tarifPerHa) }}
+                                            {{ formatRupiah(hitungLuas(item) * tarifPerHa) }}
                                         </td>
                                     </tr>
                                     
@@ -192,3 +394,12 @@ onMounted(() => {
 
   </div>
 </template>
+
+<style scoped>
+.animate-pulse { animation: pulse 1.5s infinite; }
+@keyframes pulse {
+  0% { opacity: 1; box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7); }
+  70% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(25, 135, 84, 0); }
+  100% { opacity: 1; box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
+}
+</style>

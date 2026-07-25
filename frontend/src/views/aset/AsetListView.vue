@@ -179,8 +179,8 @@ onUnmounted(() => {
         
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h2 class="fw-bold text-dark mb-0">Manajemen Aset & Katalog</h2>
-                <small class="text-muted">Cek ketersediaan inventaris dan status operasional armada balai.</small>
+                <h2 class="fw-bold text-dark mb-0">Manajemen & Katalog Aset</h2>
+                <small class="text-muted">Cek ketersediaan inventaris dan status operasional alsintan</small>
             </div>
             
             <!-- Dibungkus div agar tombolnya bisa bersebelahan -->
