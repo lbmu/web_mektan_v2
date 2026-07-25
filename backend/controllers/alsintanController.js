@@ -175,8 +175,8 @@ exports.getRiwayat = (req, res) => {
             SELECT latitude, longitude, waktu_rekam, status_mesin 
             FROM riwayat_perjalanan 
             WHERE alsintan_id = $1 
-            AND waktu_rekam >= $2::date
-            AND waktu_rekam < ($2::date + interval '1 day')
+            AND waktu_rekam >= ($2 || ' 00:00:00+07')::timestamptz
+            AND waktu_rekam < ($2 || ' 00:00:00+07')::timestamptz + interval '1 day'
             ORDER BY waktu_rekam ASC
         `;
         db.query(queryHistory, [id, tanggal], (errHist, results) => {
