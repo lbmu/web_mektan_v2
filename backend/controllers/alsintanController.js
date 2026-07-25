@@ -44,7 +44,7 @@ exports.getAlsintanById = (req, res) => {
     });
 };
 
-// 3. CREATE (DIPERBARUI: Menambah Tahun Penerimaan & Kondisi Fisik)
+// 3. CREATE 
 exports.createAlsintan = (req, res) => {
     const {
         kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri,
