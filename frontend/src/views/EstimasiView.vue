@@ -20,19 +20,17 @@ const tarifPerHa = ref(1500000);
 
 const displayTarif = computed({
     get: () => {
-        // Tampilkan dengan format titik (id-ID)
         if (!tarifPerHa.value) return '0';
         return Number(tarifPerHa.value).toLocaleString('id-ID');
     },
     set: (val) => {
-        // Hapus semua karakter selain angka (titik otomatis hilang saat disimpan)
         const numericString = val.replace(/\D/g, '');
         tarifPerHa.value = Number(numericString);
     }
 });
 
 const dailyStats = ref({});
-const lastMqttData = ref({}); // [BARU] Menyimpan titik terakhir untuk hitung selisih
+const lastMqttData = ref({}); 
 let mqttClient = null;
 
 const getTodayDate = () => {
@@ -45,7 +43,7 @@ const getTodayDate = () => {
 
 const selectedDate = ref(getTodayDate());
 
-// --- ALGORITMA HAVERSINE (PENGGANTI LEAFLET) ---
+// --- ALGORITMA HAVERSINE ---
 const hitungJarakHaversine = (lat1, lon1, lat2, lon2) => {
     const toRad = (value) => (value * Math.PI) / 180;
     const R = 6371000; 
@@ -61,7 +59,6 @@ const hitungJarakHaversine = (lat1, lon1, lat2, lon2) => {
     return R * c; 
 };
 
-// --- FUNGSI UTAMA: MENGHITUNG HM & JARAK DARI DATABASE ---
 const fetchAndCalculateHistory = async (item) => {
     try {
         const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${item.alsintan_id}/riwayat?tanggal=${selectedDate.value}`);
@@ -113,9 +110,6 @@ const calculateAllEstimations = async () => {
     }
 };
 
-// =====================================================================
-// [BARU] FUNGSI KENDALI ARGO REAL-TIME MELALUI MQTT
-// =====================================================================
 const connectMqtt = () => {
     const options = { host: MQTT_HOST, port: MQTT_PORT, protocol: 'wss', path: '/mqtt', username: MQTT_USERNAME, password: MQTT_PASSWORD };
     mqttClient = mqtt.connect(options);
@@ -123,14 +117,12 @@ const connectMqtt = () => {
     mqttClient.on('connect', () => { mqttClient.subscribe(MQTT_TOPIC); });
 
     mqttClient.on('message', (topic, message) => {
-        // PERATURAN MUTLAK: Argo hanya berjalan jika kalender di-set ke Hari Ini!
         if (selectedDate.value !== getTodayDate()) return;
 
         try {
             const data = JSON.parse(message.toString());
             const id = data.id;
             
-            // Pastikan alat ada di dalam tabel dailyStats
             if (!dailyStats.value[id]) return;
 
             const vAki = parseFloat(data.V) || 0;
@@ -141,7 +133,6 @@ const connectMqtt = () => {
             const isMesinOn = vAki > 13.4;
             const isGpsValid = lat && lng && !isNaN(lat) && !isNaN(lng) && Math.abs(lat) > 1 && Math.abs(lng) > 1;
 
-            // Jika ini titik pertama, jadikan patokan (baseline) lalu keluar
             if (!lastMqttData.value[id]) {
                 lastMqttData.value[id] = { time: currentTime, lat: lat, lng: lng, status: isMesinOn ? 'ON' : 'OFF' };
                 return; 
@@ -149,28 +140,23 @@ const connectMqtt = () => {
 
             const prev = lastMqttData.value[id];
 
-            // 1. INJEKSI PENAMBAHAN ARGO JIKA SEBELUMNYA MESIN MENYALA
             if (prev.status === 'ON') {
-                // Tambah Jam Kerja (HM)
                 const diffMs = currentTime - prev.time;
-                if (diffMs > 0 && diffMs <= 60000) { // Toleransi wajar 1 menit per tick
+                if (diffMs > 0 && diffMs <= 60000) { 
                     dailyStats.value[id].hm += (diffMs / 3600000);
                 }
 
-                // Tambah Jarak Tempuh
                 if (isGpsValid && prev.lat && prev.lng) {
                     const dist = hitungJarakHaversine(prev.lat, prev.lng, lat, lng);
-                    // Filter drift satelit (0.5m hingga 50m per tick wajar)
                     if (dist > 0.5 && dist < 50) {
                         dailyStats.value[id].distance += dist;
                     }
                 }
             }
 
-            // 2. PERBARUI MEMORI TITIK TERAKHIR
             lastMqttData.value[id] = {
                 time: currentTime,
-                lat: isGpsValid ? lat : prev.lat, // Tahan kordinat lama jika GPS blank spot
+                lat: isGpsValid ? lat : prev.lat, 
                 lng: isGpsValid ? lng : prev.lng,
                 status: isMesinOn ? 'ON' : 'OFF'
             };
@@ -203,7 +189,7 @@ const saveTarif = async () => {
     isSavingTarif.value = true;
     try {
         await axios.put(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`, { nilai: tarifPerHa.value });
-        Swal.fire({ icon: 'success', title: 'Berhasil!', text: 'Tarif dasar telah dikunci untuk seluruh sistem.', confirmButtonColor: '#198754' });
+        Swal.fire({ icon: 'success', title: 'Berhasil!', text: 'Tarif dasar telah diperbarui.', confirmButtonColor: '#198754' });
     } catch (e) {
         Swal.fire('Error', 'Gagal menyimpan perubahan tarif', 'error');
     } finally {
@@ -246,7 +232,7 @@ const totalOmzetSemuaAlat = computed(() => {
 
 watch(selectedDate, () => {
     if (items.value.length > 0) {
-        lastMqttData.value = {}; // Hapus memori titik sebelumnya agar tak loncat
+        lastMqttData.value = {}; 
         calculateAllEstimations();
     }
 });
@@ -256,11 +242,11 @@ onMounted(() => {
     if (session) userRole.value = session.role;
     fetchTarif(); 
     fetchData();
-    connectMqtt(); // Mengaktifkan listener real-time
+    connectMqtt(); 
 });
 
 onUnmounted(() => {
-    if (mqttClient) mqttClient.end(); // Mematikan koneksi saat pindah halaman
+    if (mqttClient) mqttClient.end(); 
 });
 </script>
 
@@ -303,14 +289,14 @@ onUnmounted(() => {
                             <!-- Bagian Rp -->
                             <span class="input-group-text bg-white border-0 text-muted fw-bold pe-2">Rp</span>
                             
-                            <!-- Bagian Input -->
+                            <!-- [DIPERBARUI] Bagian Input Terbuka hanya untuk UPJA -->
                             <input v-model="displayTarif" type="text" 
                                 class="form-control fw-bold border-0 text-end text-primary"
                                 style="font-size: 1.15rem; box-shadow: none;"
-                                :disabled="!['super_admin'].includes(userRole)">
+                                :disabled="userRole !== 'upja'">
                                 
-                            <!-- Bagian Tombol -->
-                            <button v-if="['super_admin'].includes(userRole)" @click="saveTarif" 
+                            <!-- [DIPERBARUI] Bagian Tombol Muncul hanya untuk UPJA -->
+                            <button v-if="userRole === 'upja'" @click="saveTarif" 
                                     class="btn btn-primary fw-bold px-4 border-0 z-0" :disabled="isSavingTarif">
                                 <span v-if="isSavingTarif" class="spinner-border spinner-border-sm me-1"></span>
                                 <i v-else class="bi bi-floppy-fill me-1"></i> Simpan
@@ -318,11 +304,12 @@ onUnmounted(() => {
                             
                         </div>
                         
-                        <div v-if="!['super_admin'].includes(userRole)" class="alert alert-warning py-2 small mb-0">
-                            <i class="bi bi-lock-fill"></i> Hanya <b>BP Mektan Jabar</b> yang dapat mengubah harga tarif
+                        <!-- [DIPERBARUI] Notifikasi Peringatan Akses -->
+                        <div v-if="userRole !== 'upja'" class="alert alert-warning py-2 small mb-0 mt-2">
+                            <i class="bi bi-lock-fill"></i> Hak akses tarif sewa dikelola sepenuhnya oleh pihak <b>UPJA</b>.
                         </div>
-                        <small v-else class="text-muted" style="font-size:11px;">
-                            <i class="bi bi-info-circle"></i> Perubahan tarif akan langsung tersimpan ke server dan berlaku global.
+                        <small v-else class="text-muted mt-2 d-block" style="font-size:11px;">
+                            <i class="bi bi-info-circle"></i> Tentukan harga sewa per hektar yang berlaku untuk kelompok tani Anda.
                         </small>
                     </div>
                 </div>

@@ -48,20 +48,6 @@ const historyCoordsPast = ref([]);
 const totalJarakPast = ref(0);
 const dailyHMPast = ref(0); 
 
-const tarifPerHa = ref(1500000); 
-const isSavingTarif = ref(false);
-
-const displayTarif = computed({
-    get: () => {
-        if (!tarifPerHa.value) return '0';
-        return Number(tarifPerHa.value).toLocaleString('id-ID');
-    },
-    set: (val) => {
-        const numericString = val.replace(/\D/g, '');
-        tarifPerHa.value = Number(numericString);
-    }
-});
-
 let map = null;
 let polylineLayer = null; 
 let marker = null;
@@ -79,7 +65,7 @@ const getTractorClass = (status) => {
 };
 
 // ===================================================================
-// FUNGSI BARU: MEMORI LOKASI (Mencegah Peta Loncat ke Bandung)
+// FUNGSI MEMORI LOKASI (Mencegah Peta Loncat)
 // ===================================================================
 const saveLastKnownLocation = (lat, lng) => {
     if (Math.abs(lat) > 1 && Math.abs(lng) > 1) {
@@ -88,7 +74,6 @@ const saveLastKnownLocation = (lat, lng) => {
 };
 
 const getLastKnownLocation = () => {
-    // Prioritas 1: Memori Lokal di Browser
     const saved = sessionStorage.getItem(`last_loc_alsintan_${id}`);
     if (saved) {
         try {
@@ -97,59 +82,11 @@ const getLastKnownLocation = () => {
         } catch (e) {}
     }
     
-    // Prioritas 2: Dari Database (Jika MQTT worker sempat update tabel alsintan)
     if (infoAlat.value && infoAlat.value.latitude && Math.abs(infoAlat.value.latitude) > 1) {
         return [parseFloat(infoAlat.value.latitude), parseFloat(infoAlat.value.longitude)];
     }
     
-    // Prioritas 3: Titik Default Balai Mekanisasi Jabar (Hanya jika alat baru pertama kali dinyalakan)
-    return [-6.9175, 107.6191];
-};
-
-const fetchTarif = async () => {
-    try {
-        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`);
-        tarifPerHa.value = Number(res.data.nilai);
-    } catch (e) {}
-};
-
-const saveTarif = async () => {
-    isSavingTarif.value = true;
-    try {
-        await axios.put(`${import.meta.env.VITE_API_BASE_URL}/settings/tarif`, { nilai: tarifPerHa.value });
-        
-        // [DIPERBARUI] Konfigurasi Notifikasi Toast yang Compact & Elegan
-        Swal.fire({ 
-            toast: true, 
-            position: 'top', 
-            icon: 'success', 
-            title: 'Tarif global diperbarui!', 
-            showConfirmButton: false, 
-            timer: 2500,
-            timerProgressBar: true,       
-            width: 'auto',                
-            padding: '0.6em 1.2em',       
-            color: '#198754',             
-            customClass: {
-                popup: 'shadow-sm border border-success border-opacity-25 rounded-4' // Integrasi dengan class Bootstrap
-            },
-            showClass: { popup: `
-            animate__animated
-            animate__fadeIn 
-            animate__faster
-            ` },
-            hideClass: { popup: `
-            animate__animated
-            animate__fadeOut
-            animate__faster
-            ` }
-        });
-        
-    } catch (e) {
-        Swal.fire('Error', 'Gagal menyimpan tarif', 'error');
-    } finally { 
-        isSavingTarif.value = false; 
-    }
+    return [-6.9175, 107.6191]; // Default Jabar
 };
 
 const fetchData = async () => {
@@ -181,7 +118,6 @@ const fetchData = async () => {
                     status: h.status_mesin || 'OFF'
                 }));
                 
-            // Simpan posisi ke memori jika data riwayat tersedia
             if (historyCoordsLive.value.length > 0) {
                 const last = historyCoordsLive.value[historyCoordsLive.value.length - 1];
                 saveLastKnownLocation(last.lat, last.lng);
@@ -206,7 +142,6 @@ const initMap = () => {
     if (!container) return;
     if (map) { map.remove(); map = null; }
 
-    // PERBAIKAN: Gunakan fungsi memori jika array riwayat kosong
     const startPos = historyCoordsLive.value.length > 0 
         ? [historyCoordsLive.value[historyCoordsLive.value.length - 1].lat, historyCoordsLive.value[historyCoordsLive.value.length - 1].lng] 
         : getLastKnownLocation();
@@ -373,7 +308,7 @@ const connectMqtt = () => {
                 const isGpsValid = lat && long && !isNaN(lat) && !isNaN(long) && Math.abs(lat) > 1 && Math.abs(long) > 1;
                 
                 if (isGpsValid) {
-                    saveLastKnownLocation(lat, long); // Perekaman memori GPS
+                    saveLastKnownLocation(lat, long); 
 
                     const newPoint = { lat: lat, lng: long, status: statusMesinBaru };
 
@@ -418,7 +353,6 @@ const formatHM = (decimalHours) => {
     return `${h}j ${m}m ${s}d`;
 };
 
-const estimasiBiaya = computed(() => luasHektar.value * tarifPerHa.value);
 const selisihDrift = computed(() => Math.max(0, jarakMentahSensor.value - jarakBersihValid.value));
 
 const resetArgo = async () => {
@@ -429,7 +363,6 @@ const resetArgo = async () => {
             jarakMentahSensor.value = 0; 
             jarakBersihValid.value = 0; 
             
-            // PERBAIKAN: Jika ditekan, jangan hapus semua! Sisakan 1 titik terakhir sebagai penahan peta
             if (historyCoordsLive.value.length > 0) {
                 const titikTerakhir = historyCoordsLive.value[historyCoordsLive.value.length - 1];
                 historyCoordsLive.value = [titikTerakhir]; 
@@ -454,7 +387,8 @@ onMounted(() => {
     const session = JSON.parse(sessionStorage.getItem('user'));
     if (session) userRole.value = session.role;
     
-    fetchTarif(); fetchData(); connectMqtt(); 
+    fetchData(); 
+    connectMqtt(); 
     syncTimer = setInterval(fetchCleanDataOnly, 10000);
 });
 
@@ -487,6 +421,8 @@ onUnmounted(() => {
     </div>
 
     <div class="row g-3 flex-grow-1 overflow-hidden pb-2">
+      
+      <!-- SISI KIRI (PETA) -->
       <div class="col-lg-8 h-100">
         <div class="card shadow-sm border-0 h-100 position-relative overflow-hidden">
           
@@ -518,12 +454,13 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- SISI KANAN (PANEL TELEMETRI) -->
       <div class="col-lg-4 h-100">
         <div class="card border-0 shadow-sm h-100 d-flex flex-column">
           <div class="card-header py-3" :class="activeTab === 'LIVE' ? 'bg-primary text-white' : 'bg-danger text-white'">
              <h6 class="mb-0 fw-bold text-center">
-                 <i class="bi" :class="activeTab === 'LIVE' ? 'bi-cpu-fill' : 'bi-receipt'"></i> 
-                 {{ activeTab === 'LIVE' ? 'PANEL TELEMETRI LIVE' : 'PEMBUKUAN & ESTIMASI' }}
+                 <i class="bi" :class="activeTab === 'LIVE' ? 'bi-cpu-fill' : 'bi-geo-alt-fill'"></i> 
+                 {{ activeTab === 'LIVE' ? 'PANEL TELEMETRI LIVE' : 'DATA RIWAYAT KERJA' }}
              </h6>
           </div>
           
@@ -534,33 +471,36 @@ onUnmounted(() => {
                 <input type="date" v-model="historyDate" class="form-control">
             </div>
 
+            <!-- KARTU LUAS TERGARAP (Diperbesar agar memenuhi ruang) -->
             <div class="card border-0 shadow-sm bg-white flex-grow-1 d-flex flex-column justify-content-center">
               <div class="card-body text-center d-flex flex-column justify-content-center">
                 <span class="text-muted small text-uppercase fw-bold">Estimasi Luas Tergarap</span>
-                <h2 class="display-4 fw-bold my-2" :class="activeTab === 'LIVE' ? 'text-primary' : 'text-danger'">
-                  {{ luasHektar.toFixed(3) }} <span class="fs-6 text-muted">Ha</span>
-                </h2>
+                <h1 class="display-3 fw-bold my-3" :class="activeTab === 'LIVE' ? 'text-primary' : 'text-danger'">
+                  {{ luasHektar.toFixed(3) }} <span class="fs-5 text-muted">Ha</span>
+                </h1>
                 
-                <div v-if="activeTab === 'LIVE'" class="border-top pt-2 mt-2 text-start">
-                    <div class="d-flex justify-content-between small mb-1">
+                <div v-if="activeTab === 'LIVE'" class="border-top pt-3 mt-1 text-start">
+                    <div class="d-flex justify-content-between small mb-2">
                         <span class="text-muted">Jarak Terekam (Map):</span><span class="fw-bold">{{ (jarakMentahSensor / 1000).toFixed(2) }} km</span>
                     </div>
-                    <div class="d-flex justify-content-between small mb-1">
+                    <div class="d-flex justify-content-between small mb-2">
                         <span class="text-muted">Jarak Bersih (Sistem):</span><span class="fw-bold text-success">{{ (jarakBersihValid / 1000).toFixed(2) }} km</span>
                     </div>
-                    <div class="d-flex justify-content-between small bg-danger bg-opacity-10 px-2 py-1 rounded mt-2">
+                    <div class="d-flex justify-content-between small bg-danger bg-opacity-10 px-2 py-2 rounded mt-2">
                         <span class="text-danger fw-bold"><i class="bi bi-funnel-fill"></i> GPS Drift Dibuang:</span>
                         <span class="text-danger fw-bold">{{ selisihDrift.toFixed(1) }} meter</span>
                     </div>
                 </div>
-                <small v-else class="text-muted border-top pt-2 d-block">Jarak Kerja Aktif: {{ (totalJarakPast / 1000).toFixed(2) }} km</small>
+                <small v-else class="text-muted border-top pt-3 mt-1 d-block fw-bold">Total Jarak Kerja Aktif: {{ (totalJarakPast / 1000).toFixed(2) }} km</small>
               </div>
             </div>
 
+            <!-- STATUS HDOP -->
             <div v-if="activeTab === 'LIVE'" class="d-flex justify-content-between px-2 small flex-shrink-0">
                 <span class="text-muted fw-bold"><i class="bi bi-geo text-danger"></i> HDOP: <span :class="hdop > 250 ? 'text-danger' : 'text-success'">{{ (hdop / 100).toFixed(2) }}</span></span>
             </div>
 
+            <!-- MINI CARDS SENSOR (LIVE) -->
             <div v-if="activeTab === 'LIVE'" class="row g-2 flex-shrink-0">
               <div class="col-4">
                   <div class="card border-0 shadow-sm bg-white h-100">
@@ -588,6 +528,7 @@ onUnmounted(() => {
               </div>
             </div>
 
+            <!-- MINI CARDS SENSOR (HISTORY) -->
             <div v-if="activeTab === 'HISTORY'" class="row g-2 flex-shrink-0">
               <div class="col-6">
                   <div class="card border-0 shadow-sm bg-danger bg-opacity-10 border-danger h-100">
@@ -606,36 +547,12 @@ onUnmounted(() => {
                   </div>
               </div>
             </div>
-
-<div class="card border border-warning shadow-sm bg-warning bg-opacity-10 flex-shrink-0 mt-1">
-                <div class="card-body">
-                    <label class="small text-muted fw-bold d-block mb-1">Tarif Jasa per Hektar</label>
-                
-                    <!-- [DIPERBARUI] Input Group Menyatu & Transparan -->
-                    <div class="input-group input-group-sm mb-3 shadow-sm rounded overflow-hidden bg-white">
-                        <span class="input-group-text bg-transparent border-0 text-muted fw-bold ps-2 pe-1">Rp</span>
-                        
-                        <input type="text" v-model="displayTarif" 
-                            class="form-control fw-bold border-0 text-dark bg-transparent"
-                            style="box-shadow: none;"
-                            :disabled="!['super_admin'].includes(userRole)">
-                        
-                        <button v-if="['super_admin'].includes(userRole)" @click="saveTarif" 
-                                class="btn btn-warning fw-bold px-3 border-0 z-0" 
-                                :disabled="isSavingTarif" title="Simpan Tarif Global">
-                            <span v-if="isSavingTarif" class="spinner-border spinner-border-sm text-dark"></span>
-                            <i v-else class="bi bi-check-lg text-dark"></i>
-                        </button>
-                    </div>
-                
-                    <div class="d-flex justify-content-between align-items-center border-top border-warning pt-2">
-                        <span class="fw-bold text-warning-emphasis">Total Tagihan</span>
-                        <span class="h5 mb-0 fw-bold text-dark">Rp {{ Math.round(estimasiBiaya).toLocaleString('id-ID') }}</span>
-                    </div>
-                </div>
-            </div>
             
-            <button v-if="activeTab === 'LIVE'" @click="resetArgo" class="btn btn-dark w-100 shadow-sm py-2 flex-shrink-0 mt-2"><i class="bi bi-arrow-repeat"></i> Reset Argo</button>
+            <!-- TOMBOL RESET ARGO -->
+            <button v-if="activeTab === 'LIVE'" @click="resetArgo" class="btn btn-dark w-100 shadow-sm py-2 flex-shrink-0 mt-auto">
+                <i class="bi bi-arrow-repeat"></i> Reset Argo
+            </button>
+
           </div>
         </div>
       </div>

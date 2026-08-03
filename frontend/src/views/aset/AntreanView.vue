@@ -62,8 +62,33 @@ const handleACC = async (item) => {
             
             await axios.post(`${import.meta.env.VITE_API_BASE_URL}/pengajuan/admin/acc/${item.id_pengajuan}`, formValues);
             
-            Swal.fire('Berhasil!', 'Surat jalan terbit. Status traktor otomatis menjadi Sedang Dipinjam.', 'success');
-            fetchAntrean(); // Refresh data
+            fetchAntrean(); // Refresh data antrean di latar belakang
+
+            // [BARU] Membuat Data String untuk QR Code
+            const qrData = `BA:${formValues.nomor_ba} | Alat:${item.nama_alat} | Peminjam:${item.nama_peminjam}`;
+            // Menggunakan layanan API Publik untuk generate QR Code secara instan
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
+
+            // [BARU] Menampilkan Pop-Up Surat Jalan Digital
+            Swal.fire({
+                title: 'Surat Jalan Digital Terbit!',
+                html: `
+                    <div class="text-center">
+                        <p class="text-muted small mb-3">Tunjukkan QR Code ini kepada petugas gerbang balai.</p>
+                        <img src="${qrUrl}" class="border p-2 rounded shadow-sm mb-3" alt="QR Code Surat Jalan">
+                        <div class="bg-light p-2 rounded text-start small border border-success border-opacity-25">
+                            <b>No. BA:</b> ${formValues.nomor_ba}<br>
+                            <b>Peminjam:</b> ${item.nama_peminjam}<br>
+                            <b>Alat:</b> ${item.nama_alat} (${item.kode_perangkat})<br>
+                            <b>Estimasi Jasa:</b> Rp ${Number(formValues.biaya_jasa || 0).toLocaleString('id-ID')}
+                        </div>
+                    </div>
+                `,
+                icon: 'success',
+                confirmButtonText: '<i class="bi bi-check-lg"></i> Tutup & Selesai',
+                confirmButtonColor: '#198754'
+            });
+
         } catch (error) {
             Swal.fire('Gagal', error.response?.data?.message || 'Terjadi kesalahan.', 'error');
         }

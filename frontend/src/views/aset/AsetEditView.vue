@@ -11,9 +11,11 @@ const id = route.params.id;
 
 const form = ref({
   kode_perangkat: '',
+  kode_unit: '',
   nama_alat: '',
   kategori_alat: '',
   merk_alat: '',
+  nomor_mesin: '',
   nomor_seri: '',
   tahun_penerimaan: '', 
   status_sensor: 'Normal',
@@ -29,8 +31,6 @@ const previewGambar = ref(null);
 const gambarLama = ref(''); 
 const isSubmitting = ref(false);
 const isLoading = ref(true);
-
-// [BARU] Referensi untuk input file agar bisa di-reset
 const fileInputRef = ref(null);
 
 const formatKodePerangkat = () => {
@@ -42,11 +42,14 @@ const fetchDetail = async () => {
     const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}`);
     const data = response.data;
     
+    // [DIPERBARUI] Menarik data kode_unit dan nomor_mesin dari API
     form.value = {
         kode_perangkat: data.kode_perangkat,
+        kode_unit: data.kode_unit || '',
         nama_alat: data.nama_alat,
         kategori_alat: data.kategori_alat,
         merk_alat: data.merk_alat,
+        nomor_mesin: data.nomor_mesin || '',
         nomor_seri: data.nomor_seri,
         tahun_penerimaan: data.tahun_penerimaan || '', 
         kondisi_fisik: data.kondisi_fisik || 'Baik', 
@@ -56,7 +59,6 @@ const fetchDetail = async () => {
         kapasitas_lahan: data.kapasitas_lahan,
         lebar_implemen: data.lebar_implemen || 1.89
     };
-    
     gambarLama.value = data.gambar;
   } catch (error) {
     Swal.fire('Error', 'Gagal mengambil data aset.', 'error');
@@ -74,31 +76,24 @@ const handleFileUpload = (event) => {
   }
 };
 
-// [BARU] Fungsi untuk membatalkan pilihan foto baru
 const hapusFoto = () => {
     fileGambar.value = null;
     previewGambar.value = null;
-    if (fileInputRef.value) {
-        fileInputRef.value.value = ''; // Me-reset input form
-    }
+    if (fileInputRef.value) fileInputRef.value.value = ''; 
 };
 
 const submitForm = async () => {
   isSubmitting.value = true;
-  
-  Swal.fire({
-      title: 'Memperbarui Aset...',
-      text: 'Menyinkronkan data ke server.',
-      allowOutsideClick: false,
-      didOpen: () => { Swal.showLoading(); }
-  });
+  Swal.fire({ title: 'Memperbarui Aset...', text: 'Menyinkronkan data ke server.', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
   try {
     const formData = new FormData();
     formData.append('kode_perangkat', form.value.kode_perangkat);
+    formData.append('kode_unit', form.value.kode_unit);
     formData.append('nama_alat', form.value.nama_alat);
     formData.append('kategori_alat', form.value.kategori_alat);
     formData.append('merk_alat', form.value.merk_alat);
+    formData.append('nomor_mesin', form.value.nomor_mesin);
     formData.append('nomor_seri', form.value.nomor_seri);
     formData.append('tahun_penerimaan', form.value.tahun_penerimaan); 
     formData.append('kondisi_fisik', form.value.kondisi_fisik); 
@@ -108,64 +103,50 @@ const submitForm = async () => {
     formData.append('kapasitas_lahan', form.value.kapasitas_lahan);
     formData.append('lebar_implemen', form.value.lebar_implemen);
 
-    if (fileGambar.value) {
-      formData.append('gambar', fileGambar.value);
-    }
+    if (fileGambar.value) formData.append('gambar', fileGambar.value);
 
     await axios.put(`${import.meta.env.VITE_API_BASE_URL}/alsintan/${id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
 
-    Swal.fire({
-        icon: 'success',
-        title: 'Diperbarui!',
-        text: 'Data aset berhasil diperbarui.',
-        confirmButtonColor: '#198754'
-    }).then(() => {
-        // [DIPERBARUI] Menggunakan replace agar history tidak menumpuk
-        router.replace(`/aset/${id}`); 
-    });
+    Swal.fire({ icon: 'success', title: 'Diperbarui!', text: 'Data aset berhasil diperbarui.', confirmButtonColor: '#198754' })
+    .then(() => router.replace(`/aset/${id}`));
 
   } catch (error) {
-    console.error("Gagal update:", error);
     Swal.fire('Gagal!', 'Terjadi kesalahan saat menyimpan perubahan.', 'error');
   } finally {
     isSubmitting.value = false;
   }
 };
 
-onMounted(() => {
-  fetchDetail();
-});
+onMounted(() => { fetchDetail(); });
 </script>
 
 <template>
   <div class="container-fluid pb-4">
-    
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h2 class="fw-bold text-dark mb-0">✏️ Edit Aset</h2>
-      <button @click="router.back()" class="btn btn-outline-secondary shadow-sm">
-        <i class="bi bi-arrow-left"></i> Kembali
-      </button>
+      <button @click="router.back()" class="btn btn-outline-secondary shadow-sm"><i class="bi bi-arrow-left"></i> Kembali</button>
     </div>
 
-    <div v-if="isLoading" class="text-center py-5">
-        <div class="spinner-border text-primary"></div>
-        <p class="mt-2 text-muted fw-bold">Memuat konfigurasi alat...</p>
-    </div>
+    <div v-if="isLoading" class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted fw-bold">Memuat konfigurasi alat...</p></div>
 
     <div v-else class="card border-0 shadow-sm">
       <div class="card-body p-4">
-        
         <form @submit.prevent="submitForm">
           <div class="row g-4">
-            
             <div class="col-md-6 border-end pe-md-4">
               <h5 class="text-primary mb-3 fw-bold"><i class="bi bi-cpu me-2"></i>Informasi Perangkat</h5>
               
-              <div class="mb-3">
-                <label class="form-label fw-bold">Kode Perangkat (ID IoT)</label>
-                <input v-model="form.kode_perangkat" @input="formatKodePerangkat" type="text" class="form-control bg-light text-primary fw-bold" required>
+              <div class="row">
+                  <div class="col-md-7 mb-3">
+                      <label class="form-label fw-bold">Kode Perangkat (ID IoT)</label>
+                      <input v-model="form.kode_perangkat" @input="formatKodePerangkat" type="text" class="form-control bg-light text-primary fw-bold" required>
+                  </div>
+                  <div class="col-md-5 mb-3">
+                      <label class="form-label fw-bold text-success">Kode Unit Aset</label>
+                      <input v-model="form.kode_unit" type="text" class="form-control border-success">
+                  </div>
               </div>
 
               <div class="mb-3">
@@ -194,8 +175,12 @@ onMounted(() => {
               </div>
 
               <div class="row">
-                  <div class="col-md-8 mb-3">
-                      <label class="form-label">Nomor Seri Mesin/Rangka</label>
+                  <div class="col-md-4 mb-3">
+                      <label class="form-label">No. Mesin</label>
+                      <input v-model="form.nomor_mesin" type="text" class="form-control">
+                  </div>
+                  <div class="col-md-4 mb-3">
+                      <label class="form-label">No. Rangka (Seri)</label>
                       <input v-model="form.nomor_seri" type="text" class="form-control">
                   </div>
                   <div class="col-md-4 mb-3">
@@ -207,7 +192,7 @@ onMounted(() => {
 
             <div class="col-md-6 ps-md-4">
               <h5 class="text-primary mb-3 fw-bold"><i class="bi bi-sliders me-2"></i>Status & Konfigurasi</h5>
-
+              
               <div class="row">
                   <div class="col-md-6 mb-3">
                       <label class="form-label">Status Penugasan</label>
@@ -235,7 +220,6 @@ onMounted(() => {
                           <span class="input-group-text bg-light text-muted">Ha / Hari</span>
                       </div>
                   </div>
-
                   <div class="col-md-6 mb-3">
                       <label class="form-label text-primary small fw-bold">Lebar Implemen / Bajak</label>
                       <div class="input-group border-primary rounded">
@@ -247,33 +231,15 @@ onMounted(() => {
 
               <div class="mb-3">
                 <label class="form-label">Foto Alat <span class="text-muted small fw-normal">(Biarkan kosong jika tak diganti)</span></label>
-                <!-- [DIPERBARUI] Tambahkan ref ke input file -->
                 <input ref="fileInputRef" @change="handleFileUpload" type="file" class="form-control" accept="image/*">
-                
                 <div class="mt-3 text-center rounded p-3 position-relative" style="border: 2px dashed #dee2e6; background-color: #f8f9fa;">
                   <span class="badge bg-secondary position-absolute top-0 start-0 m-2">Preview Gambar</span>
-                  
-                  <!-- [DIPERBARUI] Layout preview gambar baru dengan tombol X -->
                   <div v-if="previewGambar" class="position-relative d-inline-block mt-3">
                       <img :src="previewGambar" class="img-fluid rounded shadow-sm" style="max-height: 160px;">
-                      <button @click="hapusFoto" type="button" 
-                              class="btn btn-danger position-absolute top-0 end-0 m-2 rounded-circle shadow d-flex justify-content-center align-items-center" 
-                              style="width: 32px; height: 32px; padding: 0;" 
-                              title="Batal ubah foto">
-                          <i class="bi bi-x-lg" style="font-size: 14px;"></i>
-                      </button>
+                      <button @click="hapusFoto" type="button" class="btn btn-danger position-absolute top-0 end-0 m-2 rounded-circle shadow d-flex justify-content-center align-items-center" style="width: 32px; height: 32px; padding: 0;"><i class="bi bi-x-lg"></i></button>
                   </div>
-                  
-                  <!-- [DIPERBARUI] Gambar lama dari database -->
-                  <img v-else-if="gambarLama" 
-                       :src="gambarLama.startsWith('http') ? gambarLama : `${IMAGE_BASE_URL}/${gambarLama}`" 
-                       class="img-fluid rounded shadow-sm mt-3" style="max-height: 160px;" 
-                       @error="$event.target.style.display='none'">
-                       
-                  <div v-else class="text-muted py-3 mt-3">
-                      <i class="bi bi-camera fs-1 d-block mb-1 opacity-50"></i>
-                      <small>Belum ada foto</small>
-                  </div>
+                  <img v-else-if="gambarLama" :src="gambarLama.startsWith('http') ? gambarLama : `${IMAGE_BASE_URL}/${gambarLama}`" class="img-fluid rounded shadow-sm mt-3" style="max-height: 160px;" @error="$event.target.style.display='none'">
+                  <div v-else class="text-muted py-3 mt-3"><i class="bi bi-camera fs-1 d-block mb-1 opacity-50"></i><small>Belum ada foto</small></div>
                 </div>
               </div>
 
@@ -282,19 +248,14 @@ onMounted(() => {
                 <textarea v-model="form.deskripsi" class="form-control" rows="2"></textarea>
               </div>
             </div>
-
           </div>
-
           <div class="d-flex justify-content-end mt-4 pt-3 border-top bg-white">
             <button type="button" @click="router.back()" class="btn btn-light border me-2 px-4 text-muted">Batal</button>
             <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm" :disabled="isSubmitting">
-              <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
-              {{ isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan' }}
+              <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>{{ isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan' }}
             </button>
           </div>
-
         </form>
-
       </div>
     </div>
   </div>

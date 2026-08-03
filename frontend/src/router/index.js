@@ -82,13 +82,18 @@ const router = createRouter({
       path: '/aset/tambah',
       name: 'aset-add',
       component: () => import('../views/aset/AsetAddView.vue'),
-      meta: { requiresAuth: true, allowedRoles: ['super_admin'] }
+      meta: { requiresAuth: true, allowedRoles: ['mektan'] }
     },
     {
       path: '/aset/edit/:id',
       name: 'aset-edit',
       component: () => import('../views/aset/AsetEditView.vue'),
-      meta: { requiresAuth: true, allowedRoles: ['super_admin'] }
+      meta: { requiresAuth: true, allowedRoles: ['mektan'] }
+    },
+    {
+    path: '/verifikasi-akun',
+    name: 'verifikasi-akun',
+    component: () => import('../views/VerifikasiAkunView.vue')
     }
   ]
 })

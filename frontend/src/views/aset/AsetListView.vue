@@ -63,15 +63,25 @@ const goToDetail = (id) => router.push({ name: 'aset-detail', params: { id } });
 const goToMonitoring = (id) => router.push({ name: 'monitoring-detail', params: { id } });
 
 // =====================================================================
-// FUNGSI BARU: FORMULIR PENGAJUAN PUBLIK (PETANI TANPA LOGIN)
+// [DIPERBARUI] FORMULIR PENGAJUAN (DROPDOWN API + TITLE CASE + HYBRID DESA)
 // =====================================================================
 const ajukanPinjaman = async (item) => {
+    const session = JSON.parse(sessionStorage.getItem('user')) || {};
+    const namaAkunUPJA = session.nama || session.nama_lengkap || session.username || '';
+
+    // Fungsi Pengubah Huruf Kapital menjadi Title Case (Huruf depan besar)
+    const toTitleCase = (str) => {
+        return str.toLowerCase().split(' ').map(word => {
+            return word.charAt(0).toUpperCase() + word.slice(1);
+        }).join(' ');
+    };
+
     const { value: formValues } = await Swal.fire({
         title: `Form Reservasi Alsintan<br><span class="text-primary fs-5">${item.nama_alat}</span>`,
         html: `
             <div class="text-start" style="font-size: 0.9rem;">
                 <div class="alert alert-info py-2 small mb-3">
-                    <i class="bi bi-info-circle-fill me-1"></i> Admin Balai akan menghubungi No. WhatsApp Anda untuk konfirmasi persetujuan alat.
+                    <i class="bi bi-info-circle-fill me-1"></i>Mektan akan memverifikasi jadwal dan menghubungi No. WhatsApp Anda
                 </div>
                 
                 <div class="row g-2 mb-2">
@@ -79,23 +89,40 @@ const ajukanPinjaman = async (item) => {
                     <div class="col-6"><label class="fw-bold small">Rencana Selesai <span class="text-danger">*</span></label><input type="date" id="swal-akhir" class="form-control form-control-sm" required></div>
                 </div>
                 <hr class="my-2">
+                
                 <div class="mb-2">
-                    <label class="fw-bold small text-primary">Nama Lengkap Penanggung Jawab <span class="text-danger">*</span></label>
-                    <input type="text" id="swal-nama" class="form-control form-control-sm" placeholder="Sesuai KTP" required>
+                    <label class="fw-bold small text-primary"> Poktan/Gapoktan/UPJA/Petani <span class="text-danger">*</span></label>
+                    <input type="text" id="swal-poktan" class="form-control form-control-sm bg-light text-muted fw-bold" value="${namaAkunUPJA}" readonly>
                 </div>
+
+                <div class="mb-2">
+                    <label class="fw-bold small text-primary">Nama Individu Penanggung Jawab <span class="text-danger">*</span></label>
+                    <input type="text" id="swal-nama" class="form-control form-control-sm" placeholder="Sesuai KTP (Misal: Ujang)" required>
+                </div>
+
                 <div class="row g-2 mb-2">
-                    <div class="col-6"><label class="fw-bold small text-primary">Jabatan</label><input type="text" id="swal-jabatan" class="form-control form-control-sm" placeholder="Misal: Ketua"></div>
-                    <div class="col-6"><label class="fw-bold small text-primary">No. WhatsApp Aktif <span class="text-danger">*</span></label><input type="text" id="swal-kontak" class="form-control form-control-sm" placeholder="08..." required></div>
+                    <div class="col-6"><label class="fw-bold small text-primary">Jabatan</label><input type="text" id="swal-jabatan" class="form-control form-control-sm" placeholder="Misal: Operator"></div>
+                    <div class="col-6"><label class="fw-bold small text-primary">WhatsApp Aktif <span class="text-danger">*</span></label><input type="text" id="swal-kontak" class="form-control form-control-sm" placeholder="08..." required></div>
                 </div>
-                <div class="mb-2">
-                    <label class="fw-bold small text-primary">Nama Kelompok Tani / UPJA</label>
-                    <input type="text" id="swal-poktan" class="form-control form-control-sm" placeholder="Opsional">
-                </div>
+                
                 <hr class="my-2">
+                
                 <div class="row g-2 mb-2">
-                    <div class="col-4"><label class="fw-bold small text-success">Desa</label><input type="text" id="swal-desa" class="form-control form-control-sm"></div>
-                    <div class="col-4"><label class="fw-bold small text-success">Kecamatan</label><input type="text" id="swal-kec" class="form-control form-control-sm"></div>
-                    <div class="col-4"><label class="fw-bold small text-success">Kabupaten</label><input type="text" id="swal-kab" class="form-control form-control-sm"></div>
+                    <div class="col-12 mb-1">
+                        <label class="fw-bold small text-success">Kabupaten/Kota (Jawa Barat) <span class="text-danger">*</span></label>
+                        <select id="swal-kab" class="form-select form-select-sm border-success"><option value="">Memuat data...</option></select>
+                    </div>
+                    <div class="col-6">
+                        <label class="fw-bold small text-success">Kecamatan <span class="text-danger">*</span></label>
+                        <select id="swal-kec" class="form-select form-select-sm border-success" disabled><option value="">Pilih Kab/Kota dahulu</option></select>
+                    </div>
+                    <div class="col-6">
+                        <label class="fw-bold small text-success">Desa/Kelurahan Utama <span class="text-danger">*</span></label>
+                        <select id="swal-desa" class="form-select form-select-sm border-success" disabled><option value="">Pilih Kecamatan dahulu</option></select>
+                        
+                        <!-- [BARU] Input Text Rahasia jika Desa tidak ada / Lebih dari 1 -->
+                        <input type="text" id="swal-desa-custom" class="form-control form-control-sm border-primary mt-1 d-none" placeholder="Ketik nama desa / desa lainnya...">
+                    </div>
                 </div>
             </div>
         `,
@@ -105,7 +132,94 @@ const ajukanPinjaman = async (item) => {
         confirmButtonText: '<i class="bi bi-send-fill"></i> Kirim Pengajuan',
         cancelButtonText: 'Batal',
         confirmButtonColor: '#198754',
+        
+        didOpen: async () => {
+            const kabSelect = document.getElementById('swal-kab');
+            const kecSelect = document.getElementById('swal-kec');
+            const desaSelect = document.getElementById('swal-desa');
+            const desaCustom = document.getElementById('swal-desa-custom'); // Referensi input rahasia
+
+            // 1. Tarik Data Kabupaten (ID Jabar = 32)
+            try {
+                const res = await fetch('https://www.emsifa.com/api-wilayah-indonesia/api/regencies/32.json');
+                const kabs = await res.json();
+                kabSelect.innerHTML = '<option value="">-- Pilih Kabupaten/Kota --</option>' + 
+                    kabs.map(k => `<option value="${k.id}">${toTitleCase(k.name)}</option>`).join('');
+            } catch (e) {
+                kabSelect.innerHTML = '<option value="">Gagal memuat data API</option>';
+            }
+
+            // 2. Saat Kabupaten Dipilih -> Tarik Data Kecamatan
+            kabSelect.addEventListener('change', async (e) => {
+                const kabId = e.target.value;
+                kecSelect.innerHTML = '<option value="">Memuat...</option>';
+                kecSelect.disabled = true;
+                desaSelect.innerHTML = '<option value="">Pilih Kecamatan dahulu</option>';
+                desaSelect.disabled = true;
+                desaCustom.classList.add('d-none'); // Sembunyikan input custom
+
+                if (!kabId) return;
+
+                try {
+                    const res = await fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/districts/${kabId}.json`);
+                    const kecs = await res.json();
+                    kecSelect.innerHTML = '<option value="">-- Pilih Kecamatan --</option>' + 
+                        kecs.map(k => `<option value="${k.id}">${toTitleCase(k.name)}</option>`).join('');
+                    kecSelect.disabled = false;
+                } catch (e) {}
+            });
+
+            // 3. Saat Kecamatan Dipilih -> Tarik Data Desa
+            kecSelect.addEventListener('change', async (e) => {
+                const kecId = e.target.value;
+                desaSelect.innerHTML = '<option value="">Memuat...</option>';
+                desaSelect.disabled = true;
+                desaCustom.classList.add('d-none');
+
+                if (!kecId) return;
+
+                try {
+                    const res = await fetch(`https://www.emsifa.com/api-wilayah-indonesia/api/villages/${kecId}.json`);
+                    const desas = await res.json();
+                    
+                    let options = '<option value="">-- Pilih Desa/Kelurahan --</option>';
+                    options += desas.map(d => `<option value="${d.id}">${toTitleCase(d.name)}</option>`).join('');
+                    
+                    // [BARU] Tambahkan opsi manual di paling bawah
+                    options += '<option value="lainnya" class="fw-bold text-primary">Lainnya</option>';
+                    
+                    desaSelect.innerHTML = options;
+                    desaSelect.disabled = false;
+                } catch (e) {}
+            });
+
+            // 4. [BARU] Logika memunculkan Input Text Rahasia
+            desaSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'lainnya') {
+                    desaCustom.classList.remove('d-none'); // Tampilkan input
+                    desaCustom.focus();
+                } else {
+                    desaCustom.classList.add('d-none'); // Sembunyikan input
+                    desaCustom.value = ''; // Kosongkan isinya
+                }
+            });
+        },
+        
         preConfirm: () => {
+            const kabEl = document.getElementById('swal-kab');
+            const kecEl = document.getElementById('swal-kec');
+            const desaEl = document.getElementById('swal-desa');
+            const desaCustomEl = document.getElementById('swal-desa-custom');
+
+            const namaKab = kabEl.options[kabEl.selectedIndex]?.text || '';
+            const namaKec = kecEl.options[kecEl.selectedIndex]?.text || '';
+            let namaDesa = desaEl.options[desaEl.selectedIndex]?.text || '';
+
+            // Jika milih "Lainnya", ambil nama desa dari ketikan manual pengguna
+            if (desaEl.value === 'lainnya') {
+                namaDesa = desaCustomEl.value.trim();
+            }
+
             const data = {
                 alsintan_id: item.alsintan_id,
                 tanggal_mulai: document.getElementById('swal-mulai').value,
@@ -114,13 +228,14 @@ const ajukanPinjaman = async (item) => {
                 jabatan_peminjam: document.getElementById('swal-jabatan').value,
                 kontak_peminjam: document.getElementById('swal-kontak').value,
                 nama_kelompok: document.getElementById('swal-poktan').value,
-                desa: document.getElementById('swal-desa').value,
-                kecamatan: document.getElementById('swal-kec').value,
-                kabupaten: document.getElementById('swal-kab').value
+                
+                kabupaten: namaKab.includes('--') ? '' : namaKab,
+                kecamatan: namaKec.includes('--') ? '' : namaKec,
+                desa: namaDesa.includes('--') ? '' : namaDesa
             };
             
-            if(!data.tanggal_mulai || !data.tanggal_berakhir || !data.nama_peminjam || !data.kontak_peminjam) {
-                Swal.showValidationMessage('Isi semua kolom yang bertanda bintang (*)!');
+            if(!data.tanggal_mulai || !data.tanggal_berakhir || !data.nama_peminjam || !data.kontak_peminjam || !data.kabupaten || !data.kecamatan || !data.desa) {
+                Swal.showValidationMessage('Isi semua kolom yang bertanda bintang (*), termasuk lokasi lengkap!');
                 return false;
             }
             return data;
@@ -130,9 +245,7 @@ const ajukanPinjaman = async (item) => {
     if (formValues) {
         try {
             Swal.fire({ title: 'Mengirim Pengajuan...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-            
             await axios.post(`${import.meta.env.VITE_API_BASE_URL}/pengajuan/public`, formValues);
-            
             Swal.fire('Terkirim!', 'Pengajuan Anda berhasil masuk antrean. Kami akan segera menghubungi nomor WA Anda.', 'success');
         } catch (error) {
             Swal.fire('Gagal', error.response?.data?.message || 'Terjadi kesalahan server.', 'error');
@@ -183,13 +296,11 @@ onUnmounted(() => {
                 <small class="text-muted">Cek ketersediaan inventaris dan status operasional alsintan</small>
             </div>
             
-            <!-- Dibungkus div agar tombolnya bisa bersebelahan -->
-            <div v-if="['super_admin', 'admin'].includes(userRole)" class="d-flex gap-2">
-                <!-- TOMBOL MENUJU HALAMAN ANTREAN -->
+            <!-- Hanya 'mektan' yang bisa melihat Cek Antrean dan Tambah Aset -->
+            <div v-if="userRole === 'mektan'" class="d-flex gap-2">
                 <button @click="router.push('/antrean')" class="btn btn-warning fw-bold shadow-sm">
                     <i class="bi bi-inboxes-fill"></i> Cek Antrean Masuk
                 </button>
-                
                 <button @click="goToAdd" class="btn btn-primary fw-bold shadow-sm">
                     <i class="bi bi-plus-lg"></i> Tambah Aset Baru
                 </button>
@@ -208,10 +319,10 @@ onUnmounted(() => {
                         <thead class="bg-light text-muted small text-uppercase" style="letter-spacing: 0.5px;">
                             <tr>
                                 <th class="ps-4 py-3">Aset & Ketersediaan</th>
-                                <th>ID / Mesin</th>
-                                <th>Kapasitas</th>
-                                <th class="text-center">Status (IoT)</th>
-                                <th class="text-center pe-4">Aksi</th>
+                                <th class="text-center pe-5 py-3">ID / Mesin</th>
+                                <th class="text-center pe-5 py-3">Kapasitas</th>
+                                <th class="text-center pe-4 py-3">Status (IoT)</th>
+                                <th class="text-center pe-4 py-3">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -259,18 +370,18 @@ onUnmounted(() => {
                                     </div>
                                 </td>
 
-                                <td>
+                                <td class="text-center pe-5 py-3">
                                     <span class="badge border border-primary text-primary px-2 mb-1">{{ item.kode_perangkat }}</span>
                                     <br>
                                     <small class="text-muted fw-bold">SN: {{ item.nomor_seri || '-' }}</small>
                                 </td>
 
-                                <td>
+                                <td class="text-center pe-5 py-3">
                                     <span class="fw-bold text-dark">{{ item.kapasitas_lahan || '-' }}</span>
                                     <small class="text-muted ms-1">Ha / Hari</small>
                                 </td>
 
-                                <td>
+                                <td class="text-center pe-4 py-3">
                                     <div class="d-flex flex-column gap-1">
                                         <span class="badge w-100 py-2 text-center" :class="getTractorClass(item.status_mesin)">
                                             <i class="bi bi-power me-1"></i> MESIN: {{ item.status_mesin || 'OFF' }}
@@ -281,35 +392,35 @@ onUnmounted(() => {
                                     </div>
                                 </td>
 
+                                <!-- [DIPERBARUI] PEMBAGIAN HAK AKSES TOMBOL AKSI -->
                                 <td class="text-center pe-4">
                                     
-                                    <div v-if="!userRole">
-                                        <button @click="goToDetail(item.alsintan_id)" class="btn btn-sm btn-outline-info me-2" title="Lihat Spesifikasi">
-                                            <i class="bi bi-info-circle"></i> Detail
-                                        </button>
-                                        
-                                        <button v-if="item.status_ketersediaan === 'Tersedia di Balai'" 
-                                                @click="ajukanPinjaman(item)" 
-                                                class="btn btn-sm btn-success fw-bold shadow-sm" 
-                                                title="Booking Alat Ini">
-                                            <i class="bi bi-calendar-plus-fill me-1"></i> Booking
+                                    <!-- Jika Role = Mektan (Akses Penuh tanpa Booking) -->
+                                    <div v-if="userRole === 'mektan'" class="btn-group">
+                                        <button @click="goToDetail(item.alsintan_id)" class="btn btn-sm btn-outline-info" title="Detail Administrasi"><i class="bi bi-info-circle"></i></button>
+                                        <button @click="goToMonitoring(item.alsintan_id)" class="btn btn-sm btn-outline-primary" title="Kendali Peta & Argo"><i class="bi bi-geo-alt-fill"></i></button>
+                                        <button @click="goToEdit(item.alsintan_id)" class="btn btn-sm btn-outline-warning" title="Edit Data"><i class="bi bi-pencil-square"></i></button>
+                                        <button @click="deleteItem(item.alsintan_id)" class="btn btn-sm btn-outline-danger" title="Hapus Permanen"><i class="bi bi-trash"></i></button>
+                                    </div>
+
+                                    <!-- Jika Role = UPJA / Operator (Fokus Operasional) -->
+                                    <div v-else-if="['upja', 'operator'].includes(userRole)">
+                                        <div class="btn-group">
+                                            <button @click="goToDetail(item.alsintan_id)" class="btn btn-sm btn-outline-info" title="Detail Alat"><i class="bi bi-info-circle"></i></button>
+                                            <button @click="goToMonitoring(item.alsintan_id)" class="btn btn-sm btn-outline-primary" title="Kendali Peta & Argo"><i class="bi bi-geo-alt-fill"></i></button>
+                                        </div>
+                                        <!-- HANYA UPJA YANG BISA MELIHAT TOMBOL BOOKING -->
+                                        <button v-if="item.status_ketersediaan === 'Tersedia di Balai' && userRole === 'upja'" @click="ajukanPinjaman(item)" class="btn btn-sm btn-success fw-bold shadow-sm ms-2" title="Booking Alat Ini">
+                                            <i class="bi bi-calendar-plus-fill"></i> Booking
                                         </button>
                                     </div>
 
-                                    <div v-else class="btn-group">
-                                        <button @click="goToDetail(item.alsintan_id)" class="btn btn-sm btn-outline-info" title="Detail Administrasi">
-                                            <i class="bi bi-info-circle"></i>
+                                    <!-- Jika Guest / Publik (Tanpa Login) -->
+                                    <div v-else>
+                                        <button @click="goToDetail(item.alsintan_id)" class="btn btn-sm btn-outline-info" title="Lihat Spesifikasi">
+                                            <i class="bi bi-info-circle"></i> Detail
                                         </button>
-                                        <button @click="goToMonitoring(item.alsintan_id)" class="btn btn-sm btn-outline-primary" title="Kendali Peta & Argo">
-                                            <i class="bi bi-geo-alt-fill"></i>
-                                        </button>
-                                        
-                                        <button v-if="['super_admin', 'admin'].includes(userRole)" @click="goToEdit(item.alsintan_id)" class="btn btn-sm btn-outline-warning" title="Edit Data">
-                                            <i class="bi bi-pencil-square"></i>
-                                        </button>
-                                        <button v-if="['super_admin'].includes(userRole)" @click="deleteItem(item.alsintan_id)" class="btn btn-sm btn-outline-danger" title="Hapus Permanen">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
+                                        <!-- Tombol Booking dihilangkan sepenuhnya dari publik -->
                                     </div>
 
                                 </td>
@@ -335,15 +446,7 @@ onUnmounted(() => {
   70% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(25, 135, 84, 0); }
   100% { opacity: 1; box-shadow: 0 0 0 0 rgba(25, 135, 84, 0); }
 }
-
 .transition-img { transition: all 0.3s ease; }
-
-.grayscale-dim { 
-    filter: grayscale(100%) contrast(80%); 
-    opacity: 0.6; 
-}
-
-.bg-dipinjam td { 
-    background-color: #fffff8 !important; 
-}
+.grayscale-dim { filter: grayscale(100%) contrast(80%); opacity: 0.6; }
+.bg-dipinjam td { background-color: #fffff8 !important; }
 </style>

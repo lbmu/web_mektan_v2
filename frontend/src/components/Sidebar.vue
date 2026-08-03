@@ -16,7 +16,7 @@ const activeMenu = ref(null);
 const userName = ref('Admin');
 const userPhoto = ref(null);
 const userRole = ref('');
-const isLoggedIn = ref(false); // [BARU] Indikator status login
+const isLoggedIn = ref(false); 
 
 onMounted(() => {
     const session = sessionStorage.getItem('user');
@@ -25,9 +25,9 @@ onMounted(() => {
     if (session && token) {
         try {
             const userData = JSON.parse(session);
-            userName.value = userData.nama || 'Admin';
-            userRole.value = userData.role || 'admin';
-            isLoggedIn.value = true; // Set status login menjadi true
+            userName.value = userData.nama || 'Pengguna';
+            userRole.value = userData.role || ''; // Mendapatkan role (mektan, upja, atau operator)
+            isLoggedIn.value = true; 
 
             const fotoFilename = userData.foto || userData.foto_profil;
 
@@ -105,7 +105,15 @@ watch(() => props.isClosed, (newVal) => {
             <li class="nav-item">
                 <RouterLink to="/aset" class="nav-link custom-nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
                     <i class="bi bi-tools fs-5 flex-shrink-0"></i>
-                    <span v-if="!isClosed" class="ms-3 fade-in text-nowrap">Manajemen Aset</span>
+                    <span v-if="!isClosed" class="ms-3 fade-in text-nowrap">Katalog Aset</span>
+                </RouterLink>
+            </li>
+
+            <!-- [BARU] Menu Verifikasi Akun HANYA untuk role mektan -->
+            <li v-if="userRole === 'mektan'" class="nav-item">
+                <RouterLink to="/verifikasi-akun" class="nav-link custom-nav-link d-flex align-items-center" :class="{ 'justify-content-center': isClosed }" active-class="active">
+                    <i class="bi bi-shield-check fs-5 flex-shrink-0 text-nowrap"></i>
+                    <span v-if="!isClosed" class="ms-3 fade-in text-nowrap">Verifikasi Akun</span>
                 </RouterLink>
             </li>
             
@@ -146,7 +154,7 @@ watch(() => props.isClosed, (newVal) => {
         <div v-else class="d-flex flex-column gap-2 px-2" :class="{ 'align-items-center': isClosed }">
             <RouterLink to="/login" class="btn btn-primary btn-sm fw-bold w-100 d-flex align-items-center justify-content-center">
                 <i class="bi bi-box-arrow-in-right" :class="{ 'fs-5': isClosed }"></i>
-                <span v-if="!isClosed" class="ms-2">Masuk Akun</span>
+                <span v-if="!isClosed" class="ms-2">Masuk</span>
             </RouterLink>
             
             <RouterLink to="/register" class="btn btn-outline-light btn-sm fw-bold w-100 d-flex align-items-center justify-content-center">

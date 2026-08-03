@@ -44,12 +44,13 @@ exports.getAlsintanById = (req, res) => {
     });
 };
 
-// 3. CREATE 
+// 3. CREATE (DIPERBARUI: Menambah kode_unit & nomor_mesin)
 exports.createAlsintan = (req, res) => {
+    // [PERBAIKAN] Menambahkan kode_unit dan nomor_mesin ke dalam penangkapan request
     const {
-        kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri,
-        status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen,
-        tahun_penerimaan, kondisi_fisik
+        kode_perangkat, kode_unit, nama_alat, kategori_alat, merk_alat, 
+        nomor_mesin, nomor_seri, status_sensor, status_operasional, deskripsi, 
+        kapasitas_lahan, lebar_implemen, tahun_penerimaan, kondisi_fisik
     } = req.body;
 
     const gambar = req.file ? req.file.path : 'default.jpg';
@@ -58,19 +59,20 @@ exports.createAlsintan = (req, res) => {
         return res.status(400).json({ pesan: 'Kode perangkat dan nama alat harus diisi' });
     }
 
+    // [PERBAIKAN] Query INSERT disesuaikan
     const queryAlat = `
         INSERT INTO alsintan (
-            kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
-            status, status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen, gambar,
-            tahun_penerimaan, kondisi_fisik
-        ) VALUES ($1, $2, $3, $4, $5, 'OFF', $6, $7, $8, $9, $10, $11, $12, $13)
+            kode_perangkat, kode_unit, nama_alat, kategori_alat, merk_alat, 
+            nomor_mesin, nomor_seri, status, status_sensor, status_operasional, 
+            deskripsi, kapasitas_lahan, lebar_implemen, gambar, tahun_penerimaan, kondisi_fisik
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'OFF', $8, $9, $10, $11, $12, $13, $14, $15)
         RETURNING alsintan_id
     `;
 
     const values = [
-        kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri,
-        status_sensor, status_operasional, deskripsi, kapasitas_lahan, 
-        lebar_implemen || 1.89, gambar,
+        kode_perangkat, kode_unit || null, nama_alat, kategori_alat, merk_alat, 
+        nomor_mesin || null, nomor_seri || null, status_sensor, status_operasional, 
+        deskripsi, kapasitas_lahan, lebar_implemen || 1.89, gambar,
         tahun_penerimaan || null, kondisi_fisik || 'Baik'
     ];
 
@@ -101,33 +103,36 @@ exports.createAlsintan = (req, res) => {
     });
 };
 
-// 4. UPDATE (DIPERBARUI: Menambah Tahun Penerimaan & Kondisi Fisik)
+// 4. UPDATE (DIPERBARUI: Menambah kode_unit & nomor_mesin)
 exports.updateAlsintan = (req, res) => {
     const id = req.params.id;
+    // [PERBAIKAN] Menangkap data dari req.body
     const {
-        kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
-        status_sensor, status_operasional, deskripsi, kapasitas_lahan, lebar_implemen,
-        tahun_penerimaan, kondisi_fisik
+        kode_perangkat, kode_unit, nama_alat, kategori_alat, merk_alat, 
+        nomor_mesin, nomor_seri, status_sensor, status_operasional, deskripsi, 
+        kapasitas_lahan, lebar_implemen, tahun_penerimaan, kondisi_fisik
     } = req.body;
     
     db.query(`SELECT gambar FROM alsintan WHERE alsintan_id = $1`, [id], (errCheck, rowsResult) => {
         if (errCheck) return res.status(500).json({ pesan: 'Gagal mengecek data lama', error: errCheck.message });
 
+        // [PERBAIKAN] Query UPDATE disesuaikan
         let query = `
             UPDATE alsintan SET
-                kode_perangkat = $1, nama_alat = $2, kategori_alat = $3, merk_alat = $4,
-                nomor_seri = $5, status_sensor = $6, status_operasional = $7,
-                deskripsi = $8, kapasitas_lahan = $9, lebar_implemen = $10,
-                tahun_penerimaan = $11, kondisi_fisik = $12
+                kode_perangkat = $1, kode_unit = $2, nama_alat = $3, kategori_alat = $4, 
+                merk_alat = $5, nomor_mesin = $6, nomor_seri = $7, status_sensor = $8, 
+                status_operasional = $9, deskripsi = $10, kapasitas_lahan = $11, 
+                lebar_implemen = $12, tahun_penerimaan = $13, kondisi_fisik = $14
         `;
 
         let values = [
-            kode_perangkat, nama_alat, kategori_alat, merk_alat, nomor_seri, 
-            status_sensor, status_operasional, deskripsi, kapasitas_lahan, 
-            lebar_implemen || 1.89, tahun_penerimaan || null, kondisi_fisik || 'Baik'
+            kode_perangkat, kode_unit || null, nama_alat, kategori_alat, merk_alat, 
+            nomor_mesin || null, nomor_seri || null, status_sensor, status_operasional, 
+            deskripsi, kapasitas_lahan, lebar_implemen || 1.89, 
+            tahun_penerimaan || null, kondisi_fisik || 'Baik'
         ]; 
         
-        let paramCounter = 13;
+        let paramCounter = 15; // Bergeser ke 15 karena ada penambahan 2 parameter baru
 
         if (req.file) {
             console.log("📸 Gambar Traktor sukses diunggah ke Cloudinary:", req.file.path);

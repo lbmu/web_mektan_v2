@@ -32,7 +32,6 @@ const fetchDetail = async () => {
         // 2. Jika statusnya Sedang Dipinjam, ambil data transaksinya dari backend
         if (item.value.status_ketersediaan === 'Sedang Dipinjam') {
             try {
-                // Endpoint ini akan kita buat di backend setelah ini!
                 const resTx = await axios.get(`${API_BASE_URL}/peminjaman/aktif/${id}`);
                 transaksiAktif.value = resTx.data;
             } catch (errTx) {
@@ -124,7 +123,6 @@ const handlePinjamkan = async () => {
         try {
             Swal.fire({ title: 'Menyimpan Transaksi...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
             
-            // Endpoint ini akan kita bangun di backend selanjutnya
             await axios.post(`${API_BASE_URL}/peminjaman/admin-pinjam`, formValues);
             
             Swal.fire('Berhasil!', 'Barang telah dikeluarkan dari balai.', 'success');
@@ -147,7 +145,6 @@ const handleSelesaikan = async () => {
 
     if (confirm.isConfirmed) {
         try {
-            // Endpoint ini akan kita bangun di backend selanjutnya
             await axios.post(`${API_BASE_URL}/peminjaman/selesai/${transaksiAktif.value.id_transaksi}`, { alsintan_id: id });
             Swal.fire('Selesai', 'Peminjaman telah diselesaikan.', 'success');
             fetchDetail();
@@ -155,6 +152,28 @@ const handleSelesaikan = async () => {
             Swal.fire('Gagal', 'Tidak dapat menyelesaikan transaksi.', 'error');
         }
     }
+};
+
+const lihatSuratJalan = (tx) => {
+    const qrData = `BA:${tx.nomor_ba} | Alat:${item.value.nama_alat} | Peminjam:${tx.nama_peminjam}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
+
+    Swal.fire({
+        title: 'Surat Jalan Digital',
+        html: `
+            <div class="text-center">
+                <img src="${qrUrl}" class="border p-2 rounded shadow-sm mb-3" alt="QR Code Surat Jalan">
+                <div class="bg-light p-2 rounded text-start small border border-primary border-opacity-25">
+                    <b>No. BA:</b> ${tx.nomor_ba}<br>
+                    <b>Peminjam:</b> ${tx.nama_peminjam}<br>
+                    <b>Instansi/UPJA:</b> ${tx.nama_kelompok || '-'}<br>
+                    <b>Jatuh Tempo:</b> ${new Date(tx.tanggal_berakhir).toLocaleDateString('id-ID')}
+                </div>
+            </div>
+        `,
+        confirmButtonText: 'Tutup',
+        confirmButtonColor: '#0d6efd'
+    });
 };
 </script>
 
@@ -201,7 +220,12 @@ const handleSelesaikan = async () => {
                                 
                                 <hr class="my-3">
                                 
+                                <!-- [DIPERBARUI] Grid Spesifikasi Menampilkan Seluruh Data Lengkap -->
                                 <div class="row g-3">
+                                    <div class="col-6">
+                                        <small class="text-muted d-block fw-bold">Kode Unit</small>
+                                        <span class="fw-bold text-dark">{{ item.kode_unit || '-' }}</span>
+                                    </div>
                                     <div class="col-6">
                                         <small class="text-muted d-block fw-bold">Kategori</small>
                                         <span class="fw-bold text-dark">{{ item.kategori_alat || '-' }}</span>
@@ -211,12 +235,20 @@ const handleSelesaikan = async () => {
                                         <span class="fw-bold text-dark">{{ item.merk_alat || '-' }}</span>
                                     </div>
                                     <div class="col-6">
-                                        <small class="text-muted d-block fw-bold">No. Seri Mesin</small>
+                                        <small class="text-muted d-block fw-bold">No. Mesin</small>
+                                        <span class="fw-bold text-dark">{{ item.nomor_mesin || '-' }}</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted d-block fw-bold">No. Rangka / Seri</small>
                                         <span class="fw-bold text-dark">{{ item.nomor_seri || '-' }}</span>
                                     </div>
                                     <div class="col-6">
                                         <small class="text-muted d-block fw-bold">Tahun Penerimaan</small>
                                         <span class="fw-bold text-dark">{{ item.tahun_penerimaan || 'Belum Diatur' }}</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted d-block fw-bold">Kapasitas Lahan</small>
+                                        <span class="fw-bold text-dark">{{ item.kapasitas_lahan || '-' }} Ha/Hari</span>
                                     </div>
                                     <div class="col-6">
                                         <small class="text-muted d-block fw-bold">Lebar Implemen</small>
@@ -242,7 +274,7 @@ const handleSelesaikan = async () => {
                         <h4 class="fw-bold text-success mt-3 mb-1">TERSEDIA DI BALAI</h4>
                         <p class="text-muted small mb-4">Alat ini siap beroperasi dan dapat dipinjamkan ke kelompok tani.</p>
                         
-                        <button v-if="['super_admin', 'admin'].includes(userRole)" @click="handlePinjamkan" class="btn btn-success fw-bold py-2 w-100 shadow-sm mt-auto">
+                        <button v-if="userRole === 'mektan'" @click="handlePinjamkan" class="btn btn-success fw-bold py-2 w-100 shadow-sm mt-auto">
                             <i class="bi bi-file-earmark-plus"></i> Keluarkan Surat Pinjam
                         </button>
                     </div>
@@ -286,7 +318,11 @@ const handleSelesaikan = async () => {
                                 </div>
                             </div>
                             
-                            <button v-if="['super_admin', 'admin'].includes(userRole)" @click="handleSelesaikan" class="btn btn-warning w-100 fw-bold py-2 shadow-sm mt-auto">
+                            <button v-if="userRole" @click="lihatSuratJalan(transaksiAktif)" class="btn btn-outline-primary w-100 fw-bold py-2 shadow-sm mb-2">
+                                <i class="bi bi-qr-code-scan"></i> Lihat Surat Jalan (QR)
+                            </button>
+                            
+                            <button v-if="userRole === 'mektan'" @click="handleSelesaikan" class="btn btn-warning w-100 fw-bold py-2 shadow-sm mt-auto">
                                 <i class="bi bi-check-circle-fill"></i> Alat Selesai & Kembali
                             </button>
                         </div>

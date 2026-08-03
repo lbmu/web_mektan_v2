@@ -6,11 +6,14 @@ import Swal from 'sweetalert2';
 
 const router = useRouter();
 
+// [DIPERBARUI] Menambahkan kode_unit dan nomor_mesin
 const form = ref({
     kode_perangkat: '',
+    kode_unit: '',
     nama_alat: '',
     kategori_alat: '',
     merk_alat: '',
+    nomor_mesin: '',
     nomor_seri: '',
     tahun_penerimaan: '', 
     status_sensor: 'Normal',
@@ -25,7 +28,6 @@ const fileGambar = ref(null);
 const previewGambar = ref(null);
 const isSubmitting = ref(false);
 
-// [BARU] Referensi input file
 const fileInputRef = ref(null);
 
 const formatKodePerangkat = () => {
@@ -40,7 +42,6 @@ const handleFileUpload = (event) => {
     }
 };
 
-// [BARU] Fungsi menghapus foto yang dipilih
 const hapusFoto = () => {
     fileGambar.value = null;
     previewGambar.value = null;
@@ -62,9 +63,12 @@ const submitForm = async () => {
     try {
         const formData = new FormData();
         formData.append('kode_perangkat', form.value.kode_perangkat);
+        // [DIPERBARUI] Menambahkan kode_unit dan nomor_mesin ke payload
+        formData.append('kode_unit', form.value.kode_unit);
         formData.append('nama_alat', form.value.nama_alat);
         formData.append('kategori_alat', form.value.kategori_alat);
         formData.append('merk_alat', form.value.merk_alat);
+        formData.append('nomor_mesin', form.value.nomor_mesin);
         formData.append('nomor_seri', form.value.nomor_seri);
         formData.append('tahun_penerimaan', form.value.tahun_penerimaan); 
         formData.append('kondisi_fisik', form.value.kondisi_fisik); 
@@ -121,10 +125,16 @@ const submitForm = async () => {
                         <div class="col-md-6 border-end pe-md-4">
                             <h5 class="text-primary mb-3 fw-bold"><i class="bi bi-cpu me-2"></i>Informasi Perangkat</h5>
 
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Kode Perangkat (ID IoT) <span class="text-danger">*</span></label>
-                                <input v-model="form.kode_perangkat" @input="formatKodePerangkat" type="text" class="form-control bg-light text-primary fw-bold" placeholder="Contoh: IOT-TR-01" required>
-                                <div class="form-text small">Hanya huruf, angka, dan strip (-). Spasi dihapus otomatis.</div>
+                            <!-- [DIPERBARUI] Baris ID IoT disejajarkan dengan Kode Unit -->
+                            <div class="row">
+                                <div class="col-md-7 mb-3">
+                                    <label class="form-label fw-bold">Kode Perangkat (ID IoT) <span class="text-danger">*</span></label>
+                                    <input v-model="form.kode_perangkat" @input="formatKodePerangkat" type="text" class="form-control bg-light text-primary fw-bold" placeholder="Contoh: IOT-TR-01" required>
+                                </div>
+                                <div class="col-md-5 mb-3">
+                                    <label class="form-label fw-bold text-success">Kode Unit Aset</label>
+                                    <input v-model="form.kode_unit" type="text" class="form-control border-success" placeholder="Misal: TR-001">
+                                </div>
                             </div>
 
                             <div class="mb-3">
@@ -153,14 +163,19 @@ const submitForm = async () => {
                                 </div>
                             </div>
 
+                            <!-- [DIPERBARUI] Baris ini memuat No Mesin, No Rangka, dan Tahun -->
                             <div class="row">
-                                <div class="col-md-8 mb-3">
-                                    <label class="form-label">Nomor Seri Mesin/Rangka</label>
-                                    <input v-model="form.nomor_seri" type="text" class="form-control" placeholder="Contoh: UV3400254">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">No. Mesin</label>
+                                    <input v-model="form.nomor_mesin" type="text" class="form-control" placeholder="Misal: M1234">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">No. Rangka (Seri)</label>
+                                    <input v-model="form.nomor_seri" type="text" class="form-control" placeholder="Misal: R9876">
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label fw-bold text-primary">Tahun Terima</label>
-                                    <input v-model="form.tahun_penerimaan" type="number" class="form-control border-primary" placeholder="Misal: 2025" min="1990" max="2100">
+                                    <input v-model="form.tahun_penerimaan" type="number" class="form-control border-primary" placeholder="2025" min="1990" max="2100">
                                 </div>
                             </div>
                         </div>
@@ -207,11 +222,9 @@ const submitForm = async () => {
 
                             <div class="mb-3">
                                 <label class="form-label">Foto Alat</label>
-                                <!-- [DIPERBARUI] Tambahkan ref ke input file -->
                                 <input ref="fileInputRef" @change="handleFileUpload" type="file" class="form-control" accept="image/*">
                                 
                                 <div class="mt-3 text-center rounded p-3" style="border: 2px dashed #dee2e6; background-color: #f8f9fa;">
-                                    <!-- [DIPERBARUI] Tombol hapus pada preview -->
                                     <div v-if="previewGambar" class="position-relative d-inline-block">
                                         <img :src="previewGambar" alt="Preview" class="img-fluid rounded shadow-sm" style="max-height: 180px;">
                                         <button @click="hapusFoto" type="button" class="btn btn-sm btn-danger position-absolute top-0 start-100 translate-middle rounded-circle shadow" style="width: 28px; height: 28px; padding: 0;" title="Hapus foto">
